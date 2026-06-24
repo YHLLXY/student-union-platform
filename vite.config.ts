@@ -9,6 +9,5 @@ export default defineConfig({
       localsConvention: 'camelCase',
     },
   },
-  // GitHub Pages 部署时使用，先注释，阶段8启用
-  // base: '/student-union-platform/',
+  base: '/student-union-platform/',
 });
