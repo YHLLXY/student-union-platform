@@ -1,0 +1,78 @@
+// 8 个部门
+export const DEPARTMENTS: Record<string, string> = {
+  culture: '文艺部',
+  sports: '体育部',
+  academic: '学习部',
+  outreach: '外联部',
+  publicity: '宣传部',
+  office: '办公室',
+  organization: '组织部',
+  livelihood: '生活部',
+};
+
+// 4 种角色
+export const ROLES: Record<string, string> = {
+  volunteer: '志愿者',
+  dept_head: '部门负责人',
+  presidium: '主席团',
+  teacher: '老师',
+};
+
+// 角色权限层级（数字越大权限越高）
+export const ROLE_LEVEL: Record<string, number> = {
+  volunteer: 0,
+  dept_head: 1,
+  presidium: 2,
+  teacher: 3,
+};
+
+// 任务优先级
+export const TASK_PRIORITIES: Record<string, { label: string; color: string }> = {
+  urgent: { label: '紧急', color: '#e74c3c' },
+  important: { label: '重要', color: '#e67e22' },
+  normal: { label: '普通', color: '#3498db' },
+};
+
+// 任务状态
+export const TASK_STATUSES: Record<string, { label: string; color: string }> = {
+  pending: { label: '待开始', color: '#95a5a6' },
+  in_progress: { label: '进行中', color: '#3498db' },
+  review: { label: '待审核', color: '#e67e22' },
+  completed: { label: '已完成', color: '#27ae60' },
+  overdue: { label: '已逾期', color: '#e74c3c' },
+};
+
+// 公告类型
+export const NOTICE_TYPES: Record<string, string> = {
+  notification: '通知',
+  meeting: '会议纪要',
+  activity: '活动',
+};
+
+// 论坛分类
+export const FORUM_CATEGORIES: Record<string, string> = {
+  all: '全部',
+  discussion: '工作讨论',
+  activity: '活动策划',
+  resource: '资料共享',
+  casual: '闲聊',
+};
+
+// 菜单配置
+export interface MenuItem {
+  key: string;
+  label: string;
+  icon: string;
+  path: string;
+  minRole: number; // ROLE_LEVEL 最低要求
+}
+
+export const MENU_ITEMS: MenuItem[] = [
+  { key: 'tasks', label: '任务管理', icon: 'CheckSquareOutlined', path: '/tasks', minRole: 0 },
+  { key: 'notices', label: '部门公告', icon: 'BellOutlined', path: '/notices', minRole: 0 },
+  { key: 'school', label: '学校信息', icon: 'BankOutlined', path: '/school', minRole: 0 },
+  { key: 'forum', label: '部门论坛', icon: 'MessageOutlined', path: '/forum', minRole: 0 },
+  { key: 'tickets', label: '活动抢票', icon: 'GiftOutlined', path: '/tickets', minRole: 0 },
+  { key: 'admin', label: '权限管理', icon: 'SettingOutlined', path: '/admin', minRole: 1 },
+  { key: 'profile', label: '个人中心', icon: 'UserOutlined', path: '/profile', minRole: 0 },
+];

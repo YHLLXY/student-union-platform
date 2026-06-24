@@ -1,110 +1,32 @@
-# 学生会线上交流平台 — 项目恢复指南
+# React + TypeScript + Vite
 
-> 最后更新：2026-06-24  
-> 项目状态：**设计阶段完成，待开发实施**
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
----
+Currently, two official plugins are available:
 
-## 📂 项目位置
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-```
-E:\homework\开发\Claudecode\学生会交流平台\
-```
+## React Compiler
 
-## 📄 已有文件
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-| 文件 | 说明 |
-|------|------|
-| `docs/superpowers/specs/2026-06-24-学生会交流平台-技术设计文档.md` | 完整技术设计文档（10章） |
-| `docs/superpowers/plans/2026-06-24-学生会交流平台-实施计划.md` | 34个任务的详细实施计划 |
+## Expanding the Oxlint configuration
 
-## 🚀 恢复开发步骤
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
 
-### 第 0 步（考完试提前做）：注册 Supabase
-
-1. 打开 https://supabase.com → 用 GitHub 账号注册/登录
-2. 创建新项目（选免费计划，区域选离你最近的）
-3. 记下 `Project URL` 和 `anon public key`
-4. 在 Supabase Dashboard → SQL Editor 中执行设计文档第五章的建表 SQL
-
-### 第 1 步：打开项目
-
-回到 Claude Code，打开这个目录，告诉我："继续开发学生会交流平台"
-
-### 第 2 步：我会按顺序执行
-
-```
-阶段 1 (P0): 项目初始化 + Supabase + 登录页    ← 最先做
-阶段 2 (P0): 整体布局 + 任务管理                ← 核心功能
-阶段 3 (P0): 部门公告 + 学校信息
-阶段 4 (P1): 部门论坛
-阶段 5 (P1): 个人中心
-阶段 6 (P1): 权限管理
-阶段 7 (P1): 抢票模块
-阶段 8 (P0): 错误处理 + 部署到 GitHub Pages    ← 最后收尾
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
-### 技术栈速览
-
-- 前端：React 19 + Vite + TypeScript + Ant Design 5
-- 后端：Supabase（免费云服务，含数据库+认证+实时推送）
-- 部署：GitHub Pages
-
----
-
-## ⚠️ 开发原则（你指定的）
-
-- 严格模块化，一个模块崩了不影响其他
-- 遇到问题试 3 次解决不了就停下
-- 每个阶段完成后验证
-- 代码写完后 push 到 GitHub
-
----
-
-## 🔄 代码备份与回滚
-
-### 自动备份机制
-
-开发过程中，每完成一个**阶段**会自动执行 `git commit`，形成开发节点：
-
-```
-init    → 设计文档基线
-阶段 1  → 项目初始化+登录认证
-阶段 2  → 整体布局+任务管理
-阶段 3  → 部门公告+学校信息
-阶段 4  → 部门论坛
-阶段 5  → 个人中心
-阶段 6  → 权限管理
-阶段 7  → 抢票模块
-阶段 8  → 错误处理+部署
-```
-
-### 如何回滚
-
-```bash
-# 1. 查看所有开发节点
-git log --oneline
-
-# 2. 回滚到某个节点（保留当前未提交的改动）
-git checkout <节点commit号> .
-
-# 3. 完全回到某个节点（⚠️ 丢弃之后的所有改动）
-git reset --hard <节点commit号>
-
-# 4. 查看两个节点之间的差异
-git diff <旧节点> <新节点>
-
-# 5. 查看当前改了什么
-git status
-```
-
-### 紧急情况：回到上一个阶段
-
-```bash
-git log --oneline -3          # 看最近 3 个节点
-git reset --hard HEAD~1       # 回退 1 个阶段
-```
-
----
-
-祝考试顺利！🎓
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.

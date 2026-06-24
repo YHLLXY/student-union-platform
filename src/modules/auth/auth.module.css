@@ -1,0 +1,52 @@
+.loginContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f2f5 0%, #dce3ea 100%);
+}
+
+.loginCard {
+  width: 420px;
+  padding: 48px 40px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.logoSection {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.platformName {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a3a5c;
+  margin-bottom: 8px;
+}
+
+.platformSlogan {
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+.tipText {
+  text-align: center;
+  font-size: 13px;
+  color: #95a5a6;
+  margin-top: 24px;
+}
+
+.errorAlert {
+  margin-bottom: 16px;
+}
+
+.stepHint {
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: #e8f0fe;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1a3a5c;
+}
