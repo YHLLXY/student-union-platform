@@ -3,9 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spin } from 'antd';
 import { LoginPage, getCurrentUser } from './modules/auth';
 import type { UserProfile } from './modules/auth';
+import { AuthContext } from './components/AuthContext';
 import AppLayout from './components/AppLayout';
 
-// Phase 1: 仅登录模块完整实现，其余模块均为占位
+// 各模块页面（懒加载）
 const TaskListPage = lazy(() => import('./modules/tasks/TaskListPage'));
 const NoticeList = lazy(() => import('./modules/notices/NoticeList'));
 const SchoolNoticeList = lazy(() => import('./modules/school/SchoolNoticeList'));
@@ -41,26 +42,26 @@ export default function App() {
     );
   }
 
-  // 未登录 → 登录页
   if (!user) {
     return <LoginPage onLoginSuccess={(u) => setUser(u)} />;
   }
 
-  // 已登录 → 主界面
   return (
-    <AppLayout user={user}>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/tasks" element={<TaskListPage />} />
-          <Route path="/notices" element={<NoticeList />} />
-          <Route path="/school" element={<SchoolNoticeList />} />
-          <Route path="/forum" element={<PostList />} />
-          <Route path="/tickets" element={<TicketList />} />
-          <Route path="/admin" element={<MemberManage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Navigate to="/tasks" replace />} />
-        </Routes>
-      </Suspense>
-    </AppLayout>
+    <AuthContext.Provider value={user}>
+      <AppLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/tasks" element={<TaskListPage />} />
+            <Route path="/notices" element={<NoticeList />} />
+            <Route path="/school" element={<SchoolNoticeList />} />
+            <Route path="/forum" element={<PostList />} />
+            <Route path="/tickets" element={<TicketList />} />
+            <Route path="/admin" element={<MemberManage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/tasks" replace />} />
+          </Routes>
+        </Suspense>
+      </AppLayout>
+    </AuthContext.Provider>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
-import type { UserProfile } from '../modules/auth';
+import { useAuth } from './AuthContext';
 import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import styles from './AppLayout.module.css';
@@ -21,11 +21,9 @@ import styles from './AppLayout.module.css';
 const { Header, Sider, Content } = Layout;
 
 interface AppLayoutProps {
-  user: UserProfile;
   children: React.ReactNode;
 }
 
-// 图标映射
 const iconMap: Record<string, React.ReactNode> = {
   CheckSquareOutlined: <CheckSquareOutlined />,
   BellOutlined: <BellOutlined />,
@@ -36,15 +34,18 @@ const iconMap: Record<string, React.ReactNode> = {
   UserOutlined: <UserOutlined />,
 };
 
-export default function AppLayout({ user, children }: AppLayoutProps) {
+export default function AppLayout({ children }: AppLayoutProps) {
+  const user = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
-  // 筛选当前角色可见的菜单项
-  const visibleMenus = MENU_ITEMS.filter((item) => hasMinRole(user.role, item.key === 'admin' ? 'dept_head' : 'volunteer'));
+  const visibleMenus = MENU_ITEMS.filter((item) => {
+    // admin 需要 dept_head+，其他菜单所有人可见
+    const requiredRole = item.key === 'admin' ? 'dept_head' : 'volunteer';
+    return hasMinRole(user.role, requiredRole);
+  });
 
-  // 构建 Ant Design Menu 需要的 items
   const menuItems = visibleMenus.map((item) => ({
     key: item.path,
     icon: iconMap[item.icon] ?? <BellOutlined />,
