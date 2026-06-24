@@ -1,0 +1,41 @@
+.statsRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  flex: 1;
+}
+
+.profileCard {
+  margin-top: 16px;
+}
+
+.calendarCell {
+  font-size: 12px;
+  text-align: center;
+}
+
+.calendarDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #27ae60;
+  display: inline-block;
+  margin: 1px;
+}
+
+.taskPopover {
+  max-width: 250px;
+}
+
+.taskPopoverItem {
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.taskPopoverItem:last-child {
+  border-bottom: none;
+}
