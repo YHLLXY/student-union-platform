@@ -42,7 +42,7 @@ export async function signUp(
   password: string,
   department: string,
 ): Promise<{ user: UserProfile | null; error: string | null }> {
-  const email = `${studentId}@studentunion.local`;
+  const email = `${studentId}@stuunion.org`;
 
   // 1. 创建 Supabase Auth 用户
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -85,7 +85,7 @@ export async function signIn(
   studentId: string,
   password: string,
 ): Promise<{ user: UserProfile | null; error: string | null }> {
-  const email = `${studentId}@studentunion.local`;
+  const email = `${studentId}@stuunion.org`;
 
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
