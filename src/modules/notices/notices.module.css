@@ -1,0 +1,53 @@
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.noticeCard {
+  margin-bottom: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.noticeCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.pinnedCard {
+  border-left: 4px solid #e67e22;
+  background: #fffdf5;
+}
+
+.normalCard {
+  border-left: 4px solid #3498db;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cardMeta {
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-top: 8px;
+}
+
+.cardContent {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #2c3e50;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
