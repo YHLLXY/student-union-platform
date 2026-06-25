@@ -186,10 +186,33 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-/** 修改密码 */
+/** 修改密码（已登录用户） */
 export async function changePassword(newPassword: string) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   return { error };
+}
+
+/** 验证用户身份：姓名 + 学号是否匹配已注册用户 */
+export async function verifyUser(name: string, studentId: string): Promise<{ authId: string; name: string } | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('auth_id, name')
+    .eq('student_id', studentId)
+    .eq('name', name)
+    .single();
+
+  if (error || !data) return null;
+  return { authId: data.auth_id, name: data.name };
+}
+
+/** 自主重置密码（通过 auth_id 调用数据库函数） */
+export async function selfResetPassword(authId: string, newPassword: string): Promise<boolean> {
+  const { error } = await supabase.rpc('reset_user_password', {
+    user_id: authId,
+    new_password: newPassword,
+  });
+
+  return !error;
 }
 
 /** 监听认证状态变化 */

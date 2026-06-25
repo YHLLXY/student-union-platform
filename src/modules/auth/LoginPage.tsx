@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
+import { Form, Input, Button, Alert, message, Tabs } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
-import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode } from './authService';
+import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword } from './authService';
 import type { UserProfile } from './authService';
 import styles from './auth.module.css';
 
@@ -9,7 +9,7 @@ interface LoginPageProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
 
-type Step = 'input' | 'setPassword' | 'login';
+type Step = 'input' | 'setPassword' | 'login' | 'forgot';
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [tab, setTab] = useState<'student' | 'teacher'>('student');
@@ -34,7 +34,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   });
 
   const [passwordForm] = Form.useForm();
-  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // ========== 学生流程 ==========
 
@@ -196,11 +195,76 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
   };
 
+  // ========== 忘记密码流程 ==========
+
+  const [forgotAuthId, setForgotAuthId] = useState('');
+
+  const handleForgotVerify = async () => {
+    setError(null);
+    const id = isStudent ? studentForm.studentId.trim() : teacherForm.teacherId.trim();
+    const name = isStudent ? studentForm.name.trim() : teacherForm.name.trim();
+    const code = isStudent ? studentForm.inviteCode.trim() : teacherForm.inviteCode.trim();
+
+    if (!name || !id || !code) {
+      setError('请先在上一步填写姓名、学号/工号和邀请码');
+      return;
+    }
+    setLoading(true);
+    try {
+      // 验证身份：姓名 + 学号匹配
+      const user = await verifyUser(name, id);
+      if (!user) {
+        setError('姓名与学号/工号不匹配，请检查');
+        setLoading(false);
+        return;
+      }
+      // 验证邀请码有效
+      const codeData = isStudent ? await checkInviteCode(code) : await checkTeacherCode(code);
+      if (!codeData) {
+        setError('邀请码无效或已被使用');
+        setLoading(false);
+        return;
+      }
+      setForgotAuthId(user.authId);
+      setStep('setPassword');
+    } catch {
+      setError('操作失败，请检查网络连接');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotReset = async (values: { password: string; confirmPassword: string }) => {
+    setError(null);
+    if (values.password !== values.confirmPassword) {
+      message.error('两次输入的密码不一致');
+      return;
+    }
+    setLoading(true);
+    try {
+      const ok = await selfResetPassword(forgotAuthId, values.password);
+      if (ok) {
+        message.success('密码重置成功，请登录');
+        setStep('login');
+      } else {
+        setError('重置失败，请联系管理员');
+      }
+    } catch {
+      setError('操作失败，请检查网络连接');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ========== 共享的密码步骤（根据当前 tab 判断流程） ==========
 
   const isStudent = tab === 'student';
 
   const handlePasswordSubmit = async (values: { password?: string; confirmPassword?: string }) => {
+    if (forgotAuthId) {
+      await handleForgotReset({ password: values.password!, confirmPassword: values.confirmPassword! });
+      return;
+    }
     if (step === 'setPassword') {
       if (isStudent) {
         await handleStudentRegister({ password: values.password!, confirmPassword: values.confirmPassword! });
@@ -289,11 +353,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const renderPasswordStep = () => (
     <Form form={passwordForm} layout="vertical" onFinish={handlePasswordSubmit} size="large">
       <div className={styles.stepHint}>
-        {step === 'setPassword'
-          ? '🎉 首次登录，请设置密码'
-          : (isStudent ? `👋 欢迎回来，${studentForm.name}` : `👋 欢迎回来，${teacherForm.name}`)}
+        {forgotAuthId
+          ? '🔒 身份验证通过，请设置新密码'
+          : step === 'setPassword'
+            ? '🎉 首次登录，请设置密码'
+            : (isStudent ? `👋 欢迎回来，${studentForm.name}` : `👋 欢迎回来，${teacherForm.name}`)}
       </div>
-      {step === 'setPassword' && (
+      {(step === 'setPassword' || !!forgotAuthId) && (
         <>
           <Form.Item name="password" rules={[{ required: true, message: '请设置密码' }, { min: 6, message: '密码至少 6 位' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="设置密码（至少 6 位）" />
@@ -323,18 +389,50 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       )}
       <Form.Item>
         <Button type="primary" htmlType="submit" block loading={loading}>
-          {step === 'setPassword' ? '注册并登录' : '登录'}
+          {forgotAuthId ? '重置密码并登录' : step === 'setPassword' ? '注册并登录' : '登录'}
         </Button>
       </Form.Item>
       {step === 'login' && (
-        <Button type="link" block onClick={() => setForgotModalOpen(true)}>
+        <Button type="link" block onClick={() => { setStep('forgot'); setError(null); }}>
           忘记密码？
         </Button>
       )}
-      <Button type="link" block onClick={() => { setStep('input'); setError(null); }}>
+      <Button type="link" block onClick={() => { setStep(forgotAuthId ? 'forgot' : 'input'); setForgotAuthId(''); setError(null); }}>
         返回上一步
       </Button>
     </Form>
+  );
+
+  const renderForgotStep = () => (
+    <div>
+      <div className={styles.stepHint}>
+        🔐 通过邀请码验证身份后即可重置密码
+      </div>
+      <Form layout="vertical" onFinish={handleForgotVerify} size="large">
+        <Form.Item name="inviteCode" rules={[{ required: true, message: '请输入邀请码' }]}>
+          <Input
+            prefix={<KeyOutlined />}
+            placeholder="输入你的邀请码以验证身份"
+            value={isStudent ? studentForm.inviteCode : teacherForm.inviteCode}
+            onChange={(e) => {
+              if (isStudent) {
+                setStudentForm((p) => ({ ...p, inviteCode: e.target.value }));
+              } else {
+                setTeacherForm((p) => ({ ...p, inviteCode: e.target.value }));
+              }
+            }}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block loading={loading}>
+            验证身份
+          </Button>
+        </Form.Item>
+        <Button type="link" block onClick={() => { setStep('login'); setError(null); }}>
+          返回登录
+        </Button>
+      </Form>
+    </div>
   );
 
   return (
@@ -370,26 +468,14 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         </div>
 
         {step === 'input' && (tab === 'student' ? renderStudentForm() : renderTeacherForm())}
-        {(step === 'setPassword' || step === 'login') && renderPasswordStep()}
+        {step === 'forgot' && renderForgotStep()}
+        {(step === 'setPassword' || step === 'login' || !!forgotAuthId) && renderPasswordStep()}
 
         <div className={styles.tipText}>
           仅限学生会内部成员使用
         </div>
       </div>
 
-      <Modal
-        title="忘记密码"
-        open={forgotModalOpen}
-        onCancel={() => setForgotModalOpen(false)}
-        footer={
-          <Button type="primary" onClick={() => setForgotModalOpen(false)}>
-            知道了
-          </Button>
-        }
-      >
-        <p>请<strong>联系主席或老师</strong>，在「权限管理 → 成员管理」中重置密码。</p>
-        <p style={{ marginBottom: 0 }}>重置密码后，请使用新密码登录。</p>
-      </Modal>
     </div>
   );
 }
