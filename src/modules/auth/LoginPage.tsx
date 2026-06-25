@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, Button, Alert, message, Tabs } from 'antd';
+import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
 import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode } from './authService';
 import type { UserProfile } from './authService';
@@ -34,6 +34,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   });
 
   const [passwordForm] = Form.useForm();
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // ========== 学生流程 ==========
 
@@ -325,6 +326,11 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           {step === 'setPassword' ? '注册并登录' : '登录'}
         </Button>
       </Form.Item>
+      {step === 'login' && (
+        <Button type="link" block onClick={() => setForgotModalOpen(true)}>
+          忘记密码？
+        </Button>
+      )}
       <Button type="link" block onClick={() => { setStep('input'); setError(null); }}>
         返回上一步
       </Button>
@@ -370,6 +376,20 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           仅限学生会内部成员使用
         </div>
       </div>
+
+      <Modal
+        title="忘记密码"
+        open={forgotModalOpen}
+        onCancel={() => setForgotModalOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setForgotModalOpen(false)}>
+            知道了
+          </Button>
+        }
+      >
+        <p>请<strong>联系主席或老师</strong>，在「权限管理 → 成员管理」中重置密码。</p>
+        <p style={{ marginBottom: 0 }}>重置密码后，请使用新密码登录。</p>
+      </Modal>
     </div>
   );
 }

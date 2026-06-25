@@ -3,7 +3,7 @@ import { Table, Select, Button, Popconfirm, message, Spin } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { getDepartmentLabel, getRoleLabel, isAdmin } from '../../utils/helpers';
 import { ROLES, DEPARTMENTS } from '../../utils/constants';
-import { fetchAllMembers, updateMemberRole, removeMember, transferMember } from './adminService';
+import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetMemberPassword } from './adminService';
 import type { UserProfile } from '../auth';
 import InviteCodeManage from './InviteCodeManage';
 import styles from './admin.module.css';
@@ -54,6 +54,15 @@ export default function MemberManage() {
     }
   };
 
+  const handleResetPassword = async (authId: string, name: string) => {
+    const ok = await resetMemberPassword(authId);
+    if (ok) {
+      message.success(`${name} 的密码已重置为 123456`);
+    } else {
+      message.error('重置失败，请检查 SQL 函数是否已创建');
+    }
+  };
+
   const adminAccess = isAdmin(user.role); // 主席或老师
 
   const columns = [
@@ -97,14 +106,24 @@ export default function MemberManage() {
       ? [{
           title: '操作', key: 'actions',
           render: (_: unknown, record: UserProfile) => (
-            <Popconfirm
-              title="确认移除该成员？"
-              onConfirm={() => handleRemove(record.id)}
-              okText="确认"
-              cancelText="取消"
-            >
-              <Button type="link" danger size="small">移除</Button>
-            </Popconfirm>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <Popconfirm
+                title={`确认重置 ${record.name} 的密码为 123456？`}
+                onConfirm={() => handleResetPassword(record.auth_id, record.name)}
+                okText="确认"
+                cancelText="取消"
+              >
+                <Button type="link" size="small">重置密码</Button>
+              </Popconfirm>
+              <Popconfirm
+                title="确认移除该成员？"
+                onConfirm={() => handleRemove(record.id)}
+                okText="确认"
+                cancelText="取消"
+              >
+                <Button type="link" danger size="small">移除</Button>
+              </Popconfirm>
+            </div>
           ),
         }]
       : []),

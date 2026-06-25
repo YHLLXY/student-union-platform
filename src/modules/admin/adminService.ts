@@ -100,3 +100,13 @@ export async function deactivateInviteCode(codeId: string): Promise<boolean> {
 
   return !error;
 }
+
+/** 管理员重置成员密码（默认 123456） */
+export async function resetMemberPassword(authId: string): Promise<boolean> {
+  const { error } = await supabase.rpc('reset_user_password', {
+    user_id: authId,
+    new_password: '123456',
+  });
+
+  return !error;
+}
