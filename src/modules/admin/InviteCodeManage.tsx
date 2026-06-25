@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Select, message, Tag } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
-import { DEPARTMENTS } from '../../utils/constants';
-import { getDepartmentLabel } from '../../utils/helpers';
+import { DEPARTMENTS, ROLES } from '../../utils/constants';
+import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
 import { fetchInviteCodes, generateInviteCode, deactivateInviteCode } from './adminService';
 import type { InviteCode } from './adminService';
 
 const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
+const roleOptions = Object.entries(ROLES).map(([key, label]) => ({ value: key, label }));
 
 interface InviteCodeManageProps {
   userRole: string;
@@ -17,10 +18,11 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
   const [codes, setCodes] = useState<InviteCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [genDept, setGenDept] = useState(userDept);
+  const [genRole, setGenRole] = useState('volunteer');
   const [genLoading, setGenLoading] = useState(false);
 
   const loadCodes = useCallback(async () => {
-    // 负责人只看本部门
+    // 部门负责人只看本部门
     const data = await fetchInviteCodes(userRole === 'dept_head' ? userDept : undefined);
     setCodes(data);
     setLoading(false);
@@ -30,7 +32,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
 
   const handleGenerate = async () => {
     setGenLoading(true);
-    const code = await generateInviteCode(genDept);
+    const code = await generateInviteCode(genDept, genRole);
     setGenLoading(false);
 
     if (code) {
@@ -57,11 +59,18 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
     );
   };
 
+  // 部门负责人只能生成本部门志愿者邀请码
+  const isDeptHead = userRole === 'dept_head';
+
   const columns = [
     { title: '邀请码', dataIndex: 'code', key: 'code' },
     {
       title: '部门', dataIndex: 'department', key: 'department',
       render: (d: string) => getDepartmentLabel(d),
+    },
+    {
+      title: '角色', dataIndex: 'role', key: 'role',
+      render: (r: string) => getRoleLabel(r),
     },
     {
       title: '状态', dataIndex: 'is_used', key: 'is_used',
@@ -82,7 +91,16 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
             onChange={setGenDept}
             options={deptOptions}
             size="small"
-            style={{ width: 120 }}
+            style={{ width: 140 }}
+            disabled={isDeptHead}
+          />
+          <Select
+            value={genRole}
+            onChange={setGenRole}
+            options={isDeptHead ? [{ value: 'volunteer', label: '常驻志愿者' }] : roleOptions}
+            size="small"
+            style={{ width: 130 }}
+            disabled={isDeptHead}
           />
           <Button
             type="primary"

@@ -8,7 +8,7 @@ export async function fetchAllMembers(userRole: string, userDept: string): Promi
     .select('*')
     .order('created_at', { ascending: false });
 
-  // 负责人只能看本部门
+  // 部门负责人只看本部门；presidium+ / president / teacher 可看全部
   if (userRole === 'dept_head') {
     query = query.eq('department', userDept);
   }
@@ -39,12 +39,12 @@ export async function removeMember(memberId: string): Promise<boolean> {
 }
 
 /** 生成邀请码 */
-export async function generateInviteCode(department: string): Promise<string | null> {
+export async function generateInviteCode(department: string, role: string): Promise<string | null> {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const { error } = await supabase
     .from('invite_codes')
-    .insert({ code, department });
+    .insert({ code, department, role });
 
   if (error) return null;
   return code;
@@ -54,10 +54,21 @@ export interface InviteCode {
   id: string;
   code: string;
   department: string;
+  role: string;
   is_used: boolean;
   used_by: string | null;
   used_by_name?: string;
   created_at: string;
+}
+
+/** 调动成员到其他部门 */
+export async function transferMember(memberId: string, newDepartment: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('users')
+    .update({ department: newDepartment })
+    .eq('id', memberId);
+
+  return !error;
 }
 
 /** 获取邀请码列表 */

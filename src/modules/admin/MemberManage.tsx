@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Select, Button, Popconfirm, message, Spin } from 'antd';
 import { useAuth } from '../../components/AuthContext';
-import { getDepartmentLabel } from '../../utils/helpers';
-import { ROLES } from '../../utils/constants';
-import { fetchAllMembers, updateMemberRole, removeMember } from './adminService';
+import { getDepartmentLabel, getRoleLabel, isAdmin } from '../../utils/helpers';
+import { ROLES, DEPARTMENTS } from '../../utils/constants';
+import { fetchAllMembers, updateMemberRole, removeMember, transferMember } from './adminService';
 import type { UserProfile } from '../auth';
 import InviteCodeManage from './InviteCodeManage';
 import styles from './admin.module.css';
 
 const roleOptions = Object.entries(ROLES).map(([key, label]) => ({ value: key, label }));
+const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
 
 export default function MemberManage() {
   const user = useAuth();
@@ -33,6 +34,16 @@ export default function MemberManage() {
     }
   };
 
+  const handleDeptChange = async (memberId: string, newDept: string) => {
+    const ok = await transferMember(memberId, newDept);
+    if (ok) {
+      message.success('部门已调动');
+      loadMembers();
+    } else {
+      message.error('调动失败');
+    }
+  };
+
   const handleRemove = async (memberId: string) => {
     const ok = await removeMember(memberId);
     if (ok) {
@@ -43,38 +54,60 @@ export default function MemberManage() {
     }
   };
 
+  const adminAccess = isAdmin(user.role); // 主席或老师
+
   const columns = [
     { title: '姓名', dataIndex: 'name', key: 'name' },
-    { title: '学号', dataIndex: 'student_id', key: 'student_id' },
+    { title: '学号/工号', dataIndex: 'student_id', key: 'student_id' },
     {
       title: '部门', dataIndex: 'department', key: 'department',
-      render: (d: string) => getDepartmentLabel(d),
+      render: (d: string, record: UserProfile) => {
+        if (adminAccess) {
+          return (
+            <Select
+              value={d}
+              size="small"
+              style={{ width: 140 }}
+              options={deptOptions}
+              onChange={(val) => handleDeptChange(record.id, val)}
+            />
+          );
+        }
+        return getDepartmentLabel(d);
+      },
     },
     {
       title: '角色', dataIndex: 'role', key: 'role',
-      render: (r: string, record: UserProfile) => (
-        <Select
-          value={r}
-          size="small"
-          style={{ width: 120 }}
-          options={roleOptions}
-          onChange={(val) => handleRoleChange(record.id, val)}
-        />
-      ),
+      render: (r: string, record: UserProfile) => {
+        if (adminAccess) {
+          return (
+            <Select
+              value={r}
+              size="small"
+              style={{ width: 120 }}
+              options={roleOptions}
+              onChange={(val) => handleRoleChange(record.id, val)}
+            />
+          );
+        }
+        return getRoleLabel(r);
+      },
     },
-    {
-      title: '操作', key: 'actions',
-      render: (_: unknown, record: UserProfile) => (
-        <Popconfirm
-          title="确认移除该成员？"
-          onConfirm={() => handleRemove(record.id)}
-          okText="确认"
-          cancelText="取消"
-        >
-          <Button type="link" danger size="small">移除</Button>
-        </Popconfirm>
-      ),
-    },
+    ...(adminAccess
+      ? [{
+          title: '操作', key: 'actions',
+          render: (_: unknown, record: UserProfile) => (
+            <Popconfirm
+              title="确认移除该成员？"
+              onConfirm={() => handleRemove(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button type="link" danger size="small">移除</Button>
+            </Popconfirm>
+          ),
+        }]
+      : []),
   ];
 
   if (loading) return <Spin />;
