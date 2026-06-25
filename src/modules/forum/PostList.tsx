@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Button, Menu, Modal, Spin, Empty } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
-import { formatDateTime } from '../../utils/helpers';
+import { formatDateTime, hasMinRole } from '../../utils/helpers';
 import { FORUM_CATEGORIES } from '../../utils/constants';
 import { fetchPosts } from './forumService';
 import type { ForumPost } from './forumService';
@@ -54,9 +54,11 @@ export default function PostList() {
       <div className={styles.mainArea}>
         <div className={styles.pageHeader}>
           <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>💬 部门论坛</h2>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
-            发帖
-          </Button>
+          {hasMinRole(user.role, 'dept_head') && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
+              发帖
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -85,7 +87,7 @@ export default function PostList() {
         width={720}
         destroyOnClose
       >
-        {detailId && <PostDetail postId={detailId} onClose={() => setDetailId(null)} />}
+        {detailId && <PostDetail postId={detailId} onClose={() => setDetailId(null)} onDeleted={loadPosts} />}
       </Modal>
 
       <Modal

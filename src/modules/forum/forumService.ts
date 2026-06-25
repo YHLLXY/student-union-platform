@@ -6,6 +6,7 @@ export interface ForumPost {
   content: string;
   category: string;
   department: string;
+  collaborating_departments: string[];
   created_by: string;
   author_name?: string;
   reply_count?: number;
@@ -22,12 +23,12 @@ export interface ForumReply {
   created_at: string;
 }
 
-/** 获取帖子列表（按部门+分类筛选） */
-export async function fetchPosts(department: string, category?: string): Promise<ForumPost[]> {
+/** 获取帖子列表（本部门 + 协同部门可见） */
+export async function fetchPosts(userDepartment: string, category?: string): Promise<ForumPost[]> {
   let query = supabase
     .from('forum_posts')
     .select('*, author:created_by(name)')
-    .eq('department', department)
+    .or(`department.eq.${userDepartment},collaborating_departments.cs.{${userDepartment}}`)
     .order('created_at', { ascending: false });
 
   if (category && category !== 'all') {
@@ -49,6 +50,7 @@ export async function fetchPosts(department: string, category?: string): Promise
         ...p,
         author_name: (p.author as { name: string } | null)?.name ?? '未知',
         reply_count: count ?? 0,
+        collaborating_departments: p.collaborating_departments as string[] ?? [],
       };
     }),
   );
@@ -76,6 +78,7 @@ export async function fetchPostDetail(postId: string): Promise<ForumPost | null>
     ...p,
     author_name: (p.author as { name: string } | null)?.name ?? '未知',
     reply_count: count ?? 0,
+    collaborating_departments: p.collaborating_departments as string[] ?? [],
   } as unknown as ForumPost;
 }
 
@@ -102,15 +105,42 @@ export async function createPost(post: {
   category: string;
   department: string;
   created_by: string;
+  collaborating_departments?: string[];
 }): Promise<ForumPost | null> {
   const { data, error } = await supabase
     .from('forum_posts')
-    .insert(post)
+    .insert({
+      ...post,
+      collaborating_departments: post.collaborating_departments ?? [],
+    })
     .select('*')
     .single();
 
   if (error) return null;
   return data as ForumPost;
+}
+
+/** 删除帖子（级联删除回复） */
+export async function deletePost(postId: string): Promise<boolean> {
+  // 先删回复
+  await supabase.from('forum_replies').delete().eq('post_id', postId);
+  // 再删帖子
+  const { error } = await supabase
+    .from('forum_posts')
+    .delete()
+    .eq('id', postId);
+
+  return !error;
+}
+
+/** 更新协同部门 */
+export async function updateCollaboratingDepts(postId: string, depts: string[]): Promise<boolean> {
+  const { error } = await supabase
+    .from('forum_posts')
+    .update({ collaborating_departments: depts })
+    .eq('id', postId);
+
+  return !error;
 }
 
 /** 回复 */
