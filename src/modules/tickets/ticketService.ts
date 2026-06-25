@@ -165,6 +165,17 @@ export async function fetchMyTickets(userId: string): Promise<MyTicket[]> {
   }));
 }
 
+/** 获取当前用户已抢的票务 ID 列表（用于按钮状态判断） */
+export async function fetchMyGrabbedIds(userId: string): Promise<Set<string>> {
+  const { data } = await supabase
+    .from('ticket_records')
+    .select('ticket_id')
+    .eq('user_id', userId);
+
+  if (!data) return new Set();
+  return new Set(data.map((r: { ticket_id: string }) => r.ticket_id));
+}
+
 /** 获取某票务的抢票记录（发布者查看） */
 export async function fetchTicketRecords(ticketId: string): Promise<TicketRecord[]> {
   const { data } = await supabase

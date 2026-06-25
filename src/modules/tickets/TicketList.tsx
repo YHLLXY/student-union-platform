@@ -3,7 +3,7 @@ import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
-import { fetchTickets, grabTicket, subscribeToTickets } from './ticketService';
+import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from './ticketService';
 import type { Ticket } from './ticketService';
 import TicketForm from './TicketForm';
 import MyTickets from './MyTickets';
@@ -15,12 +15,17 @@ export default function TicketList() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('available');
+  const [grabbedIds, setGrabbedIds] = useState<Set<string>>(new Set());
 
   const loadTickets = useCallback(async () => {
-    const data = await fetchTickets();
+    const [data, ids] = await Promise.all([
+      fetchTickets(),
+      fetchMyGrabbedIds(user.id),
+    ]);
     setTickets(data);
+    setGrabbedIds(ids);
     setLoading(false);
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     loadTickets();
@@ -53,7 +58,8 @@ export default function TicketList() {
           {tickets.map((ticket) => {
             const isOpen = new Date(ticket.open_time) <= new Date();
             const soldOut = (ticket.remaining_count ?? 0) <= 0;
-            const canGrab = isOpen && !soldOut;
+            const alreadyGrabbed = grabbedIds.has(ticket.id);
+const canGrab = isOpen && !soldOut && !alreadyGrabbed;
 
             return (
               <Card key={ticket.id} className={styles.ticketCard}>
@@ -71,14 +77,18 @@ export default function TicketList() {
                     {soldOut ? '已售罄' : `剩余 ${ticket.remaining_count}/${ticket.total_count}`}
                   </span>
                   {isOpen ? (
-                    <Button
-                      type="primary"
-                      size="small"
-                      disabled={!canGrab}
-                      onClick={() => handleGrab(ticket)}
-                    >
-                      {soldOut ? '已售罄' : '抢票'}
-                    </Button>
+                    alreadyGrabbed ? (
+                      <Tag color="blue">已抢票</Tag>
+                    ) : (
+                      <Button
+                        type="primary"
+                        size="small"
+                        disabled={!canGrab}
+                        onClick={() => handleGrab(ticket)}
+                      >
+                        {soldOut ? '已售罄' : '抢票'}
+                      </Button>
+                    )
                   ) : (
                     <Tag icon={<ClockCircleOutlined />} color="default">未开抢</Tag>
                   )}
