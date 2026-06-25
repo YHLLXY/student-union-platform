@@ -67,6 +67,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
                 <div className={styles.cardBody}>
                   <div className={styles.cardTitle}>{ticket.title}</div>
                   <div className={styles.cardMeta}>
+                    <span>🎬 活动：{formatDateTime(ticket.event_time)}</span>
                     <span>🕐 开抢：{formatDateTime(ticket.open_time)}</span>
                     <span>👤 发布者：{ticket.creator_name}</span>
                     <span>📦 每人限抢 {ticket.per_user_limit} 张</span>

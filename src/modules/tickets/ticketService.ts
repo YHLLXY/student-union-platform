@@ -8,6 +8,7 @@ export interface Ticket {
   total_count: number;
   per_user_limit: number;
   open_time: string;
+  event_time: string;
   created_by: string;
   creator_name?: string;
   remaining_count?: number;
@@ -59,6 +60,7 @@ export async function createTicket(ticket: {
   total_count: number;
   per_user_limit: number;
   open_time: string;
+  event_time: string;
   created_by: string;
 }): Promise<Ticket | null> {
   const { data, error } = await supabase
@@ -142,27 +144,32 @@ export interface MyTicket {
   name: string;
   grabbed_at: string;
   ticket_title: string;
+  event_time: string;
 }
 
 /** 获取我的票券 */
 export async function fetchMyTickets(userId: string): Promise<MyTicket[]> {
   const { data } = await supabase
     .from('ticket_records')
-    .select('*, ticket:ticket_id(title)')
+    .select('*, ticket:ticket_id(title, event_time)')
     .eq('user_id', userId)
     .order('grabbed_at', { ascending: false });
 
   if (!data) return [];
 
-  return data.map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    ticket_id: r.ticket_id as string,
-    user_id: r.user_id as string,
-    student_id: r.student_id as string,
-    name: r.name as string,
-    grabbed_at: r.grabbed_at as string,
-    ticket_title: (r.ticket as { title: string } | null)?.title ?? '未知',
-  }));
+  return data.map((r: Record<string, unknown>) => {
+    const ticket = r.ticket as { title: string; event_time: string } | null;
+    return {
+      id: r.id as string,
+      ticket_id: r.ticket_id as string,
+      user_id: r.user_id as string,
+      student_id: r.student_id as string,
+      name: r.name as string,
+      grabbed_at: r.grabbed_at as string,
+      ticket_title: ticket?.title ?? '未知',
+      event_time: ticket?.event_time ?? '',
+    };
+  });
 }
 
 /** 获取当前用户已抢的票务 ID 列表（用于按钮状态判断） */
@@ -185,6 +192,35 @@ export async function fetchTicketRecords(ticketId: string): Promise<TicketRecord
     .order('grabbed_at', { ascending: true });
 
   return data as TicketRecord[] ?? [];
+}
+
+/** 退票（仅限活动开始前 5 小时外） */
+export async function refundTicket(
+  recordId: string,
+  ticketId: string,
+  eventTime: string,
+): Promise<{ success: boolean; message: string }> {
+  // 检查是否在活动开始前 5 小时外
+  const event = new Date(eventTime);
+  const now = new Date();
+  const fiveHours = 5 * 60 * 60 * 1000;
+
+  if (event.getTime() - now.getTime() < fiveHours) {
+    return { success: false, message: '距活动开始不足 5 小时，无法退票' };
+  }
+
+  // 删除抢票记录
+  const { error } = await supabase
+    .from('ticket_records')
+    .delete()
+    .eq('id', recordId)
+    .eq('ticket_id', ticketId);
+
+  if (error) {
+    return { success: false, message: '退票失败，请重试' };
+  }
+
+  return { success: true, message: '退票成功' };
 }
 
 /** 实时订阅票务变更 */

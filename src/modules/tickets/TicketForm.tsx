@@ -21,6 +21,7 @@ export default function TicketForm({ onSuccess, onClose }: TicketFormProps) {
     total_count: number;
     per_user_limit: number;
     open_time: { toISOString: () => string };
+    event_time: { toISOString: () => string };
   }) => {
     setLoading(true);
     const ticket = await createTicket({
@@ -30,6 +31,7 @@ export default function TicketForm({ onSuccess, onClose }: TicketFormProps) {
       total_count: values.total_count,
       per_user_limit: values.per_user_limit,
       open_time: values.open_time.toISOString(),
+      event_time: values.event_time.toISOString(),
       created_by: user.id,
     });
     setLoading(false);
@@ -72,8 +74,12 @@ export default function TicketForm({ onSuccess, onClose }: TicketFormProps) {
           </Form.Item>
         </div>
 
+        <Form.Item name="event_time" label="活动开始时间" rules={[{ required: true, message: '请选择活动开始时间' }]}>
+          <DatePicker showTime style={{ width: '100%' }} placeholder="选择活动开始时间" />
+        </Form.Item>
+
         <Form.Item name="open_time" label="开抢时间" rules={[{ required: true, message: '请选择开抢时间' }]}>
-          <DatePicker showTime style={{ width: '100%' }} placeholder="选择开抢时间" />
+          <DatePicker showTime style={{ width: '100%' }} placeholder="选择开抢时间（应早于活动开始时间）" />
         </Form.Item>
 
         <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
