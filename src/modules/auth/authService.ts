@@ -41,6 +41,7 @@ export async function signUp(
   inviteCode: string,
   password: string,
   department: string,
+  role: string,
 ): Promise<{ user: UserProfile | null; error: string | null }> {
   const email = `${studentId}@stuunion.org`;
 
@@ -54,7 +55,7 @@ export async function signUp(
     return { user: null, error: authError?.message ?? '注册失败，请重试' };
   }
 
-  // 2. 写入 users 表
+  // 2. 写入 users 表（角色从邀请码获取，不再硬编码）
   const { data: userData, error: userError } = await supabase
     .from('users')
     .insert({
@@ -62,7 +63,7 @@ export async function signUp(
       name,
       student_id: studentId,
       department,
-      role: 'volunteer', // 新用户默认志愿者
+      role,
     })
     .select('*')
     .single();
@@ -78,6 +79,62 @@ export async function signUp(
     .eq('code', inviteCode);
 
   return { user: userData as UserProfile, error: null };
+}
+
+/** 教师注册：使用教师邀请码注册 */
+export async function signUpTeacher(
+  name: string,
+  teacherId: string,
+  inviteCode: string,
+  password: string,
+): Promise<{ user: UserProfile | null; error: string | null }> {
+  const email = `${teacherId}@stuunion.org`;
+
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (authError || !authData.user) {
+    return { user: null, error: authError?.message ?? '注册失败，请重试' };
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .insert({
+      auth_id: authData.user.id,
+      name,
+      student_id: teacherId,
+      department: '', // 教师无部门
+      role: 'teacher',
+    })
+    .select('*')
+    .single();
+
+  if (userError) {
+    return { user: null, error: userError.message };
+  }
+
+  await supabase
+    .from('invite_codes')
+    .update({ is_used: true, used_by: userData.id })
+    .eq('code', inviteCode);
+
+  return { user: userData as UserProfile, error: null };
+}
+
+/** 检查教师邀请码是否有效（role=teacher 的邀请码） */
+export async function checkTeacherCode(code: string) {
+  const { data, error } = await supabase
+    .from('invite_codes')
+    .select('*')
+    .eq('code', code)
+    .eq('is_used', false)
+    .eq('role', 'teacher')
+    .single();
+
+  if (error || !data) return null;
+  return data;
 }
 
 /** 登录 */
