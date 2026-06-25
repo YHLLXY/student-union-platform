@@ -24,11 +24,12 @@ export interface TicketRecord {
   grabbed_at: string;
 }
 
-/** 获取所有票务（含剩余数量） */
+/** 获取所有票务（含剩余数量，活动已开始的自动隐藏） */
 export async function fetchTickets(): Promise<Ticket[]> {
   const { data } = await supabase
     .from('tickets')
     .select('*, creator:created_by(name)')
+    .gt('event_time', new Date().toISOString())
     .order('open_time', { ascending: true });
 
   if (!data) return [];
