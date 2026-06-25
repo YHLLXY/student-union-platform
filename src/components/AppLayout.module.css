@@ -30,11 +30,28 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.feedbackBtn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: #1890ff;
+}
+
+.feedbackBtn:hover {
+  color: #40a9ff;
+}
+
+.siderInfo {
+  padding: 4px 8px;
   font-size: 12px;
   color: #95a5a6;
-  background: #fafafa;
 }
 
 .contentArea {

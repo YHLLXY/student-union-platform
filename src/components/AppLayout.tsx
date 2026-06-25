@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Dropdown, Avatar } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Button } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CheckSquareOutlined,
@@ -10,12 +10,14 @@ import {
   SettingOutlined,
   UserOutlined,
   LogoutOutlined,
+  BugOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
 import { useAuth } from './AuthContext';
 import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
+import FeedbackModal from './FeedbackModal';
 import styles from './AppLayout.module.css';
 
 const { Header, Sider, Content } = Layout;
@@ -39,6 +41,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const visibleMenus = MENU_ITEMS.filter((item) => {
     // admin 需要 dept_head+，其他菜单所有人可见
@@ -104,13 +107,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
           />
           {!collapsed && (
             <div className={styles.siderBottom}>
-              {getDepartmentLabel(user.department)} · {getRoleLabel(user.role)}
+              <Button
+                type="link"
+                size="small"
+                icon={<BugOutlined />}
+                className={styles.feedbackBtn}
+                onClick={() => setFeedbackOpen(true)}
+              >
+                反馈与建议
+              </Button>
+              <div className={styles.siderInfo}>
+                {getDepartmentLabel(user.department)} · {getRoleLabel(user.role)}
+              </div>
             </div>
           )}
         </Sider>
 
         <Content className={styles.contentArea}>{children}</Content>
       </Layout>
+
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </Layout>
   );
 }
