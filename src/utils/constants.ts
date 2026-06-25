@@ -1,13 +1,17 @@
-// 8 个部门
+// 12 个部门
 export const DEPARTMENTS: Record<string, string> = {
-  culture: '文艺部',
-  sports: '体育部',
-  academic: '学习部',
-  outreach: '外联部',
-  publicity: '宣传部',
-  office: '办公室',
+  presidium: '主席主任团',
+  student_office: '学办',
+  academic_support: '学辅',
+  youth_volunteers: '青协',
   organization: '组织部',
-  livelihood: '生活部',
+  student_aid: '学资',
+  science_competition: '科项+科竞部',
+  publicity: '宣传部',
+  life_services: '生活服务部',
+  sports: '体育部',
+  arts: '文艺部',
+  humanities: '人文部',
 };
 
 // 4 种角色
