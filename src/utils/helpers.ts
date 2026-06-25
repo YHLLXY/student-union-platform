@@ -6,6 +6,11 @@ export function hasMinRole(userRole: string, requiredRole: string): boolean {
   return (ROLE_LEVEL[userRole] ?? -1) >= (ROLE_LEVEL[requiredRole] ?? 99);
 }
 
+/** 判断是否为最高权限（主席或老师） */
+export function isAdmin(role: string): boolean {
+  return role === 'president' || role === 'teacher';
+}
+
 /** 格式化日期 YYYY-MM-DD */
 export function formatDate(date: string | Date): string {
   return dayjs(date).format('YYYY-MM-DD');
@@ -18,6 +23,7 @@ export function formatDateTime(date: string | Date): string {
 
 /** 根据英文 key 获取部门中文名 */
 export function getDepartmentLabel(key: string): string {
+  if (!key) return '—';
   return DEPARTMENTS[key] ?? key;
 }
 

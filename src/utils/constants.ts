@@ -14,11 +14,12 @@ export const DEPARTMENTS: Record<string, string> = {
   humanities: '人文部',
 };
 
-// 4 种角色
+// 5 种角色
 export const ROLES: Record<string, string> = {
-  volunteer: '志愿者',
+  volunteer: '常驻志愿者',
   dept_head: '部门负责人',
-  presidium: '主席团',
+  presidium: '主席团成员',
+  president: '主席',
   teacher: '老师',
 };
 
@@ -27,6 +28,7 @@ export const ROLE_LEVEL: Record<string, number> = {
   volunteer: 0,
   dept_head: 1,
   presidium: 2,
+  president: 3,
   teacher: 3,
 };
 
