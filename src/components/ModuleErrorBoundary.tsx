@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from 'react';
 import { Alert, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
+import { logger } from '../diagnostics';
 
 interface Props {
   children: ReactNode;
@@ -23,7 +24,11 @@ export default class ModuleErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    console.error(`[ModuleErrorBoundary:${this.props.moduleName}]`, error, info.componentStack);
+    logger.for(`${this.props.moduleName}/ModuleErrorBoundary`).error(
+      '模块渲染错误',
+      error,
+      { module: this.props.moduleName },
+    );
   }
 
   render() {

@@ -82,3 +82,50 @@ export const MENU_ITEMS: MenuItem[] = [
   { key: 'admin', label: '权限管理', icon: 'SettingOutlined', path: '/admin', minRole: 1 },
   { key: 'profile', label: '个人中心', icon: 'UserOutlined', path: '/profile', minRole: 0 },
 ];
+
+/** 诊断标签 — 模块/组件级，搜标签即定位到文件 */
+export const MODULE_TAGS = {
+  auth: {
+    LoginPage: 'auth/LoginPage',
+    authService: 'auth/authService',
+  },
+  tasks: {
+    TaskListPage: 'tasks/TaskListPage',
+    TaskDetail: 'tasks/TaskDetail',
+    TaskForm: 'tasks/TaskForm',
+    taskService: 'tasks/taskService',
+  },
+  notices: {
+    NoticeList: 'notices/NoticeList',
+    NoticeForm: 'notices/NoticeForm',
+    noticeService: 'notices/noticeService',
+  },
+  school: {
+    SchoolNoticeList: 'school/SchoolNoticeList',
+    SchoolNoticeForm: 'school/SchoolNoticeForm',
+    schoolService: 'school/schoolService',
+  },
+  profile: {
+    ProfilePage: 'profile/ProfilePage',
+    ChangePassword: 'profile/ChangePassword',
+    TaskCalendar: 'profile/TaskCalendar',
+    profileService: 'profile/profileService',
+  },
+  forum: {
+    PostList: 'forum/PostList',
+    PostDetail: 'forum/PostDetail',
+    PostForm: 'forum/PostForm',
+    forumService: 'forum/forumService',
+  },
+  admin: {
+    MemberManage: 'admin/MemberManage',
+    InviteCodeManage: 'admin/InviteCodeManage',
+    adminService: 'admin/adminService',
+  },
+  tickets: {
+    TicketList: 'tickets/TicketList',
+    TicketForm: 'tickets/TicketForm',
+    MyTickets: 'tickets/MyTickets',
+    ticketService: 'tickets/ticketService',
+  },
+} as const;

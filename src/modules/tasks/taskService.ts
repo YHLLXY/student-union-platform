@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('tasks/taskService');
 
 export interface Task {
   id: string;
@@ -47,7 +50,7 @@ export async function fetchTasks(userId: string, department: string, role: strin
   const { data, error } = await query;
 
   if (error) {
-    console.error('fetchTasks error:', error);
+    log.error('fetchTasks 查询失败', error);
     return [];
   }
 
@@ -96,7 +99,7 @@ export async function createTask(task: {
     .single();
 
   if (error) {
-    console.error('createTask error:', error);
+    log.error('createTask 创建失败', error);
     return null;
   }
   return data as Task;
