@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, Tag, Button, Input, List, message, Popconfirm } from 'antd';
+import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox } from 'antd';
 import type { UserProfile } from '../auth';
-import { hasMinRole, formatDateTime } from '../../utils/helpers';
-import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
-import { submitTask, fetchTaskSubmissions, reviewSubmission } from './taskService';
-import type { Task, TaskSubmission } from './taskService';
+import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
+import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '../../utils/constants';
+import {
+  submitTask, fetchTaskSubmissions, reviewSubmission,
+  updateHandoverNote, fetchLinkedNotices,
+} from './taskService';
+import type { Task, TaskSubmission, LinkedNotice } from './taskService';
+import styles from './tasks.module.css';
 
 const { TextArea } = Input;
 
@@ -18,13 +22,35 @@ interface TaskDetailProps {
 export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetailProps) {
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [note, setNote] = useState('');
+  const [handoverNote, setHandoverNote] = useState(task.handover_note ?? '');
   const [submitting, setSubmitting] = useState(false);
+  const [linkedNotices, setLinkedNotices] = useState<LinkedNotice[]>([]);
   const priority = TASK_PRIORITIES[task.priority] ?? TASK_PRIORITIES.normal;
   const status = TASK_STATUSES[task.status] ?? TASK_STATUSES.pending;
 
   useEffect(() => {
     fetchTaskSubmissions(task.id).then(setSubmissions);
+    fetchLinkedNotices(task.id).then(setLinkedNotices);
   }, [task.id]);
+
+  // 解析 Markdown 步骤清单为交互式 Checklist
+  const parseSteps = (content: string) => {
+    const lines = content.split('\n');
+    const steps: { text: string; checked: boolean }[] = [];
+    let inSteps = false;
+    for (const line of lines) {
+      if (line.startsWith('## 步骤清单')) { inSteps = true; continue; }
+      if (inSteps && line.startsWith('## ')) { inSteps = false; continue; }
+      if (inSteps && line.trim().startsWith('- [ ]')) {
+        steps.push({ text: line.replace('- [ ]', '').trim(), checked: false });
+      } else if (inSteps && line.trim().startsWith('- [x]')) {
+        steps.push({ text: line.replace('- [x]', '').trim(), checked: true });
+      }
+    }
+    return steps;
+  };
+
+  const steps = parseSteps(task.content ?? '');
 
   const handleSubmit = async () => {
     if (!note.trim()) {
@@ -32,6 +58,9 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       return;
     }
     setSubmitting(true);
+    if (handoverNote.trim()) {
+      await updateHandoverNote(task.id, handoverNote.trim());
+    }
     const result = await submitTask(task.id, user.id, note.trim());
     setSubmitting(false);
     if (result.success) {
@@ -42,6 +71,12 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
     } else {
       message.error(result.error ?? '提交失败');
     }
+  };
+
+  const handleSaveHandover = async () => {
+    const ok = await updateHandoverNote(task.id, handoverNote.trim());
+    if (ok) { message.success('交接备注已保存'); onUpdate(); }
+    else { message.error('保存失败'); }
   };
 
   const handleReview = async (submissionId: string, approved: boolean) => {
@@ -65,16 +100,58 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
           <Tag color={priority.color}>{priority.label}</Tag>
         </Descriptions.Item>
         <Descriptions.Item label="状态">
-          <Tag>{status.label}</Tag>
+          <Tag color={status.color}>{status.label}</Tag>
         </Descriptions.Item>
         <Descriptions.Item label="发布者">{task.creator_name}</Descriptions.Item>
         <Descriptions.Item label="执行人">{task.assignee_name ?? '部门全体'}</Descriptions.Item>
         <Descriptions.Item label="截止时间">{task.deadline ? formatDateTime(task.deadline) : '暂无'}</Descriptions.Item>
         <Descriptions.Item label="创建时间">{formatDateTime(task.created_at)}</Descriptions.Item>
+        {task.collaborating_departments && task.collaborating_departments.length > 0 && (
+          <Descriptions.Item label="关联部门" span={2}>
+            {task.collaborating_departments.map((d) => (
+              <Tag key={d} color="blue">{getDepartmentLabel(d)}</Tag>
+            ))}
+          </Descriptions.Item>
+        )}
         <Descriptions.Item label="任务内容" span={2}>
           {task.content || '暂无详细内容'}
         </Descriptions.Item>
+        {task.handover_note && (
+          <Descriptions.Item label="📝 交接备注" span={2}>
+            <div style={{ whiteSpace: 'pre-wrap', background: '#fffbe6', padding: 8, borderRadius: 4 }}>
+              {task.handover_note}
+            </div>
+          </Descriptions.Item>
+        )}
       </Descriptions>
+
+      {/* 步骤清单交互式 Checklist */}
+      {steps.length > 0 && (
+        <div className={styles.stepChecklist}>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>✅ 步骤清单</p>
+          {steps.map((step, i) => (
+            <div key={i} className={styles.stepItem}>
+              <Checkbox checked={step.checked} style={{ pointerEvents: 'none' }}>
+                <span style={step.checked ? { textDecoration: 'line-through', color: '#95a5a6' } : {}}>
+                  {step.text}
+                </span>
+              </Checkbox>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 关联公告 */}
+      {linkedNotices.length > 0 && (
+        <div className={styles.linkedSection}>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>📢 被以下公告关联</p>
+          {linkedNotices.map((n) => (
+            <Tag key={n.id} color="orange" style={{ cursor: 'pointer', marginBottom: 4 }}>
+              {NOTICE_TYPES[n.type] ?? '通知'}：{n.title}
+            </Tag>
+          ))}
+        </div>
+      )}
 
       {/* 提交完成区 */}
       {canSubmit && (
@@ -88,9 +165,36 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
             maxLength={1000}
             style={{ marginBottom: 8 }}
           />
+          <div className={styles.handoverHint}>
+            💡 填写交接备注，方便后继者了解注意事项
+          </div>
+          <TextArea
+            rows={2}
+            value={handoverNote}
+            onChange={(e) => setHandoverNote(e.target.value)}
+            placeholder="交接备注（可选）：后续接手的同学需要知道什么？"
+            maxLength={1000}
+            style={{ marginBottom: 8 }}
+          />
           <Button type="primary" onClick={handleSubmit} loading={submitting}>
             提交任务
           </Button>
+        </div>
+      )}
+
+      {/* 已完成任务可追加交接备注 */}
+      {task.status === 'completed' && user.id === (task.assigned_to || task.created_by) && (
+        <div style={{ marginBottom: 20, padding: '16px', background: '#f6ffed', borderRadius: 8 }}>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>📝 交接备注</p>
+          <TextArea
+            rows={3}
+            value={handoverNote}
+            onChange={(e) => setHandoverNote(e.target.value)}
+            placeholder="补充交接备注，帮助后继者了解情况"
+            maxLength={1000}
+            style={{ marginBottom: 8 }}
+          />
+          <Button onClick={handleSaveHandover}>保存交接备注</Button>
         </div>
       )}
 
@@ -114,9 +218,16 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
                         okText="通过"
                         cancelText="取消"
                       >
-                        <Button type="link" size="small" style={{ color: '#27ae60' }}>
-                          通过
-                        </Button>
+                        <Button type="link" size="small" style={{ color: '#27ae60' }}>通过</Button>
+                      </Popconfirm>,
+                      <Popconfirm
+                        key="reject"
+                        title="确认打回？"
+                        onConfirm={() => handleReview(sub.id, false)}
+                        okText="打回"
+                        cancelText="取消"
+                      >
+                        <Button type="link" size="small" danger>打回</Button>
                       </Popconfirm>,
                     ]
                   : undefined
