@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Select, Button, Popconfirm, message, Spin } from 'antd';
+import { Table, Select, Button, Popconfirm, message, Spin, Tabs } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { getDepartmentLabel, getRoleLabel, isAdmin } from '../../utils/helpers';
 import { ROLES, DEPARTMENTS } from '../../utils/constants';
 import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetMemberPassword } from './adminService';
 import type { UserProfile } from '../auth';
 import InviteCodeManage from './InviteCodeManage';
+import WorkOverview from './WorkOverview';
 import styles from './admin.module.css';
 
 const roleOptions = Object.entries(ROLES).map(([key, label]) => ({ value: key, label }));
@@ -15,6 +16,7 @@ export default function MemberManage() {
   const user = useAuth();
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('members');
 
   const loadMembers = useCallback(async () => {
     const data = await fetchAllMembers(user.role, user.department);
@@ -131,10 +133,8 @@ export default function MemberManage() {
 
   if (loading) return <Spin />;
 
-  return (
+  const memberContent = (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>⚙️ 权限管理</h2>
-
       <div className={styles.section}>
         <div className={styles.sectionTitle}>👥 成员管理</div>
         <Table
@@ -145,10 +145,23 @@ export default function MemberManage() {
           pagination={{ pageSize: 20 }}
         />
       </div>
-
       <div className={styles.section}>
         <InviteCodeManage userRole={user.role} userDept={user.department} />
       </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>⚙️ 权限管理</h2>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { key: 'members', label: '👥 成员管理', children: memberContent },
+          { key: 'overview', label: '📊 工作看板', children: <WorkOverview /> },
+        ]}
+      />
     </div>
   );
 }

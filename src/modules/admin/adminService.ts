@@ -1,5 +1,9 @@
 import supabase from '../../supabaseClient';
 import type { UserProfile } from '../auth';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('admin/adminService');
+void log;
 
 /** 获取成员列表 */
 export async function fetchAllMembers(userRole: string, userDept: string): Promise<UserProfile[]> {
@@ -109,4 +113,52 @@ export async function resetMemberPassword(authId: string): Promise<boolean> {
   });
 
   return !error;
+}
+
+// ========== 成员任务聚合 ==========
+export interface MemberWorkSummary {
+  user: UserProfile;
+  pending: number;
+  in_progress: number;
+  review: number;
+  completed: number;
+  overdue: number;
+  total: number;
+}
+
+/** 获取所有成员的任务状态分布 */
+export async function fetchMemberWorkSummaries(userRole: string, userDept: string): Promise<MemberWorkSummary[]> {
+  let memberQuery = supabase.from('users').select('*').neq('role', 'removed').order('created_at', { ascending: false });
+  if (userRole === 'dept_head') {
+    memberQuery = memberQuery.eq('department', userDept);
+  }
+  const { data: members } = await memberQuery;
+  if (!members || members.length === 0) return [];
+
+  const summaries: MemberWorkSummary[] = [];
+  const now = new Date().toISOString();
+
+  for (const m of members) {
+    const user = m as UserProfile;
+
+    const [pendingRes, progressRes, reviewRes, completedRes, overdueRes] = await Promise.all([
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending'),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'in_progress'),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'review'),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'completed'),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).neq('status', 'completed').lt('deadline', now),
+    ]);
+
+    summaries.push({
+      user,
+      pending: pendingRes.count ?? 0,
+      in_progress: progressRes.count ?? 0,
+      review: reviewRes.count ?? 0,
+      completed: completedRes.count ?? 0,
+      overdue: overdueRes.count ?? 0,
+      total: (pendingRes.count ?? 0) + (progressRes.count ?? 0) + (reviewRes.count ?? 0) + (completedRes.count ?? 0),
+    });
+  }
+
+  return summaries;
 }
