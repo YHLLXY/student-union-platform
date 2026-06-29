@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Input, Select, Switch, Button, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
-import { createNotice } from './noticeService';
+import { createNotice, fetchActiveTasksForLinking } from './noticeService';
 
 const { TextArea } = Input;
 
@@ -13,8 +13,20 @@ interface NoticeFormProps {
 export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
   const user = useAuth();
   const [loading, setLoading] = useState(false);
+  const [taskOptions, setTaskOptions] = useState<{ value: string; label: string }[]>([]);
 
-  const handleSubmit = async (values: { title: string; content: string; type: string; is_pinned: boolean }) => {
+  useEffect(() => {
+    fetchActiveTasksForLinking(user.department).then((tasks) => {
+      setTaskOptions(tasks.map((t) => ({
+        value: t.id,
+        label: `[${t.status === 'review' ? '待审' : t.status === 'in_progress' ? '进行中' : '待开始'}] ${t.title}`,
+      })));
+    });
+  }, [user.department]);
+
+  const handleSubmit = async (values: {
+    title: string; content: string; type: string; is_pinned: boolean; linked_tasks?: string[];
+  }) => {
     setLoading(true);
     const notice = await createNotice({
       title: values.title,
@@ -23,15 +35,11 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
       department: user.department,
       is_pinned: values.is_pinned,
       created_by: user.id,
+      linked_tasks: values.linked_tasks ?? [],
     });
     setLoading(false);
-
-    if (notice) {
-      message.success('公告发布成功');
-      onSuccess();
-    } else {
-      message.error('发布失败');
-    }
+    if (notice) { message.success('公告发布成功'); onSuccess(); }
+    else { message.error('发布失败'); }
   };
 
   return (
@@ -58,6 +66,19 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
 
         <Form.Item name="content" label="内容">
           <TextArea rows={5} placeholder="公告详细内容" maxLength={5000} />
+        </Form.Item>
+
+        <Form.Item name="linked_tasks" label="🔗 关联任务（可选）">
+          <Select
+            mode="multiple"
+            placeholder="搜索并选择本部门进行中的任务"
+            options={taskOptions}
+            allowClear
+            showSearch
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
 
         <Form.Item name="is_pinned" label="置顶" valuePropName="checked">
