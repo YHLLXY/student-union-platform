@@ -7,6 +7,8 @@ import { fetchUserStats } from './profileService';
 import type { UserStats } from './profileService';
 import TaskCalendar from './TaskCalendar';
 import ChangePassword from './ChangePassword';
+import Heatmap from './Heatmap';
+import Leaderboard from './Leaderboard';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
@@ -49,6 +51,14 @@ export default function ProfilePage() {
           />
         </Card>
       </div>
+
+      <Card style={{ marginBottom: 16 }}>
+        <Heatmap />
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <Leaderboard />
+      </Card>
 
       {/* 任务日历 */}
       <Card title="📅 任务日历" style={{ marginBottom: 16 }}>
