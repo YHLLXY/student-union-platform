@@ -17,6 +17,12 @@ export interface Task {
   assignee_name?: string;
   created_at: string;
   updated_at: string;
+  // 新增字段
+  template_id?: string | null;
+  handover_note?: string | null;
+  collaborating_departments?: string[];
+  // 关联公告
+  linked_notices?: LinkedNotice[];
 }
 
 export interface TaskSubmission {
@@ -29,6 +35,29 @@ export interface TaskSubmission {
   submitter_name?: string;
   submitted_at: string;
   reviewed_at: string | null;
+}
+
+export interface LinkedNotice {
+  id: string;
+  title: string;
+  type: string;
+}
+
+export interface TaskTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  department: string;
+  steps: TemplateStep[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateStep {
+  order: number;
+  title: string;
+  description: string;
 }
 
 /** 按角色权限获取任务列表 */
@@ -88,12 +117,15 @@ export async function createTask(task: {
   assigned_to?: string | null;
   deadline?: string | null;
   created_by: string;
+  template_id?: string | null;
+  collaborating_departments?: string[];
 }): Promise<Task | null> {
   const { data, error } = await supabase
     .from('tasks')
     .insert({
       ...task,
       status: 'pending',
+      collaborating_departments: task.collaborating_departments ?? [],
     })
     .select('*')
     .single();
@@ -224,4 +256,101 @@ export function subscribeToTasks(
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+// ========== 任务模板 CRUD ==========
+
+/** 获取本部门任务模板列表 */
+export async function fetchTemplates(department: string): Promise<TaskTemplate[]> {
+  const { data, error } = await supabase
+    .from('task_templates')
+    .select('*')
+    .eq('department', department)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    log.error('fetchTemplates 查询失败', error);
+    return [];
+  }
+  return (data || []) as TaskTemplate[];
+}
+
+/** 创建任务模板 */
+export async function createTemplate(template: {
+  title: string;
+  description?: string;
+  department: string;
+  steps: TemplateStep[];
+  created_by: string;
+}): Promise<TaskTemplate | null> {
+  const { data, error } = await supabase
+    .from('task_templates')
+    .insert(template)
+    .select('*')
+    .single();
+
+  if (error) {
+    log.error('createTemplate 创建失败', error);
+    return null;
+  }
+  return data as TaskTemplate;
+}
+
+/** 更新任务模板 */
+export async function updateTemplate(
+  id: string,
+  updates: { title?: string; description?: string; steps?: TemplateStep[] },
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('task_templates')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    log.error('updateTemplate 更新失败', error);
+    return false;
+  }
+  return true;
+}
+
+/** 删除任务模板 */
+export async function deleteTemplate(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('task_templates')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    log.error('deleteTemplate 删除失败', error);
+    return false;
+  }
+  return true;
+}
+
+/** 更新任务交接备注 */
+export async function updateHandoverNote(taskId: string, note: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('tasks')
+    .update({ handover_note: note, updated_at: new Date().toISOString() })
+    .eq('id', taskId);
+
+  if (error) {
+    log.error('updateHandoverNote 更新失败', error);
+    return false;
+  }
+  return true;
+}
+
+/** 获取关联到某任务的通知 */
+export async function fetchLinkedNotices(taskId: string): Promise<LinkedNotice[]> {
+  const { data, error } = await supabase
+    .from('notices')
+    .select('id, title, type')
+    .contains('linked_tasks', [taskId]);
+
+  if (error) {
+    log.error('fetchLinkedNotices 查询失败', error);
+    return [];
+  }
+  return (data || []) as LinkedNotice[];
 }
