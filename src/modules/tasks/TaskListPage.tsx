@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Tabs, Button, Spin, Modal, Empty } from 'antd';
-import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
@@ -8,6 +9,7 @@ import { fetchTasks, subscribeToTasks } from './taskService';
 import type { Task } from './taskService';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
+import TaskTemplateManage from './TaskTemplateManage';
 import styles from './tasks.module.css';
 
 const priorityBorderClass: Record<string, string> = {
@@ -18,11 +20,14 @@ const priorityBorderClass: Record<string, string> = {
 
 export default function TaskListPage() {
   const user = useAuth();
+  const [searchParams] = useSearchParams();
+  const memberFilter = searchParams.get('member') ?? '';
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const loadTasks = useCallback(async () => {
     const data = await fetchTasks(user.id, user.department, user.role);
@@ -32,30 +37,38 @@ export default function TaskListPage() {
 
   useEffect(() => {
     loadTasks();
-
-    // 实时订阅
-    const unsubscribe = subscribeToTasks(user.department, () => {
-      loadTasks();
-    });
-
+    const unsubscribe = subscribeToTasks(user.department, () => { loadTasks(); });
     return unsubscribe;
   }, [loadTasks, user.department]);
 
-  const filteredTasks = filter === 'all'
-    ? tasks
-    : tasks.filter((t) => t.status === filter);
+  // 应用 member 筛选
+  let filteredTasks = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
+  if (memberFilter) {
+    filteredTasks = filteredTasks.filter((t) =>
+      t.assigned_to === memberFilter || t.created_by === memberFilter);
+  }
 
   const canCreate = hasMinRole(user.role, 'dept_head');
 
   return (
     <div>
       <div className={styles.pageHeader}>
-        <h2 className={styles.pageTitle}>📋 任务管理</h2>
-        {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
-            发布任务
-          </Button>
-        )}
+        <h2 className={styles.pageTitle}>
+          📋 任务管理
+          {memberFilter && <span style={{ fontSize: 14, fontWeight: 400, color: '#7f8c8d', marginLeft: 8 }}>（已筛选成员）</span>}
+        </h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {canCreate && (
+            <>
+              <Button icon={<FileTextOutlined />} onClick={() => setShowTemplates(true)}>
+                模板管理
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
+                发布任务
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <Tabs
@@ -74,7 +87,7 @@ export default function TaskListPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
       ) : filteredTasks.length === 0 ? (
-        <Empty description="暂无任务" className={styles.emptyState} />
+        <Empty description={memberFilter ? '该成员暂无任务' : '暂无任务'} className={styles.emptyState} />
       ) : (
         filteredTasks.map((task) => {
           const priority = TASK_PRIORITIES[task.priority] ?? TASK_PRIORITIES.normal;
@@ -88,7 +101,12 @@ export default function TaskListPage() {
               <div className={styles.cardTitle}>{task.title}</div>
               <div className={styles.cardMeta}>
                 <Tag color={priority.color}>{priority.label}</Tag>
-                <Tag>{status.label}</Tag>
+                <Tag color={status.color}>{status.label}</Tag>
+                {task.collaborating_departments && task.collaborating_departments.length > 0 &&
+                  task.collaborating_departments.map((d) => (
+                    <Tag key={d} color="blue" style={{ fontSize: 11 }}>🤝 {getDepartmentLabel(d)}</Tag>
+                  ))
+                }
                 <span className={styles.cardMetaItem}>
                   <ClockCircleOutlined /> 截止 {task.deadline ? formatDateTime(task.deadline) : '暂无'}
                 </span>
@@ -101,49 +119,27 @@ export default function TaskListPage() {
                     <TeamOutlined /> {getDepartmentLabel(task.assigned_department)}
                   </span>
                 )}
-                <span className={styles.cardMetaItem}>
-                  发布者: {task.creator_name}
-                </span>
+                <span className={styles.cardMetaItem}>发布者: {task.creator_name}</span>
               </div>
             </Card>
           );
         })
       )}
 
-      {/* 任务详情 Modal */}
-      <Modal
-        open={!!detailTask}
-        onCancel={() => setDetailTask(null)}
-        footer={null}
-        width={700}
-        destroyOnClose
-      >
+      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={700} destroyOnClose>
         {detailTask && (
-          <TaskDetail
-            task={detailTask}
-            user={user}
-            onUpdate={loadTasks}
-            onClose={() => setDetailTask(null)}
-          />
+          <TaskDetail task={detailTask} user={user} onUpdate={loadTasks} onClose={() => setDetailTask(null)} />
         )}
       </Modal>
 
-      {/* 发布任务 Modal */}
-      <Modal
-        open={showForm}
-        onCancel={() => setShowForm(false)}
-        footer={null}
-        width={600}
-        destroyOnClose
-      >
+      <Modal open={showForm} onCancel={() => setShowForm(false)} footer={null} width={600} destroyOnClose>
         <TaskForm
-          onSuccess={() => {
-            setShowForm(false);
-            loadTasks();
-          }}
+          onSuccess={() => { setShowForm(false); loadTasks(); }}
           onClose={() => setShowForm(false)}
         />
       </Modal>
+
+      <TaskTemplateManage open={showTemplates} onClose={() => setShowTemplates(false)} />
     </div>
   );
 }
