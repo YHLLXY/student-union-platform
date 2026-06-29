@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('school/schoolService');
 
 export interface SchoolNotice {
   id: string;
@@ -19,7 +22,7 @@ export async function fetchSchoolNotices(): Promise<SchoolNotice[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('fetchSchoolNotices error:', error);
+    log.error('fetchSchoolNotices 查询失败', error);
     return [];
   }
 
@@ -43,7 +46,7 @@ export async function createSchoolNotice(notice: {
     .single();
 
   if (error) {
-    console.error('createSchoolNotice error:', error);
+    log.error('createSchoolNotice 创建失败', error);
     return null;
   }
   return data as SchoolNotice;

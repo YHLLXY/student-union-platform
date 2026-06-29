@@ -27,7 +27,7 @@ export default class ModuleErrorBoundary extends Component<Props, State> {
     logger.for(`${this.props.moduleName}/ModuleErrorBoundary`).error(
       '模块渲染错误',
       error,
-      { module: this.props.moduleName },
+      { module: this.props.moduleName, stack: info.componentStack?.slice(0, 500) },
     );
   }
 

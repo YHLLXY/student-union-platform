@@ -1,32 +1,46 @@
-# React + TypeScript + Vite
+# 🏛 学生会线上交流平台
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> 精简 · 高效 · 连接 — 为学生会内部成员打造的线上办公平台
 
-Currently, two official plugins are available:
+集**任务管理、信息公告、部门交流、活动票务**于一体，风格参考钉钉/飞书。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🔧 技术栈
 
-## React Compiler
+| 层面 | 选型 |
+|------|------|
+| 前端框架 | React 19 + TypeScript |
+| 构建工具 | Vite 8 |
+| UI 组件库 | Ant Design 6 |
+| 路由 | React Router 7 |
+| 后端服务 | Supabase（认证 + PostgreSQL + 实时订阅） |
+| 部署 | GitHub Pages |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📦 模块
 
-## Expanding the Oxlint configuration
+| 模块 | 说明 |
+|------|------|
+| 登录认证 | 学生/教师双入口，邀请码注册，忘记密码 |
+| 任务管理 | 发布、执行、审核、实时状态追踪 |
+| 部门公告 | 部门内公告发布、置顶、已读追踪 |
+| 学校信息 | 校级通知，全员可见 |
+| 部门论坛 | Markdown 发帖回帖，协同部门可见 |
+| 活动抢票 | 票务发布、抢票、退票 |
+| 个人中心 | 任务统计、日历、修改密码 |
+| 权限管理 | 成员管理、邀请码管理、部门调动 |
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 🚀 本地开发
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev        # 启动开发服务器 http://localhost:5173
+npm run build      # 生产构建
+npm run preview    # 预览构建结果
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 📡 环境变量
+
+复制 `.env.example` 为 `.env`，填入 Supabase 项目 URL 和 anon key。
+
+## 📄 许可
+
+仅供学生会内部使用。

@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('notices/noticeService');
 
 export interface Notice {
   id: string;
@@ -22,7 +25,7 @@ export async function fetchNotices(department: string): Promise<Notice[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('fetchNotices error:', error);
+    log.error('fetchNotices 查询失败', error);
     return [];
   }
 
@@ -48,7 +51,7 @@ export async function createNotice(notice: {
     .single();
 
   if (error) {
-    console.error('createNotice error:', error);
+    log.error('createNotice 创建失败', error);
     return null;
   }
   return data as Notice;
