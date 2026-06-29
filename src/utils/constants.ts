@@ -62,6 +62,7 @@ export const FORUM_CATEGORIES: Record<string, string> = {
   activity: '活动策划',
   resource: '资料共享',
   casual: '闲聊',
+  knowledge: '📚 知识库',
 };
 
 // 菜单配置
@@ -94,6 +95,7 @@ export const MODULE_TAGS = {
     TaskDetail: 'tasks/TaskDetail',
     TaskForm: 'tasks/TaskForm',
     taskService: 'tasks/taskService',
+    TaskTemplateManage: 'tasks/TaskTemplateManage',
   },
   notices: {
     NoticeList: 'notices/NoticeList',
@@ -109,6 +111,8 @@ export const MODULE_TAGS = {
     ProfilePage: 'profile/ProfilePage',
     ChangePassword: 'profile/ChangePassword',
     TaskCalendar: 'profile/TaskCalendar',
+    Heatmap: 'profile/Heatmap',
+    Leaderboard: 'profile/Leaderboard',
     profileService: 'profile/profileService',
   },
   forum: {
@@ -120,6 +124,7 @@ export const MODULE_TAGS = {
   admin: {
     MemberManage: 'admin/MemberManage',
     InviteCodeManage: 'admin/InviteCodeManage',
+    WorkOverview: 'admin/WorkOverview',
     adminService: 'admin/adminService',
   },
   tickets: {

@@ -212,3 +212,31 @@ ON CONFLICT (code) DO NOTHING;
 --   USING (user_id IN (SELECT id FROM users WHERE auth_id = auth.uid())
 --          OR ticket_id IN (SELECT id FROM tickets WHERE created_by IN (SELECT id FROM users WHERE auth_id = auth.uid()))
 --          OR (SELECT role FROM users WHERE auth_id = auth.uid()) IN ('president', 'teacher'));
+
+-- ============================================================
+-- 第五部分：平台增强 — 5模块务实增强（2026-06-29）
+-- ============================================================
+
+-- 1. 任务模板表
+CREATE TABLE IF NOT EXISTS task_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  department TEXT NOT NULL,
+  steps JSONB NOT NULL DEFAULT '[]',
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. tasks 表新增列
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES task_templates(id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS handover_note TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS collaborating_departments TEXT[] DEFAULT '{}';
+
+-- 3. forum_posts 表新增列
+ALTER TABLE forum_posts ADD COLUMN IF NOT EXISTS template_type TEXT;
+ALTER TABLE forum_posts ADD COLUMN IF NOT EXISTS template_data JSONB;
+
+-- 4. notices 表新增列
+ALTER TABLE notices ADD COLUMN IF NOT EXISTS linked_tasks UUID[] DEFAULT '{}';

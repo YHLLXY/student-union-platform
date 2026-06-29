@@ -12,6 +12,8 @@ export interface ForumPost {
   reply_count?: number;
   created_at: string;
   updated_at: string;
+  template_type?: string | null;
+  template_data?: Record<string, unknown> | null;
 }
 
 export interface ForumReply {
@@ -106,6 +108,8 @@ export async function createPost(post: {
   department: string;
   created_by: string;
   collaborating_departments?: string[];
+  template_type?: string | null;
+  template_data?: Record<string, unknown> | null;
 }): Promise<ForumPost | null> {
   const { data, error } = await supabase
     .from('forum_posts')

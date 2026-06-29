@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Tag, Spin, message, Select, Popconfirm } from 'antd';
+import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions } from 'antd';
 import { SendOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../components/AuthContext';
@@ -12,6 +12,22 @@ import styles from './forum.module.css';
 const { TextArea } = Input;
 
 const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
+
+const templateFieldLabels: Record<string, Record<string, string>> = {
+  meeting: {
+    meeting_time: '会议时间', location: '会议地点', attendees: '参会人员',
+    topics: '议题列表', resolutions: '决议', todos: '待办事项',
+  },
+  review: {
+    activity_name: '活动名称', activity_time: '活动时间', participant_count: '参与人数',
+    highlights: '活动亮点', shortcomings: '不足之处', improvements: '改进建议',
+    budget_summary: '预算决算情况',
+  },
+  contact: {
+    org_name: '单位名称', contact_person: '联系人', position: '职务',
+    phone_wechat: '电话/微信', cooperation_history: '合作历史', notes: '备注',
+  },
+};
 
 interface PostDetailProps {
   postId: string;
@@ -95,7 +111,27 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
       </div>
 
       <div style={{ padding: '16px 0', borderTop: '1px solid #f0f0f0', lineHeight: 1.8 }}>
-        <ReactMarkdown>{post.content || '暂无内容'}</ReactMarkdown>
+        {post.template_type && post.template_data ? (
+          <Descriptions bordered size="small" column={1}>
+            {Object.entries(post.template_data).map(([key, val]) => {
+              const label = templateFieldLabels[post.template_type!]?.[key] ?? key;
+              const renderVal = (v: unknown) => {
+                if (Array.isArray(v)) return v.join('、');
+                if (typeof v === 'string' && v.includes('\n')) {
+                  return v.split('\n').map((line, i) => (<div key={i}>{line || <br />}</div>));
+                }
+                return String(v ?? '-');
+              };
+              return (
+                <Descriptions.Item key={key} label={label}>
+                  {renderVal(val)}
+                </Descriptions.Item>
+              );
+            })}
+          </Descriptions>
+        ) : (
+          <ReactMarkdown>{post.content || '暂无内容'}</ReactMarkdown>
+        )}
       </div>
 
       {/* 追加协同部门（presidium+） */}
