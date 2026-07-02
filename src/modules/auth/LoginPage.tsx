@@ -45,22 +45,22 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
     setLoading(true);
     try {
+      // 先检查学号是否已注册，已注册用户跳过邀请码校验直接登录
+      const exists = await checkStudentId(studentForm.studentId.trim());
+      if (exists) {
+        setStep('login');
+        return;
+      }
+      // 新用户：验证邀请码
       const codeData = await checkInviteCode(studentForm.inviteCode.trim());
       if (!codeData) {
         setError('邀请码无效或已被使用');
-        setLoading(false);
         return;
       }
       const dept = codeData.department as string;
       const role = codeData.role as string ?? 'volunteer';
       setStudentForm((p) => ({ ...p, department: dept, role }));
-
-      const exists = await checkStudentId(studentForm.studentId.trim());
-      if (exists) {
-        setStep('login');
-      } else {
-        setStep('setPassword');
-      }
+      setStep('setPassword');
     } catch {
       setError('操作失败，请检查网络连接');
     } finally {
@@ -128,18 +128,19 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
     setLoading(true);
     try {
-      const codeData = await checkTeacherCode(teacherForm.inviteCode.trim());
-      if (!codeData) {
-        setError('教师邀请码无效或已被使用');
-        setLoading(false);
-        return;
-      }
+      // 先检查工号是否已注册，已注册用户跳过邀请码校验直接登录
       const exists = await checkStudentId(teacherForm.teacherId.trim());
       if (exists) {
         setStep('login');
-      } else {
-        setStep('setPassword');
+        return;
       }
+      // 新用户：验证教师邀请码
+      const codeData = await checkTeacherCode(teacherForm.inviteCode.trim());
+      if (!codeData) {
+        setError('教师邀请码无效或已被使用');
+        return;
+      }
+      setStep('setPassword');
     } catch {
       setError('操作失败，请检查网络连接');
     } finally {
@@ -203,25 +204,17 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setError(null);
     const id = isStudent ? studentForm.studentId.trim() : teacherForm.teacherId.trim();
     const name = isStudent ? studentForm.name.trim() : teacherForm.name.trim();
-    const code = isStudent ? studentForm.inviteCode.trim() : teacherForm.inviteCode.trim();
 
-    if (!name || !id || !code) {
-      setError('请先在上一步填写姓名、学号/工号和邀请码');
+    if (!name || !id) {
+      setError('请先在上一步填写姓名和学号/工号');
       return;
     }
     setLoading(true);
     try {
-      // 验证身份：姓名 + 学号匹配
+      // 验证身份：姓名 + 学号匹配即可
       const user = await verifyUser(name, id);
       if (!user) {
         setError('姓名与学号/工号不匹配，请检查');
-        setLoading(false);
-        return;
-      }
-      // 验证邀请码有效
-      const codeData = isStudent ? await checkInviteCode(code) : await checkTeacherCode(code);
-      if (!codeData) {
-        setError('邀请码无效或已被使用');
         setLoading(false);
         return;
       }
