@@ -64,3 +64,96 @@
 .leaderboardRank { width: 24px; display: flex; justify-content: center; }
 .leaderboardName { flex: 1; font-size: 14px; }
 .leaderboardCount { font-size: 13px; color: #7f8c8d; }
+
+/* 通讯录 */
+.directoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.memberCard {
+  transition: box-shadow 0.2s;
+}
+.memberCard:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.memberCardBody {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.memberName {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberStats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.memberStatItem {
+  cursor: default;
+}
+
+/* 通讯录 */
+.directoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.memberCard {
+  cursor: default;
+}
+
+.memberCardBody {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.memberName {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberStats {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.memberStatItem {
+  font-size: 12px;
+  cursor: default;
+}
+
+/* 部门新人指南 */
+.guideSection {
+  margin-bottom: 16px;
+}
+
+.guideSection:last-child {
+  margin-bottom: 0;
+}
+
+.guideSection h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}

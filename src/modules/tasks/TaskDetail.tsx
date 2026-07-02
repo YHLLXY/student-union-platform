@@ -9,6 +9,7 @@ import {
 } from './taskService';
 import type { Task, TaskSubmission, LinkedNotice } from './taskService';
 import styles from './tasks.module.css';
+import MilestonePanel from './MilestonePanel';
 
 const { TextArea } = Input;
 
@@ -138,6 +139,23 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
               </Checkbox>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 里程碑面板（仅当任务启用了里程碑模式时显示） */}
+      {task.has_milestones && (
+        <MilestonePanel
+          taskId={task.id}
+          userId={user.id}
+          userRole={user.role}
+        />
+      )}
+
+      {/* 来源公告 */}
+      {task.linked_notice_id && (
+        <div className={styles.linkedSection}>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>📋 来源公告</p>
+          <Tag color="blue">从公告创建</Tag>
         </div>
       )}
 

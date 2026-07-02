@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
-import { fetchTasks, subscribeToTasks } from './taskService';
+import { fetchTasks, subscribeToTasks, fetchTaskOverdueMilestones } from './taskService';
 import type { Task } from './taskService';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
@@ -28,10 +28,25 @@ export default function TaskListPage() {
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [overdueMilestoneMap, setOverdueMilestoneMap] = useState<Record<string, number>>({});
 
   const loadTasks = useCallback(async () => {
     const data = await fetchTasks(user.id, user.department, user.role);
     setTasks(data);
+    // 批量查询里程碑逾期数
+    const milestoneTasks = data.filter((t) => t.has_milestones);
+    if (milestoneTasks.length > 0) {
+      const map: Record<string, number> = {};
+      await Promise.all(
+        milestoneTasks.map(async (t) => {
+          const count = await fetchTaskOverdueMilestones(t.id);
+          if (count > 0) map[t.id] = count;
+        }),
+      );
+      setOverdueMilestoneMap(map);
+    } else {
+      setOverdueMilestoneMap({});
+    }
     setLoading(false);
   }, [user.id, user.department, user.role]);
 
@@ -102,6 +117,11 @@ export default function TaskListPage() {
               <div className={styles.cardMeta}>
                 <Tag color={priority.color}>{priority.label}</Tag>
                 <Tag color={status.color}>{status.label}</Tag>
+                {overdueMilestoneMap[task.id] > 0 && (
+                  <Tag color="red" style={{ fontSize: 11 }}>
+                    ⚠️ {overdueMilestoneMap[task.id]} 项逾期
+                  </Tag>
+                )}
                 {task.collaborating_departments && task.collaborating_departments.length > 0 &&
                   task.collaborating_departments.map((d) => (
                     <Tag key={d} color="blue" style={{ fontSize: 11 }}>🤝 {getDepartmentLabel(d)}</Tag>

@@ -23,6 +23,9 @@ export interface Task {
   collaborating_departments?: string[];
   // 关联公告
   linked_notices?: LinkedNotice[];
+  // 二期新增
+  linked_notice_id?: string | null;
+  has_milestones?: boolean;
 }
 
 export interface TaskSubmission {
@@ -41,6 +44,20 @@ export interface LinkedNotice {
   id: string;
   title: string;
   type: string;
+}
+
+export interface TaskMilestone {
+  id: string;
+  task_id: string;
+  title: string;
+  description: string | null;
+  deadline: string | null;
+  status: 'pending' | 'completed';
+  sort_order: number;
+  completed_at: string | null;
+  completed_by: string | null;
+  completer_name?: string;
+  created_at: string;
 }
 
 export interface TaskTemplate {
@@ -119,13 +136,24 @@ export async function createTask(task: {
   created_by: string;
   template_id?: string | null;
   collaborating_departments?: string[];
+  has_milestones?: boolean;    // 二期新增
+  linked_notice_id?: string;   // 二期新增
 }): Promise<Task | null> {
   const { data, error } = await supabase
     .from('tasks')
     .insert({
-      ...task,
+      title: task.title,
+      content: task.content,
+      priority: task.priority,
+      assigned_department: task.assigned_department,
+      assigned_to: task.assigned_to ?? null,
+      deadline: task.deadline ?? null,
+      created_by: task.created_by,
       status: 'pending',
+      template_id: task.template_id ?? null,
       collaborating_departments: task.collaborating_departments ?? [],
+      has_milestones: task.has_milestones ?? false,
+      linked_notice_id: task.linked_notice_id ?? null,
     })
     .select('*')
     .single();
@@ -353,4 +381,99 @@ export async function fetchLinkedNotices(taskId: string): Promise<LinkedNotice[]
     return [];
   }
   return (data || []) as LinkedNotice[];
+}
+
+// ========== 任务里程碑 CRUD ==========
+
+/** 获取任务的里程碑列表 */
+export async function fetchMilestones(taskId: string): Promise<TaskMilestone[]> {
+  const { data, error } = await supabase
+    .from('task_milestones')
+    .select('*, completer:completed_by(name)')
+    .eq('task_id', taskId)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    log.error('fetchMilestones 查询失败', error);
+    return [];
+  }
+
+  return (data || []).map((m: Record<string, unknown>) => ({
+    ...m,
+    completer_name: (m.completer as { name: string } | null)?.name ?? undefined,
+  })) as unknown as TaskMilestone[];
+}
+
+/** 创建里程碑 */
+export async function createMilestone(milestone: {
+  task_id: string;
+  title: string;
+  description?: string;
+  deadline?: string | null;
+  sort_order?: number;
+}): Promise<TaskMilestone | null> {
+  const { data, error } = await supabase
+    .from('task_milestones')
+    .insert({ ...milestone, status: 'pending' })
+    .select('*')
+    .single();
+
+  if (error) {
+    log.error('createMilestone 创建失败', error);
+    return null;
+  }
+  return data as TaskMilestone;
+}
+
+/** 更新里程碑状态（勾选完成/取消完成） */
+export async function updateMilestoneStatus(
+  id: string,
+  status: 'pending' | 'completed',
+  userId: string,
+): Promise<boolean> {
+  const update: Record<string, unknown> = { status };
+  if (status === 'completed') {
+    update.completed_at = new Date().toISOString();
+    update.completed_by = userId;
+  } else {
+    update.completed_at = null;
+    update.completed_by = null;
+  }
+
+  const { error } = await supabase
+    .from('task_milestones')
+    .update(update)
+    .eq('id', id);
+
+  if (error) {
+    log.error('updateMilestoneStatus 更新失败', error);
+    return false;
+  }
+  return true;
+}
+
+/** 删除里程碑 */
+export async function deleteMilestone(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('task_milestones')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    log.error('deleteMilestone 删除失败', error);
+    return false;
+  }
+  return true;
+}
+
+/** 获取某任务的逾期里程碑数（用于任务卡片 Badge） */
+export async function fetchTaskOverdueMilestones(taskId: string): Promise<number> {
+  const { count } = await supabase
+    .from('task_milestones')
+    .select('id', { count: 'exact', head: true })
+    .eq('task_id', taskId)
+    .eq('status', 'pending')
+    .lt('deadline', new Date().toISOString());
+
+  return count ?? 0;
 }

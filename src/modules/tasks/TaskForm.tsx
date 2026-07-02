@@ -1,6 +1,6 @@
 import type { Dayjs } from 'dayjs';
 import { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, Button, message } from 'antd';
+import { Form, Input, Select, DatePicker, Button, Checkbox, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { DEPARTMENTS } from '../../utils/constants';
 import { createTask, fetchTemplates } from './taskService';
@@ -50,6 +50,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
     assignedDepartment: string;
     deadline: Dayjs | null;
     collaborating_departments?: string[];
+    enableMilestones?: boolean;
   }) => {
     setLoading(true);
     const task = await createTask({
@@ -61,6 +62,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
       created_by: user.id,
       template_id: selectedTemplate || null,
       collaborating_departments: values.collaborating_departments ?? [],
+      has_milestones: values.enableMilestones ?? false,
     });
 
     setLoading(false);
@@ -133,6 +135,10 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
             options={allDeptOptions.filter((d) => d.value !== assignedDept)}
             allowClear
           />
+        </Form.Item>
+
+        <Form.Item name="enableMilestones" valuePropName="checked">
+          <Checkbox>✅ 启用里程碑模式，将模板步骤转为可追踪的检查点</Checkbox>
         </Form.Item>
 
         <Form.Item name="deadline" label="截止时间">

@@ -89,3 +89,50 @@
   background: #fff7e6;
   border-radius: 8px;
 }
+
+/* 里程碑面板 */
+.milestonePanel {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f0f7ff;
+  border-radius: 8px;
+}
+
+.milestoneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.milestoneItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e8f4fd;
+}
+
+.milestoneItem:last-child {
+  border-bottom: none;
+}
+
+.milestoneDanger {
+  background: #fff2f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.milestoneWarning {
+  background: #fffbe6;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.milestoneMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  flex: 1;
+}

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty } from 'antd';
-import { PlusOutlined, PushpinFilled } from '@ant-design/icons';
+import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message } from 'antd';
+import { PlusOutlined, PushpinFilled, FileTextOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
 import { NOTICE_TYPES, TASK_STATUSES } from '../../utils/constants';
-import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos } from './noticeService';
+import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos, createTaskFromNotice } from './noticeService';
 import type { Notice } from './noticeService';
 import NoticeForm from './NoticeForm';
 import styles from './notices.module.css';
@@ -16,6 +16,9 @@ export default function NoticeList() {
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [linkedTasks, setLinkedTasks] = useState<Record<string, { id: string; title: string; status: string; assignee_name?: string }[]>>({});
+  const [convertTarget, setConvertTarget] = useState<Notice | null>(null);
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [convertForm] = Form.useForm();
 
   const loadNotices = useCallback(async () => {
     const data = await fetchNotices(user.department);
@@ -95,6 +98,25 @@ export default function NoticeList() {
                     })}
                   </div>
                 )}
+                {canCreate && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0', textAlign: 'right' }}>
+                    <Button
+                      icon={<FileTextOutlined />}
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConvertTarget(notice);
+                        convertForm.resetFields();
+                        convertForm.setFieldsValue({
+                          title: notice.title,
+                          priority: 'normal',
+                        });
+                      }}
+                    >
+                      转为任务
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -112,6 +134,74 @@ export default function NoticeList() {
           onSuccess={() => { setShowForm(false); loadNotices(); }}
           onClose={() => setShowForm(false)}
         />
+      </Modal>
+
+      <Modal
+        open={!!convertTarget}
+        onCancel={() => setConvertTarget(null)}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <div>
+          <h3 style={{ marginBottom: 16 }}>📋 从公告创建任务</h3>
+          {convertTarget && (
+            <>
+              <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 16 }}>
+                来源公告：{convertTarget.title}
+              </p>
+              <Form
+                form={convertForm}
+                layout="vertical"
+                onFinish={async (values: {
+                  title: string;
+                  priority: string;
+                  deadline: unknown;
+                  assigned_to?: string;
+                }) => {
+                  setConvertLoading(true);
+                  const result = await createTaskFromNotice({
+                    title: values.title,
+                    priority: values.priority,
+                    assigned_department: user.department,
+                    assigned_to: values.assigned_to || null,
+                    deadline: (values.deadline as { toISOString?: () => string } | null)?.toISOString?.() ?? null,
+                    created_by: user.id,
+                    linked_notice_id: convertTarget.id,
+                  });
+                  setConvertLoading(false);
+                  if (result.success) {
+                    message.success('任务创建成功');
+                    setConvertTarget(null);
+                    loadNotices();
+                  } else {
+                    message.error(result.error ?? '创建失败');
+                  }
+                }}
+              >
+                <Form.Item name="title" label="任务标题" rules={[{ required: true }]}>
+                  <Input placeholder="任务标题" maxLength={100} />
+                </Form.Item>
+                <Form.Item name="priority" label="优先级" initialValue="normal">
+                  <Select
+                    options={[
+                      { value: 'normal', label: '🔵 普通' },
+                      { value: 'important', label: '🟠 重要' },
+                      { value: 'urgent', label: '🔴 紧急' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item name="deadline" label="截止时间" rules={[{ required: true, message: '请选择截止时间' }]}>
+                  <DatePicker showTime style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+                  <Button onClick={() => setConvertTarget(null)} style={{ marginRight: 8 }}>取消</Button>
+                  <Button type="primary" htmlType="submit" loading={convertLoading}>创建任务</Button>
+                </Form.Item>
+              </Form>
+            </>
+          )}
+        </div>
       </Modal>
     </div>
   );

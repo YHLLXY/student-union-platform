@@ -105,3 +105,35 @@ export async function fetchLinkedTaskInfos(taskIds: string[]): Promise<{ id: str
     assignee_name: (t.assignee as { name: string } | null)?.name ?? undefined,
   }));
 }
+
+/** 从公告创建任务（公告一键转任务） */
+export async function createTaskFromNotice(task: {
+  title: string;
+  priority: string;
+  assigned_department: string;
+  assigned_to?: string | null;
+  deadline?: string | null;
+  created_by: string;
+  linked_notice_id: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('tasks')
+    .insert({
+      title: task.title,
+      content: '',
+      priority: task.priority,
+      status: 'pending',
+      assigned_department: task.assigned_department,
+      assigned_to: task.assigned_to ?? null,
+      deadline: task.deadline ?? null,
+      created_by: task.created_by,
+      linked_notice_id: task.linked_notice_id,
+    });
+
+  if (error) {
+    log.error('createTaskFromNotice 创建失败', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}

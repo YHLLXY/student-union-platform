@@ -3,21 +3,25 @@ import { Card, Statistic, Descriptions, Button, Modal, message } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
-import { fetchUserStats } from './profileService';
+import { fetchUserStats, fetchMilestoneSummary } from './profileService';
 import type { UserStats } from './profileService';
 import TaskCalendar from './TaskCalendar';
 import ChangePassword from './ChangePassword';
 import Heatmap from './Heatmap';
 import Leaderboard from './Leaderboard';
+import MemberDirectory from './MemberDirectory';
+import DeptGuide from './DeptGuide';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
   const user = useAuth();
   const [stats, setStats] = useState<UserStats>({ completed: 0, pending: 0, overdue: 0 });
+  const [milestoneSummary, setMilestoneSummary] = useState({ milestoneOverdue: 0, milestoneUpcoming: 0 });
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchUserStats(user.id).then(setStats);
+    fetchMilestoneSummary(user.id).then(setMilestoneSummary);
   }, [user.id]);
 
   return (
@@ -52,12 +56,43 @@ export default function ProfilePage() {
         </Card>
       </div>
 
+      {(milestoneSummary.milestoneOverdue > 0 || milestoneSummary.milestoneUpcoming > 0) && (
+        <div className={styles.statsRow}>
+          {milestoneSummary.milestoneOverdue > 0 && (
+            <Card className={styles.statCard}>
+              <Statistic
+                title="⚠️ 里程碑逾期"
+                value={milestoneSummary.milestoneOverdue}
+                valueStyle={{ color: '#e74c3c' }}
+              />
+            </Card>
+          )}
+          {milestoneSummary.milestoneUpcoming > 0 && (
+            <Card className={styles.statCard}>
+              <Statistic
+                title="⏰ 近日截止"
+                value={milestoneSummary.milestoneUpcoming}
+                valueStyle={{ color: '#e67e22' }}
+              />
+            </Card>
+          )}
+        </div>
+      )}
+
       <Card style={{ marginBottom: 16 }}>
         <Heatmap />
       </Card>
 
       <Card style={{ marginBottom: 16 }}>
         <Leaderboard />
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <MemberDirectory />
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <DeptGuide />
       </Card>
 
       {/* 任务日历 */}

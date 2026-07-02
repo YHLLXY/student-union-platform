@@ -240,3 +240,36 @@ ALTER TABLE forum_posts ADD COLUMN IF NOT EXISTS template_data JSONB;
 
 -- 4. notices 表新增列
 ALTER TABLE notices ADD COLUMN IF NOT EXISTS linked_tasks UUID[] DEFAULT '{}';
+
+-- ============================================================
+-- 第六部分：平台增强二期 — 数据库迁移（2026-07-02）
+-- ============================================================
+
+-- 1. 任务里程碑表（新增）
+CREATE TABLE IF NOT EXISTS task_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  deadline TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending | completed
+  sort_order INTEGER DEFAULT 0,
+  completed_at TIMESTAMPTZ,
+  completed_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. 部门指南表（新增）
+CREATE TABLE IF NOT EXISTS department_guides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  department TEXT UNIQUE NOT NULL,
+  basic_info JSONB DEFAULT '{}',     -- { leader, teacher, office, group_chat }
+  templates JSONB DEFAULT '[]',      -- [{ title, url }]
+  faqs JSONB DEFAULT '[]',           -- [{ question, answer }]
+  updated_by UUID REFERENCES users(id),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. tasks 表新增列
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS has_milestones BOOLEAN DEFAULT false;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS linked_notice_id UUID REFERENCES notices(id);
