@@ -90,7 +90,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </Header>
 
-      <Layout hasSider>
+      <Layout hasSider style={{ flexDirection: 'row' }}>
         <Sider
           width={200}
           collapsible

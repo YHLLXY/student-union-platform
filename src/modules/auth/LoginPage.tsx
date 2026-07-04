@@ -483,6 +483,10 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className={styles.logoSection}>
           <div className={styles.platformName}>🏛 学生会</div>
           <div className={styles.platformSlogan}>线上交流平台</div>
+          <div
+            style={{ fontSize: 12, color: '#7f8c8d', marginTop: 8, cursor: 'pointer' }}
+            onClick={() => setDevModalOpen(true)}
+          >🔧 开发者入口 · YHLLXY</div>
         </div>
 
         {error && (
