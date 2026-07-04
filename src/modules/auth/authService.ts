@@ -215,6 +215,20 @@ export async function selfResetPassword(authId: string, newPassword: string): Pr
   return !error;
 }
 
+/** 获取最高权限用户信息（开发者入口用） */
+export async function fetchPresidentUser(): Promise<{ name: string; student_id: string } | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('name, student_id')
+    .or('role.eq.president,role.eq.teacher')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return { name: data.name, student_id: data.student_id };
+}
+
 /** 监听认证状态变化 */
 export function onAuthStateChange(callback: (user: UserProfile | null) => void) {
   return supabase.auth.onAuthStateChange(async (_event, session) => {

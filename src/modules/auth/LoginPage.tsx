@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Form, Input, Button, Alert, message, Tabs } from 'antd';
+import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
-import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword } from './authService';
+import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchPresidentUser } from './authService';
 import type { UserProfile } from './authService';
 import styles from './auth.module.css';
 
@@ -200,6 +200,11 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const [forgotAuthId, setForgotAuthId] = useState('');
 
+  // 开发者入口
+  const [devModalOpen, setDevModalOpen] = useState(false);
+  const [devKey, setDevKey] = useState('');
+  const [devLoading, setDevLoading] = useState(false);
+
   const handleForgotVerify = async () => {
     setError(null);
     const id = isStudent ? studentForm.studentId.trim() : teacherForm.teacherId.trim();
@@ -246,6 +251,50 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       setError('操作失败，请检查网络连接');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ========== 开发者入口 ==========
+
+  const handleDevLogin = async () => {
+    if (!devKey.trim()) {
+      message.error('请输入开发者密钥');
+      return;
+    }
+    setDevLoading(true);
+    try {
+      // 1. 校验密钥
+      const VALID_DEV_KEY = 'DEV2026PRESIDENT';
+      if (devKey.trim() !== VALID_DEV_KEY) {
+        message.error('密钥无效');
+        setDevLoading(false);
+        return;
+      }
+      // 2. 获取最高权限用户
+      const president = await fetchPresidentUser();
+      if (!president) {
+        message.error('系统中无管理员账号，请先注册');
+        setDevLoading(false);
+        return;
+      }
+      // 3. 自动填入表单并跳转密码登录
+      setTab('student');
+      setStudentForm((p) => ({
+        ...p,
+        name: president.name,
+        studentId: president.student_id,
+        inviteCode: devKey.trim(),
+        department: 'presidium',
+        role: 'president',
+      }));
+      setStep('login');
+      setDevModalOpen(false);
+      setDevKey('');
+      message.success(`已切换到管理员 ${president.name}，请输入密码`);
+    } catch {
+      message.error('操作失败，请检查网络');
+    } finally {
+      setDevLoading(false);
     }
   };
 
@@ -467,7 +516,47 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className={styles.tipText}>
           仅限学生会内部成员使用
         </div>
+
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <Button
+            type="link"
+            size="small"
+            style={{ color: '#bdc3c7', fontSize: 12 }}
+            onClick={() => setDevModalOpen(true)}
+          >
+            🔧
+          </Button>
+        </div>
       </div>
+
+      <Modal
+        open={devModalOpen}
+        onCancel={() => { setDevModalOpen(false); setDevKey(''); }}
+        footer={null}
+        width={360}
+        title="🔧 开发者入口"
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 12 }}>
+            输入开发者密钥以直接使用管理员账号登录
+          </p>
+          <Input.Password
+            placeholder="开发者密钥"
+            value={devKey}
+            onChange={(e) => setDevKey(e.target.value)}
+            onPressEnter={handleDevLogin}
+            style={{ marginBottom: 12 }}
+          />
+          <Button
+            type="primary"
+            block
+            loading={devLoading}
+            onClick={handleDevLogin}
+          >
+            验证并登录
+          </Button>
+        </div>
+      </Modal>
 
     </div>
   );
