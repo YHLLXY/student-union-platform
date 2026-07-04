@@ -215,13 +215,12 @@ export async function selfResetPassword(authId: string, newPassword: string): Pr
   return !error;
 }
 
-/** 获取最高权限用户信息（开发者入口用） */
-export async function fetchPresidentUser(): Promise<{ name: string; student_id: string } | null> {
+/** 获取开发者用户信息（开发者入口用） */
+export async function fetchDeveloperUser(): Promise<{ name: string; student_id: string } | null> {
   const { data, error } = await supabase
     .from('users')
     .select('name, student_id')
-    .or('role.eq.president,role.eq.teacher')
-    .order('created_at', { ascending: true })
+    .eq('role', 'developer')
     .limit(1)
     .single();
 

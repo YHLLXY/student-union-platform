@@ -8,7 +8,7 @@ export function hasMinRole(userRole: string, requiredRole: string): boolean {
 
 /** 判断是否为最高权限（主席或老师） */
 export function isAdmin(role: string): boolean {
-  return role === 'president' || role === 'teacher';
+  return role === 'president' || role === 'teacher' || role === 'developer';
 }
 
 /** 格式化日期 YYYY-MM-DD */

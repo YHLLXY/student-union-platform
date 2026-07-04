@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
-import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchPresidentUser } from './authService';
+import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser } from './authService';
 import type { UserProfile } from './authService';
 import styles from './auth.module.css';
 
@@ -270,10 +270,10 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         setDevLoading(false);
         return;
       }
-      // 2. 获取最高权限用户
-      const president = await fetchPresidentUser();
-      if (!president) {
-        message.error('系统中无管理员账号，请先注册');
+      // 2. 获取开发者用户
+      const developer = await fetchDeveloperUser();
+      if (!developer) {
+        message.error('系统中无开发者账号，请先注册');
         setDevLoading(false);
         return;
       }
@@ -281,16 +281,16 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       setTab('student');
       setStudentForm((p) => ({
         ...p,
-        name: president.name,
-        studentId: president.student_id,
+        name: developer.name,
+        studentId: developer.student_id,
         inviteCode: devKey.trim(),
         department: 'presidium',
-        role: 'president',
+        role: 'developer',
       }));
       setStep('login');
       setDevModalOpen(false);
       setDevKey('');
-      message.success(`已切换到管理员 ${president.name}，请输入密码`);
+      message.success(`已切换到开发者 ${developer.name}，请输入密码`);
     } catch {
       message.error('操作失败，请检查网络');
     } finally {
