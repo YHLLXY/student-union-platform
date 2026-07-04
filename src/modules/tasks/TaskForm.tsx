@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Button, Checkbox, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { DEPARTMENTS } from '../../utils/constants';
+import { isAdmin } from '../../utils/helpers';
 import { createTask, fetchTemplates } from './taskService';
 import type { TaskTemplate } from './taskService';
 
@@ -76,7 +77,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
 
   const myDept = user.department;
   const deptOptions = Object.entries(DEPARTMENTS)
-    .filter(([key]) => user.role === 'teacher' || user.role === 'presidium' || key === myDept)
+    .filter(([key]) => isAdmin(user.role) || user.role === 'presidium' || key === myDept)
     .map(([key, label]) => ({ value: key, label }));
 
   const allDeptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
