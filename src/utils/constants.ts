@@ -1,4 +1,4 @@
-// 12 个部门
+// 12 个部门 + 开发者
 export const DEPARTMENTS: Record<string, string> = {
   presidium: '主席主任团',
   student_office: '学办',
@@ -12,6 +12,7 @@ export const DEPARTMENTS: Record<string, string> = {
   sports: '体育部',
   arts: '文艺部',
   humanities: '人文部',
+  developer: '开发者',
 };
 
 // 6 种角色

@@ -284,7 +284,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         name: developer.name,
         studentId: developer.student_id,
         inviteCode: devKey.trim(),
-        department: 'presidium',
+        department: 'developer',
         role: 'developer',
       }));
       setStep('login');
