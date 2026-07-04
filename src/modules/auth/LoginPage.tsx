@@ -521,10 +521,10 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <Button
             type="link"
             size="small"
-            style={{ color: '#bdc3c7', fontSize: 12 }}
+            style={{ color: '#7f8c8d', fontSize: 12 }}
             onClick={() => setDevModalOpen(true)}
           >
-            🔧
+            🔧 开发者
           </Button>
         </div>
       </div>

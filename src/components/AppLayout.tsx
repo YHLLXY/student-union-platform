@@ -90,7 +90,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </Header>
 
-      <Layout>
+      <Layout hasSider>
         <Sider
           width={200}
           collapsible
