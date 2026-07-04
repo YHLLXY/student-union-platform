@@ -59,14 +59,81 @@ src/
 - **权限判断：** `hasMinRole(user.role, 'dept_head')` 检查是否满足最低角色要求
 - **管理员判断：** `isAdmin(role)` → `president || teacher`
 
-## 开发约定
+## 开发流程与规范
 
-1. **模块隔离：** 每个模块目录有 `index.tsx` 集中导出，组件通过 CSS Modules 隔离样式
-2. **诊断日志：** 所有新代码使用 `import { logger } from '../../diagnostics'` + `logger.for('模块/组件名')`
-3. **子代理 xhigh：** 所有 Agent/Workflow 子代理使用 `effort: 'xhigh'`
-4. **先问后改：** 任何代码修改前必须先分析问题、提出方案、评估影响、征得用户同意
-5. **每阶段验证：** 每阶段完成后 `npm run build`（`tsc -b && vite build`），0 错误才能继续
-6. **提交规范：** feat/fix/docs/style 前缀 + 中文描述
+### 全链路流程
+
+```
+提出问题 → 分析原因 → 设计方案 → 评估影响 → 征得同意 → 执行 → build验证 → 提交推送
+```
+
+**任何代码修改，无论大小，都必须走完这个流程。** 尤其是"评估影响 → 征得同意"两步，不得跳过。
+
+### 子代理驱动开发
+
+- **一任务一代理：** 每个独立任务分派给一个新的子代理，保持上下文清爽
+- **参数：** 所有 Agent 调用使用 `effort: 'xhigh'`，`subagent_type: 'general-purpose'`
+- **并行策略：** 修改不同文件的子代理可以同时运行；修改同一文件的必须串行
+- **先后顺序：** Service 层函数先行 → 组件次之 → 页面集成最后
+- **任务间 review：** 每批子代理完成后，检查 build 结果再进入下一批
+
+### 模块结构规范
+
+每个 `modules/<name>/` 目录遵循统一模式：
+```
+module/
+├── index.tsx            # 集中导出（export { default as Xxx } from './Xxx'）
+├── XxxService.ts        # 数据层：Supabase 查询、接口类型、CRUD 函数
+├── XxxComponent.tsx     # 页面/组件
+└── xxx.module.css       # CSS Modules 隔离样式
+```
+
+- **新组件入口：** 在 `modules/<parent>/` 下新建文件，通过 `index.tsx` 导出
+- **不改路由：** 功能增强在已有页面内通过 Card / Tab / Modal 展开，不动路由配置
+- **不拆模块：** 所有增强在已有 8 个模块内扩展，不新建模块目录
+
+### 代码规范
+
+- **诊断日志：** 所有新文件使用 `import { logger } from '../../diagnostics'` + `const log = logger.for('模块/组件名')`
+- **类型定义：** 接口放在对应的 Service 文件中，组件通过 `import type` 引用
+- **Supabase 查询：** 用 `.select('*, join:foreign_key(fields)')` 做联表，`.maybeSingle()` 查可能不存在的行
+- **错误处理：** Service 层 catch 后 `log.error()` + 返回安全默认值（`[]` / `null` / `false`）
+
+### 数据库变更流程
+
+1. **先在 `supabase-migration.sql` 末尾追加 DDL**（新表/新列/新策略）
+2. **代码中先写好对应的 Service 函数**（查询新表/新列的代码）
+3. **提醒用户手动执行迁移**（复制 SQL → Supabase Dashboard → SQL Editor）
+4. 用户确认执行后，功能才能正常使用
+
+### 问题管理
+
+- **发现 Bug 或警告：** 记录到 `docs/ISSUES.md`（现象、原因、影响范围、严重程度）
+- **暂不修复的：** 标记为「待处理」，写清楚不修的原因
+- **已修复的：** 移到「已修复」区，补充解决方案和 commit hash
+
+### 提交规范
+
+```bash
+git add <涉及的文件>
+git commit -m "类型: 中文描述"
+git push origin master
+```
+
+| 前缀 | 用途 | 示例 |
+|------|------|------|
+| `feat:` | 新功能 | `feat(profile): add MemberDirectory component` |
+| `fix:` | Bug 修复 | `fix(auth): 修复老用户登录被邀请码校验拦截` |
+| `docs:` | 文档 | `docs: 添加 CLAUDE.md + ISSUES.md` |
+| `style:` | 样式 | `style(tasks): add milestone panel CSS` |
+
+### 禁止事项
+
+- ❌ 跳过用户同意直接修改代码
+- ❌ 代码中用 `TBD` / `TODO` / 占位符代替实际实现
+- ❌ 新增模块目录（除非用户明确要求）
+- ❌ 修改路由配置（除非用户明确要求）
+- ❌ 修改已有组件的 UI 主题风格
 
 ## Supabase 数据库
 
@@ -93,7 +160,6 @@ src/
 | 设计文档 | `docs/superpowers/specs/` |
 | 实施计划 | `docs/superpowers/plans/` |
 | 数据库迁移 | `supabase-migration.sql` |
-| 开发规范 | `.claude/settings.json` |
 
 ## 启动命令
 
