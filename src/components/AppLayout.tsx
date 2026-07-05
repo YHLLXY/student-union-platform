@@ -120,7 +120,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           collapsible
           collapsed={collapsed}
           onCollapse={setCollapsed}
-          style={{ background: '#ffffff' }}
+          style={{ background: '#ffffff', height: '100%', overflowY: 'auto' }}
         >
           <Menu
             mode="inline"
