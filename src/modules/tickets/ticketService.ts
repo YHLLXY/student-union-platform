@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('tickets/ticketService');
 
 export interface Ticket {
   id: string;
@@ -26,13 +29,13 @@ export interface TicketRecord {
 
 /** 获取所有票务（含剩余数量，活动已开始的自动隐藏） */
 export async function fetchTickets(): Promise<Ticket[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('tickets')
     .select('*, creator:created_by(name)')
     .gt('event_time', new Date().toISOString())
     .order('open_time', { ascending: true });
 
-  if (!data) return [];
+  if (error || !data) { log.error('fetchTickets 查询失败', error); return []; }
 
   // 并行查询每个票务的已抢数量
   const tickets = await Promise.all(
@@ -70,7 +73,7 @@ export async function createTicket(ticket: {
     .select('*')
     .single();
 
-  if (error) return null;
+  if (error) { log.error('createTicket 创建失败', error); return null; }
   return data as Ticket;
 }
 
@@ -150,13 +153,13 @@ export interface MyTicket {
 
 /** 获取我的票券 */
 export async function fetchMyTickets(userId: string): Promise<MyTicket[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('ticket_records')
     .select('*, ticket:ticket_id(title, event_time)')
     .eq('user_id', userId)
     .order('grabbed_at', { ascending: false });
 
-  if (!data) return [];
+  if (error || !data) { log.error('fetchMyTickets 查询失败', error); return []; }
 
   return data.map((r: Record<string, unknown>) => {
     const ticket = r.ticket as { title: string; event_time: string } | null;
@@ -175,24 +178,25 @@ export async function fetchMyTickets(userId: string): Promise<MyTicket[]> {
 
 /** 获取当前用户已抢的票务 ID 列表（用于按钮状态判断） */
 export async function fetchMyGrabbedIds(userId: string): Promise<Set<string>> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('ticket_records')
     .select('ticket_id')
     .eq('user_id', userId);
 
-  if (!data) return new Set();
+  if (error || !data) { log.error('fetchMyGrabbedIds 查询失败', error); return new Set(); }
   return new Set(data.map((r: { ticket_id: string }) => r.ticket_id));
 }
 
 /** 获取某票务的抢票记录（发布者查看） */
 export async function fetchTicketRecords(ticketId: string): Promise<TicketRecord[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('ticket_records')
     .select('*')
     .eq('ticket_id', ticketId)
     .order('grabbed_at', { ascending: true });
 
-  return data as TicketRecord[] ?? [];
+  if (error || !data) { log.error('fetchTicketRecords 查询失败', error); return []; }
+  return data as TicketRecord[];
 }
 
 /** 退票（仅限活动开始前 5 小时外） */

@@ -1,9 +1,9 @@
 import supabase from '../../supabaseClient';
 import type { UserProfile } from '../auth';
 import { logger } from '../../diagnostics';
+import { hasMinRole } from '../../utils/helpers';
 
 const log = logger.for('admin/adminService');
-void log;
 
 /** 获取成员列表 */
 export async function fetchAllMembers(userRole: string, userDept: string): Promise<UserProfile[]> {
@@ -12,13 +12,13 @@ export async function fetchAllMembers(userRole: string, userDept: string): Promi
     .select('*')
     .order('created_at', { ascending: false });
 
-  // 部门负责人只看本部门；presidium+ / president / teacher 可看全部
-  if (userRole === 'dept_head') {
+  // 部门负责人只看本部门；presidium+ / president / teacher / developer 可看全部
+  if (hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium')) {
     query = query.eq('department', userDept);
   }
 
   const { data, error } = await query;
-  if (error) return [];
+  if (error) { log.error('fetchAllMembers 查询失败', error); return []; }
   return data as UserProfile[];
 }
 
@@ -29,7 +29,8 @@ export async function updateMemberRole(memberId: string, newRole: string): Promi
     .update({ role: newRole })
     .eq('id', memberId);
 
-  return !error;
+  if (error) { log.error('updateMemberRole 更新失败', error); return false; }
+  return true;
 }
 
 /** 移除成员 */
@@ -39,7 +40,8 @@ export async function removeMember(memberId: string): Promise<boolean> {
     .update({ role: 'removed' })
     .eq('id', memberId);
 
-  return !error;
+  if (error) { log.error('removeMember 移除失败', error); return false; }
+  return true;
 }
 
 /** 生成邀请码 */
@@ -50,7 +52,7 @@ export async function generateInviteCode(department: string, role: string): Prom
     .from('invite_codes')
     .insert({ code, department, role });
 
-  if (error) return null;
+  if (error) { log.error('generateInviteCode 生成失败', error); return null; }
   return code;
 }
 
@@ -72,7 +74,8 @@ export async function transferMember(memberId: string, newDepartment: string): P
     .update({ department: newDepartment })
     .eq('id', memberId);
 
-  return !error;
+  if (error) { log.error('transferMember 调动失败', error); return false; }
+  return true;
 }
 
 /** 获取邀请码列表 */
@@ -87,7 +90,7 @@ export async function fetchInviteCodes(department?: string): Promise<InviteCode[
   }
 
   const { data, error } = await query;
-  if (error || !data) return [];
+  if (error || !data) { log.error('fetchInviteCodes 查询失败', error); return []; }
 
   return data.map((c: Record<string, unknown>) => ({
     ...c,
@@ -102,7 +105,8 @@ export async function deactivateInviteCode(codeId: string): Promise<boolean> {
     .update({ is_used: true })
     .eq('id', codeId);
 
-  return !error;
+  if (error) { log.error('deactivateInviteCode 停用失败', error); return false; }
+  return true;
 }
 
 /** 管理员重置成员密码（默认 123456） */
@@ -112,7 +116,8 @@ export async function resetMemberPassword(authId: string): Promise<boolean> {
     new_password: '123456',
   });
 
-  return !error;
+  if (error) { log.error('resetMemberPassword 重置失败', error); return false; }
+  return true;
 }
 
 // ========== 成员任务聚合 ==========
@@ -129,7 +134,7 @@ export interface MemberWorkSummary {
 /** 获取所有成员的任务状态分布 */
 export async function fetchMemberWorkSummaries(userRole: string, userDept: string): Promise<MemberWorkSummary[]> {
   let memberQuery = supabase.from('users').select('*').neq('role', 'removed').order('created_at', { ascending: false });
-  if (userRole === 'dept_head') {
+  if (hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium')) {
     memberQuery = memberQuery.eq('department', userDept);
   }
   const { data: members } = await memberQuery;

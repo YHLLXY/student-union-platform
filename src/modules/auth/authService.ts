@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('auth/authService');
 
 export interface UserProfile {
   id: string;
@@ -25,12 +28,13 @@ export async function checkInviteCode(code: string) {
 
 /** 检查学号是否已注册 */
 export async function checkStudentId(studentId: string): Promise<boolean> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('users')
     .select('id')
     .eq('student_id', studentId)
     .single();
 
+  if (error) { log.error('checkStudentId 查询失败', error); return false; }
   return !!data;
 }
 
@@ -172,12 +176,13 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('users')
     .select('*')
     .eq('auth_id', session.user.id)
     .single();
 
+  if (error) { log.error('getCurrentUser 查询失败', error); return null; }
   return data as UserProfile | null;
 }
 
@@ -236,12 +241,13 @@ export function onAuthStateChange(callback: (user: UserProfile | null) => void) 
       return;
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('auth_id', session.user.id)
       .single();
 
+    if (error) { log.error('onAuthStateChange 查询失败', error); callback(null); return; }
     callback(data as UserProfile | null);
   });
 }

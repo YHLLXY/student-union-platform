@@ -89,8 +89,8 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
   // 权限判断
   const isAuthor = post?.created_by === user.id;
   const isDeptHead = hasMinRole(user.role, 'dept_head');
-  const isAdmin = hasMinRole(user.role, 'president');
-  const canDelete = isAuthor || (isDeptHead && post?.department === user.department) || isAdmin;
+  const isPlatformAdmin = hasMinRole(user.role, 'president');
+  const canDelete = isAuthor || (isDeptHead && post?.department === user.department) || isPlatformAdmin;
   const canManageDept = hasMinRole(user.role, 'presidium');
 
   if (!post) return <Spin />;

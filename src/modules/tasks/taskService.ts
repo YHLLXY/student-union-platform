@@ -1,5 +1,6 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
+import { hasMinRole } from '../../utils/helpers';
 
 const log = logger.for('tasks/taskService');
 
@@ -84,14 +85,14 @@ export async function fetchTasks(userId: string, department: string, role: strin
     .select('*, creator:created_by(name), assignee:assigned_to(name)')
     .order('created_at', { ascending: false });
 
-  // 志愿者只看指派给自己的或本部门的任务
-  if (role === 'volunteer') {
+  // volunteer: 只看指派给自己的或本部门的任务
+  if (!hasMinRole(role, 'dept_head')) {
     query = query.or(`assigned_to.eq.${userId},assigned_department.eq.${department}`);
-  } else if (role === 'dept_head' || role === 'presidium') {
-    // 负责人和主席团看本部门的
+  } else if (!hasMinRole(role, 'president')) {
+    // dept_head / presidium: 看本部门的
     query = query.eq('assigned_department', department);
   }
-  // teacher 看全部，不加过滤
+  // president / teacher / developer: 看全部，不加过滤
 
   const { data, error } = await query;
 

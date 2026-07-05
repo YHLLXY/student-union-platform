@@ -65,7 +65,7 @@ export default function MemberManage() {
     }
   };
 
-  const adminAccess = isAdmin(user.role); // 主席或老师
+  const adminAccess = isAdmin(user.role); // 主席、老师或开发者
 
   const columns = [
     { title: '姓名', dataIndex: 'name', key: 'name' },

@@ -11,25 +11,31 @@ export interface UserStats {
 
 /** 获取用户任务统计 */
 export async function fetchUserStats(userId: string): Promise<UserStats> {
-  const { data: completed } = await supabase
+  const { data: completed, error: err1 } = await supabase
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .eq('assigned_to', userId)
     .eq('status', 'completed');
 
-  const { data: pending } = await supabase
+  if (err1) log.error('fetchUserStats completed 查询失败', err1);
+
+  const { data: pending, error: err2 } = await supabase
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .eq('assigned_to', userId)
     .in('status', ['pending', 'in_progress', 'review']);
 
+  if (err2) log.error('fetchUserStats pending 查询失败', err2);
+
   // 逾期：状态不是completed且截止时间已过
-  const { data: overdue } = await supabase
+  const { data: overdue, error: err3 } = await supabase
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .eq('assigned_to', userId)
     .neq('status', 'completed')
     .lt('deadline', new Date().toISOString());
+
+  if (err3) log.error('fetchUserStats overdue 查询失败', err3);
 
   return {
     completed: completed?.length ?? 0,
@@ -43,7 +49,7 @@ export async function fetchUserTasksByMonth(userId: string, year: number, month:
   const start = new Date(year, month - 1, 1).toISOString();
   const end = new Date(year, month, 0, 23, 59, 59).toISOString();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('tasks')
     .select('id, title, status, deadline')
     .eq('assigned_to', userId)
@@ -51,6 +57,7 @@ export async function fetchUserTasksByMonth(userId: string, year: number, month:
     .lte('deadline', end)
     .order('deadline', { ascending: true });
 
+  if (error) { log.error('fetchUserTasksByMonth 查询失败', error); return []; }
   return data ?? [];
 }
 

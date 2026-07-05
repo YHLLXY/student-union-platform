@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Select, message, Tag } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
 import { DEPARTMENTS, ROLES } from '../../utils/constants';
-import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
+import { getDepartmentLabel, getRoleLabel, hasMinRole } from '../../utils/helpers';
 import { fetchInviteCodes, generateInviteCode, deactivateInviteCode } from './adminService';
 import type { InviteCode } from './adminService';
 
@@ -21,9 +21,11 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
   const [genRole, setGenRole] = useState('volunteer');
   const [genLoading, setGenLoading] = useState(false);
 
+  // 部门负责人只看本部门（hasMinRole 替代硬编码字符串比较）
+  const isDeptHead = hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium');
+
   const loadCodes = useCallback(async () => {
-    // 部门负责人只看本部门
-    const data = await fetchInviteCodes(userRole === 'dept_head' ? userDept : undefined);
+    const data = await fetchInviteCodes(isDeptHead ? userDept : undefined);
     setCodes(data);
     setLoading(false);
   }, [userRole, userDept]);
@@ -59,8 +61,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
     );
   };
 
-  // 部门负责人只能生成本部门志愿者邀请码
-  const isDeptHead = userRole === 'dept_head';
+  // 部门负责人只能生成本部门志愿者邀请码（isDeptHead 已在组件顶部定义）
 
   const columns = [
     { title: '邀请码', dataIndex: 'code', key: 'code' },

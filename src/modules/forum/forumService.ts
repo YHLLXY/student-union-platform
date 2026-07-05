@@ -1,4 +1,7 @@
 import supabase from '../../supabaseClient';
+import { logger } from '../../diagnostics';
+
+const log = logger.for('forum/forumService');
 
 export interface ForumPost {
   id: string;
@@ -38,8 +41,7 @@ export async function fetchPosts(userDepartment: string, category?: string): Pro
   }
 
   const { data, error } = await query;
-  if (error || !data) return [];
-
+  if (error || !data) { log.error('fetchPosts 查询失败', error); return []; }
   // 并行查每个帖子的回复数
   const posts = await Promise.all(
     data.map(async (p: Record<string, unknown>) => {
@@ -68,7 +70,7 @@ export async function fetchPostDetail(postId: string): Promise<ForumPost | null>
     .eq('id', postId)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) { log.error('fetchPostDetail 查询失败', error); return null; }
 
   const { count } = await supabase
     .from('forum_replies')
@@ -86,13 +88,13 @@ export async function fetchPostDetail(postId: string): Promise<ForumPost | null>
 
 /** 获取回复列表 */
 export async function fetchReplies(postId: string): Promise<ForumReply[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('forum_replies')
     .select('*, author:created_by(name)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
 
-  if (!data) return [];
+  if (error || !data) { log.error('fetchReplies 查询失败', error); return []; }
 
   return data.map((r: Record<string, unknown>) => ({
     ...r,
@@ -120,7 +122,7 @@ export async function createPost(post: {
     .select('*')
     .single();
 
-  if (error) return null;
+  if (error) { log.error('createPost 创建失败', error); return null; }
   return data as ForumPost;
 }
 
@@ -134,7 +136,8 @@ export async function deletePost(postId: string): Promise<boolean> {
     .delete()
     .eq('id', postId);
 
-  return !error;
+  if (error) { log.error('deletePost 删除失败', error); return false; }
+  return true;
 }
 
 /** 更新协同部门 */
@@ -144,7 +147,8 @@ export async function updateCollaboratingDepts(postId: string, depts: string[]):
     .update({ collaborating_departments: depts })
     .eq('id', postId);
 
-  return !error;
+  if (error) { log.error('updateCollaboratingDepts 更新失败', error); return false; }
+  return true;
 }
 
 /** 回复 */
@@ -153,5 +157,6 @@ export async function createReply(postId: string, userId: string, content: strin
     .from('forum_replies')
     .insert({ post_id: postId, content, created_by: userId });
 
-  return !error;
+  if (error) { log.error('createReply 回复失败', error); return false; }
+  return true;
 }
