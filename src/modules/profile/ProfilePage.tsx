@@ -11,6 +11,7 @@ import Heatmap from './Heatmap';
 import Leaderboard from './Leaderboard';
 import MemberDirectory from './MemberDirectory';
 import DeptGuide from './DeptGuide';
+import TaskListModal from './TaskListModal';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
@@ -18,6 +19,8 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<UserStats>({ completed: 0, pending: 0, overdue: 0 });
   const [milestoneSummary, setMilestoneSummary] = useState({ milestoneOverdue: 0, milestoneUpcoming: 0 });
   const [showPassword, setShowPassword] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskModalTab, setTaskModalTab] = useState('completed');
 
   useEffect(() => {
     fetchUserStats(user.id).then(setStats);
@@ -30,7 +33,7 @@ export default function ProfilePage() {
 
       {/* 统计面板 */}
       <div className={styles.statsRow}>
-        <Card className={styles.statCard}>
+        <Card className={styles.statCard} onClick={() => { setTaskModalTab('completed'); setTaskModalOpen(true); }}>
           <Statistic
             title="已完成"
             value={stats.completed}
@@ -38,7 +41,7 @@ export default function ProfilePage() {
             valueStyle={{ color: '#27ae60' }}
           />
         </Card>
-        <Card className={styles.statCard}>
+        <Card className={styles.statCard} onClick={() => { setTaskModalTab('pending'); setTaskModalOpen(true); }}>
           <Statistic
             title="待完成"
             value={stats.pending}
@@ -46,7 +49,7 @@ export default function ProfilePage() {
             valueStyle={{ color: '#3498db' }}
           />
         </Card>
-        <Card className={styles.statCard}>
+        <Card className={styles.statCard} onClick={() => { setTaskModalTab('overdue'); setTaskModalOpen(true); }}>
           <Statistic
             title="已逾期"
             value={stats.overdue}
@@ -115,6 +118,13 @@ export default function ProfilePage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <TaskListModal
+        open={taskModalOpen}
+        initialTab={taskModalTab}
+        userId={user.id}
+        onClose={() => setTaskModalOpen(false)}
+      />
 
       <Modal
         open={showPassword}

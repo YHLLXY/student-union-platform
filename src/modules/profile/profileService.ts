@@ -324,3 +324,41 @@ export async function updateDeptGuide(
   }
   return true;
 }
+
+// ========== 任务汇总（用于统计卡片弹窗） ==========
+export interface TaskBrief {
+  id: string;
+  title: string;
+  priority: string;
+  status: string;
+  deadline: string | null;
+  assigned_department: string;
+}
+
+/** 获取用户的所有任务（用于统计卡片 Modal，限制 100 条） */
+export async function fetchAllUserTasks(userId: string): Promise<{
+  completed: TaskBrief[];
+  pending: TaskBrief[];
+  overdue: TaskBrief[];
+}> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id, title, priority, status, deadline, assigned_department')
+    .eq('assigned_to', userId)
+    .order('deadline', { ascending: true, nullsFirst: false })
+    .limit(100);
+
+  if (error) {
+    log.error('fetchAllUserTasks 查询失败', error);
+    return { completed: [], pending: [], overdue: [] };
+  }
+
+  const tasks = (data || []) as TaskBrief[];
+  const now = new Date().toISOString();
+
+  return {
+    completed: tasks.filter((t) => t.status === 'completed'),
+    pending: tasks.filter((t) => t.status !== 'completed' && (!t.deadline || t.deadline >= now)),
+    overdue: tasks.filter((t) => t.status !== 'completed' && t.deadline && t.deadline < now),
+  };
+}

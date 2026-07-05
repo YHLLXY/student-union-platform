@@ -6,6 +6,13 @@
 
 .statCard {
   flex: 1;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.statCard:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .profileCard {
@@ -156,4 +163,56 @@
   font-weight: 600;
   margin-bottom: 8px;
   color: #2c3e50;
+}
+
+/* 任务弹窗列表 */
+.taskModalList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.taskModalItem {
+  padding: 10px 14px;
+  border-left: 3px solid #3498db;
+  border-radius: 6px;
+  background: #fafbfc;
+  transition: box-shadow 0.15s;
+}
+
+.taskModalItem:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.taskModalItemUrgent {
+  border-left-color: #e74c3c;
+}
+
+.taskModalItemImportant {
+  border-left-color: #e67e22;
+}
+
+.taskModalItemNormal {
+  border-left-color: #3498db;
+}
+
+.taskModalTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+.taskModalMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.taskModalDate {
+  font-size: 12px;
+  color: #95a5a6;
 }
