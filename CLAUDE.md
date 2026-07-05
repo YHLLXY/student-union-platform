@@ -135,6 +135,30 @@ git push origin master
 - ❌ 修改路由配置（除非用户明确要求）
 - ❌ 修改已有组件的 UI 主题风格
 
+### 线上问题排查优先级
+
+> ⚠️ **本地正常 + 线上异常 → 先查部署，最后才怀疑代码。**
+
+当用户反馈"线上有问题但本地正常"时，按以下顺序排查，禁止跳过前两步直接改代码：
+
+1. **确认线上文件是否最新：**
+   ```bash
+   curl -sI "https://yhllxy.github.io/student-union-platform/" | grep -i last-modified
+   ```
+   对比 `Last-Modified` 日期是否与最新 commit 一致。不一致 → 部署没生效。
+
+2. **确认 GitHub Pages 源配置：**
+   - Settings → Pages → Source 必须为 **"GitHub Actions"**
+   - 检查 Actions 标签页最新 workflow 是否绿色 ✓
+
+3. **确认部署文件内容：**
+   ```bash
+   # 爬取线上 JS/CSS 文件名，与 gh-pages 分支或本地 dist/ 对比
+   curl -s "https://yhllxy.github.io/student-union-platform/" | grep -o 'assets/[^"]*\.js'
+   ```
+
+4. **以上三步确认正常后，才排查代码问题。**
+
 ## Supabase 数据库
 
 - **项目 URL：** `https://bbyykrgitgawqwdgcxhp.supabase.co`

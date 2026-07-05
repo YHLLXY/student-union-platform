@@ -19,6 +19,34 @@
 
 ---
 
+### #4 线上侧边栏不显示 + 部署不更新（重大教训）
+
+- **日期：** 2026-07-05
+- **类型：** 部署配置错误 + 问题定位经验教训
+- **严重程度：** 高（线上功能完全不可用，持续多日）
+- **现象：**
+  1. 线上页面左侧栏消失，菜单不可见
+  2. 所有代码推送后线上无变化
+  3. 本地 `npm run dev` 完全正常
+- **排查过程（走弯路）：**
+  1. 反复修改 `AppLayout.tsx`：加 `hasSider` → 加 `flexDirection:'row'` → 改用 CSS Module
+  2. 花了大量 token 检查权限逻辑、菜单过滤、CSS-in-JS、Ant Design 版本兼容性
+  3. 代码改动全部正确，但线上始终不生效
+- **真正根因：**
+  1. GitHub Pages 源配置（Settings → Pages → Source）未正确指向 `gh-pages` 分支，导致无论 Actions 怎么构建推送，站点永远返回 6月25日的旧文件
+  2. 旧版 `peaceiris/actions-gh-pages@v4` 工作流推送到 gh-pages 分支，但 GitHub Pages 根本没读那个分支
+- **最终解决方案：**
+  1. 改用 GitHub 官方部署方式：`actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4`
+  2. GitHub Pages Source 切换为 "GitHub Actions"
+- **修改位置：** [.github/workflows/deploy.yml](.github/workflows/deploy.yml) — 完全重写
+- **Commits:** `62a5cdf` + `431baf6`
+- **核心教训：**
+  > ⚠️ **本地正常 + 线上异常 ≠ 代码有 bug。先查 CI/CD 是否真的部署成功了，再改代码。**
+  >
+  > 排查优先级：① 确认线上文件是否最新（检查 Last-Modified / JS 文件名） → ② 检查部署流水线 → ③ 最后才怀疑代码
+
+---
+
 ## 待处理
 
 ### #2 antd Modal `destroyOnClose` 弃用警告
