@@ -129,6 +129,7 @@ export async function fetchHeatmapData(userId: string, year: number, month: numb
 export interface LeaderboardEntry {
   user_id: string;
   name: string;
+  avatar_url: string | null;
   completed: number;
   rank: number;
 }
@@ -139,7 +140,7 @@ export async function fetchLeaderboard(department: string): Promise<LeaderboardE
 
   const { data: members } = await supabase
     .from('users')
-    .select('id, name')
+    .select('id, name, avatar_url')
     .eq('department', department)
     .neq('role', 'removed');
 
@@ -154,7 +155,7 @@ export async function fetchLeaderboard(department: string): Promise<LeaderboardE
       .eq('status', 'completed')
       .gte('deadline', start);
 
-    results.push({ user_id: m.id, name: m.name, completed: count ?? 0, rank: 0 });
+    results.push({ user_id: m.id, name: m.name, avatar_url: m.avatar_url ?? null, completed: count ?? 0, rank: 0 });
   }
 
   results.sort((a, b) => b.completed - a.completed);
