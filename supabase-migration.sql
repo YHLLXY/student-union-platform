@@ -273,3 +273,75 @@ CREATE TABLE IF NOT EXISTS department_guides (
 -- 3. tasks 表新增列
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS has_milestones BOOLEAN DEFAULT false;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS linked_notice_id UUID REFERENCES notices(id);
+
+-- ============================================================
+-- 第七部分：平台功能指南（2026-07-05）
+-- ============================================================
+
+-- 1. 平台指南表
+CREATE TABLE IF NOT EXISTS platform_guides (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  module_key  TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  content     TEXT NOT NULL DEFAULT '',
+  sort_order  INTEGER DEFAULT 0,
+  created_by  UUID REFERENCES users(id) ON DELETE SET NULL,
+  updated_by  UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. RLS 策略
+ALTER TABLE platform_guides ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can read guides' AND tablename = 'platform_guides'
+  ) THEN
+    CREATE POLICY "Anyone can read guides"
+      ON platform_guides FOR SELECT
+      USING (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Dept head+ can insert guides' AND tablename = 'platform_guides'
+  ) THEN
+    CREATE POLICY "Dept head+ can insert guides"
+      ON platform_guides FOR INSERT
+      WITH CHECK (EXISTS (
+        SELECT 1 FROM users WHERE auth_id = auth.uid()
+        AND role IN ('dept_head','presidium','president','teacher','developer')
+      ));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Dept head+ can update guides' AND tablename = 'platform_guides'
+  ) THEN
+    CREATE POLICY "Dept head+ can update guides"
+      ON platform_guides FOR UPDATE
+      USING (EXISTS (
+        SELECT 1 FROM users WHERE auth_id = auth.uid()
+        AND role IN ('dept_head','presidium','president','teacher','developer')
+      ));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Dept head+ can delete guides' AND tablename = 'platform_guides'
+  ) THEN
+    CREATE POLICY "Dept head+ can delete guides"
+      ON platform_guides FOR DELETE
+      USING (EXISTS (
+        SELECT 1 FROM users WHERE auth_id = auth.uid()
+        AND role IN ('dept_head','presidium','president','teacher','developer')
+      ));
+  END IF;
+END $$;
+
+-- 3. 初始数据（4 个模块各 1 条默认介绍）
+INSERT INTO platform_guides (module_key, title, content, sort_order) VALUES
+('tasks', '如何查看与提交任务', '任务管理是你在学生会的主要工作入口。\n\n你可以在这里查看分配给你的所有任务，每个任务都有优先级（紧急/重要/普通）和状态（待开始/进行中/待审核/已完成）。\n\n提交任务时，点击任务卡片进入详情，填写完成说明后点击"提交审核"。部门负责人会审核你的提交，审核通过后任务状态变为"已完成"。\n\n如果任务有里程碑（子任务），你可以在任务详情中逐个勾选完成。逾期未完成的里程碑会显示警告标记。', 0),
+('notices', '部门公告的使用', '部门公告用于发布本部门的重要通知、会议纪要和活动信息。\n\n公告分为三种类型：\n• 通知 — 一般性工作通知\n• 会议纪要 — 会议记录和决议\n• 活动 — 部门活动相关\n\n发布公告时，可以选择关联已有任务，这样任务详情中会显示该公告的链接。部门负责人及以上可以置顶公告，置顶的公告会始终显示在列表最上方。', 0),
+('forum', '部门论坛介绍', '部门论坛是部门内部的交流讨论空间。\n\n论坛分类：\n• 工作讨论 — 日常工作话题\n• 活动策划 — 活动方案讨论\n• 资料共享 — 文件和资源分享\n• 闲聊 — 轻松话题\n• 知识库 — 重要文档和模板归档\n\n发帖时支持 Markdown 格式，可以插入标题、列表、链接等。知识库分类的帖子会作为部门知识沉淀长期保存。', 0),
+('profile', '个人中心功能概览', '个人中心汇集了你的所有个人信息和工作数据。\n\n主要功能：\n• 任务统计卡片 — 展示你已完成、待完成和已逾期的任务数量\n• 工作量热力图 — 按日历形式展示你每月完成任务的时间分布\n• 本月任务排行 — 查看本部门成员的本月任务完成排名（负责人及以上可见）\n• 任务日历 — 在日历上查看各日期的任务截止情况\n• 通讯录 — 查看全学生会成员信息\n• 新人指南 — 查看本部门的常用信息、模板和 FAQ\n• 修改密码 — 在页面底部的个人信息区域', 0)
+ON CONFLICT DO NOTHING;

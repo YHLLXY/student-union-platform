@@ -11,6 +11,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   BugOutlined,
+  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
@@ -18,6 +19,7 @@ import { useAuth } from './AuthContext';
 import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
+import { GuideDrawer } from '../modules/guide';
 import styles from './AppLayout.module.css';
 
 const { Header, Sider, Content } = Layout;
@@ -42,6 +44,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const visibleMenus = MENU_ITEMS.filter((item) => {
     // admin 需要 dept_head+，其他菜单所有人可见
@@ -81,6 +84,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <Header className={styles.header}>
         <div className={styles.logo}>🏛 学生会</div>
         <div className={styles.headerRight}>
+          <Button
+            type="text"
+            icon={<QuestionCircleOutlined />}
+            onClick={() => setGuideOpen(true)}
+            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
+            title="功能指南"
+          />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
               <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
@@ -126,6 +136,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Content className={styles.contentArea}>{children}</Content>
       </Layout>
 
+      <GuideDrawer open={guideOpen} onClose={() => setGuideOpen(false)} />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </Layout>
   );

@@ -1,0 +1,55 @@
+.guideList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guideCard {
+  padding: 12px 14px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+  transition: box-shadow 0.2s;
+}
+
+.guideCard:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.guideCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.guideCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.guideCardActions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.guideCardContent {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.guideCardMeta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #b0b0b0;
+}
+
+.addBtnWrapper {
+  margin-top: 16px;
+  padding: 0 4px;
+}
