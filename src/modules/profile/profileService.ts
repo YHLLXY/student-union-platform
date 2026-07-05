@@ -72,45 +72,55 @@ export interface HeatmapDay {
   date: string;
   count: number;
   level: number;
+  tasks: { id: string; title: string }[];
 }
 
-/** 获取用户指定月份的任务完成热力图数据 */
+/** 获取用户指定月份的任务提交热力图数据（基于实际提交日期） */
 export async function fetchHeatmapData(userId: string, year: number, month: number): Promise<HeatmapDay[]> {
   const start = new Date(year, month - 1, 1).toISOString();
   const end = new Date(year, month, 0, 23, 59, 59).toISOString();
 
   const { data, error } = await supabase
-    .from('tasks')
-    .select('deadline')
-    .eq('assigned_to', userId)
-    .eq('status', 'completed')
-    .gte('deadline', start)
-    .lte('deadline', end);
+    .from('task_submissions')
+    .select('submitted_at, task:tasks!inner(id, title)')
+    .eq('user_id', userId)
+    .gte('submitted_at', start)
+    .lte('submitted_at', end)
+    .order('submitted_at', { ascending: true });
 
   if (error) {
     log.error('fetchHeatmapData 查询失败', error);
     return [];
   }
 
-  const countMap: Record<string, number> = {};
-  for (const t of data || []) {
-    if (t.deadline) {
-      const day = t.deadline.slice(0, 10);
-      countMap[day] = (countMap[day] ?? 0) + 1;
+  // 按日期分组，收集任务信息（去重：同一天同一任务多次提交算一次）
+  const dayMap: Record<string, { id: string; title: string }[]> = {};
+  for (const s of data || []) {
+    if (s.submitted_at) {
+      const day = (s.submitted_at as string).slice(0, 10);
+      if (!dayMap[day]) dayMap[day] = [];
+      const task = s.task as unknown as { id: string; title: string } | { id: string; title: string }[] | null;
+      if (task) {
+        const taskObj = Array.isArray(task) ? task[0] : task;
+        if (taskObj && !dayMap[day].some((t) => t.id === taskObj.id)) {
+          dayMap[day].push({ id: taskObj.id, title: taskObj.title });
+        }
+      }
     }
   }
 
-  const days: HeatmapDay[] = [];
   const lastDay = new Date(year, month, 0).getDate();
+  const days: HeatmapDay[] = [];
   for (let d = 1; d <= lastDay; d++) {
     const date = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const count = countMap[date] ?? 0;
+    const tasks = dayMap[date] ?? [];
+    const count = tasks.length;
     let level = 0;
     if (count >= 5) level = 4;
     else if (count >= 3) level = 3;
     else if (count >= 2) level = 2;
     else if (count >= 1) level = 1;
-    days.push({ date, count, level });
+    days.push({ date, count, level, tasks });
   }
   return days;
 }

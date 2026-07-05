@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Spin, Empty } from 'antd';
+import { Spin, Empty, Popover } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { fetchHeatmapData } from './profileService';
@@ -61,14 +61,38 @@ export default function Heatmap() {
           <div className={styles.heatmapCells}>
             {weeks.map((week, wi) => (
               <div key={wi} className={styles.heatmapWeek}>
-                {week.map((day, di) => (
-                  <div
-                    key={di}
-                    className={styles.heatmapCell}
-                    style={{ background: day ? LEVEL_COLORS[day.level] : 'transparent' }}
-                    title={day ? `${day.date} — ${day.count} 个任务完成` : ''}
-                  />
-                ))}
+                {week.map((day, di) => {
+                  const cell = (
+                    <div
+                      key={di}
+                      className={styles.heatmapCell}
+                      style={{
+                        background: day ? LEVEL_COLORS[day.level] : 'transparent',
+                        cursor: day && day.count > 0 ? 'pointer' : 'default',
+                      }}
+                    />
+                  );
+                  if (day && day.tasks.length > 0) {
+                    const content = (
+                      <div style={{ maxWidth: 220 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>
+                          {day.date} — {day.count} 次提交
+                        </div>
+                        {day.tasks.map((t) => (
+                          <div key={t.id} style={{ fontSize: 12, padding: '2px 0', borderBottom: '1px solid #f5f5f5' }}>
+                            {t.title}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                    return (
+                      <Popover key={di} content={content} title="当日提交" trigger="click">
+                        {cell}
+                      </Popover>
+                    );
+                  }
+                  return cell;
+                })}
               </div>
             ))}
           </div>
