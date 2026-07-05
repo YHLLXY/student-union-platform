@@ -65,6 +65,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const userMenuItems: MenuProps['items'] = [
     {
+      key: 'info',
+      label: `${getDepartmentLabel(user.department)} · ${getRoleLabel(user.role)}`,
+      disabled: true,
+      style: { fontSize: 12, color: '#95a5a6' },
+    },
+    { type: 'divider' },
+    {
       key: 'profile',
       icon: <UserOutlined />,
       label: '个人中心',
@@ -91,6 +98,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
             style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
             title="功能指南"
           />
+          <Button
+            type="text"
+            icon={<BugOutlined />}
+            onClick={() => setFeedbackOpen(true)}
+            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
+            title="反馈与建议"
+          />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
               <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
@@ -115,22 +129,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onClick={({ key }) => navigate(key)}
             style={{ borderRight: 0, marginTop: 4 }}
           />
-          {!collapsed && (
-            <div className={styles.siderBottom}>
-              <Button
-                type="link"
-                size="small"
-                icon={<BugOutlined />}
-                className={styles.feedbackBtn}
-                onClick={() => setFeedbackOpen(true)}
-              >
-                反馈与建议
-              </Button>
-              <div className={styles.siderInfo}>
-                {getDepartmentLabel(user.department)} · {getRoleLabel(user.role)}
-              </div>
-            </div>
-          )}
         </Sider>
 
         <Content className={styles.contentArea}>{children}</Content>
