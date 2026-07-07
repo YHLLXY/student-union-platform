@@ -1,46 +1,21 @@
-# 🏛 学生会线上交流平台
+# 学生会线上交流平台
 
-> 精简 · 高效 · 连接 — 为学生会内部成员打造的线上办公平台
+> 重庆邮电大学学生会内部办公与交流平台
 
-集**任务管理、信息公告、部门交流、活动票务**于一体，风格参考钉钉/飞书。
+**🌐 线上地址：https://yhllxy.github.io/student-union-platform/**
 
-## 🔧 技术栈
+## 技术栈
 
-| 层面 | 选型 |
-|------|------|
-| 前端框架 | React 19 + TypeScript |
-| 构建工具 | Vite 8 |
-| UI 组件库 | Ant Design 6 |
-| 路由 | React Router 7 |
-| 后端服务 | Supabase（认证 + PostgreSQL + 实时订阅） |
-| 部署 | GitHub Pages |
+React 19 · TypeScript 6 · Vite 8 · Ant Design 6 · Supabase
 
-## 📦 模块
-
-| 模块 | 说明 |
-|------|------|
-| 登录认证 | 学生/教师双入口，邀请码注册，忘记密码 |
-| 任务管理 | 发布、执行、审核、实时状态追踪 |
-| 部门公告 | 部门内公告发布、置顶、已读追踪 |
-| 学校信息 | 校级通知，全员可见 |
-| 部门论坛 | Markdown 发帖回帖，协同部门可见 |
-| 活动抢票 | 票务发布、抢票、退票 |
-| 个人中心 | 任务统计、日历、修改密码 |
-| 权限管理 | 成员管理、邀请码管理、部门调动 |
-
-## 🚀 本地开发
+## 本地开发
 
 ```bash
 npm install
-npm run dev        # 启动开发服务器 http://localhost:5173
-npm run build      # 生产构建
-npm run preview    # 预览构建结果
+npm run dev      # http://localhost:5173/student-union-platform/
+npm run build    # 生产构建
 ```
 
-## 📡 环境变量
+## 部署
 
-复制 `.env.example` 为 `.env`，填入 Supabase 项目 URL 和 anon key。
-
-## 📄 许可
-
-仅供学生会内部使用。
+推送 `master` 分支 → GitHub Actions 自动构建 → GitHub Pages
