@@ -34,6 +34,15 @@
   align-items: center !important;
 }
 
+/* 关键词高亮 */
+.highlight {
+  background: #fff3b0;
+  color: #1a1a1a;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
 .collapseLabel {
   font-size: 15px;
   font-weight: 600;

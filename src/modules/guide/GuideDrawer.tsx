@@ -20,6 +20,34 @@ const MODULE_TABS = [
   { key: 'profile', label: '个人中心' },
 ];
 
+/**
+ * 对文本中的关键词做高亮，返回 React 节点数组
+ * 支持空格分隔的多关键词（匹配任一即高亮）
+ */
+function highlightText(text: string, keyword: string): React.ReactNode {
+  if (!keyword.trim()) return text;
+
+  // 提取多个关键词（空格分隔），按长度降序排列避免短词先匹配导致长词被截断
+  const keywords = keyword
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  if (keywords.length === 0) return text;
+
+  // 构建正则：多个关键词用 | 连接，大小写不敏感
+  const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+  const parts = text.split(regex);
+
+  return parts.map((part, i) =>
+    keywords.some((k) => k.toLowerCase() === part.toLowerCase())
+      ? <mark key={i} className={styles.highlight}>{part}</mark>
+      : part,
+  );
+}
+
 export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
   const user = useAuth();
   const canEdit = hasMinRole(user.role, 'dept_head');
@@ -51,16 +79,25 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
     setActiveKeys([]);
   }, [activeTab]);
 
-  // 客户端关键词搜索
+  // 客户端关键词搜索：标题 + 内容，支持多关键词（空格分隔，任一匹配即命中）
   const filteredGuides = useMemo(() => {
     if (!searchText.trim()) return guides;
-    const kw = searchText.trim().toLowerCase();
-    return guides.filter(
-      (g) =>
-        g.title.toLowerCase().includes(kw) ||
-        g.content.toLowerCase().includes(kw),
-    );
+    const keywords = searchText.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (keywords.length === 0) return guides;
+    return guides.filter((g) => {
+      const haystack = `${g.title} ${g.content}`.toLowerCase();
+      return keywords.some((kw) => haystack.includes(kw));
+    });
   }, [guides, searchText]);
+
+  // 搜索时自动展开匹配项，清空搜索时全部折叠
+  useEffect(() => {
+    if (searchText.trim()) {
+      setActiveKeys(filteredGuides.map((g) => g.id));
+    } else {
+      setActiveKeys([]);
+    }
+  }, [searchText, filteredGuides]);
 
   const handleEdit = (entry: GuideEntry) => {
     setEditingEntry(entry);
@@ -95,6 +132,8 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
+  const kw = searchText.trim();
+
   return (
     <>
       <Drawer
@@ -113,7 +152,7 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
 
         <div className={styles.toolbar}>
           <Input.Search
-            placeholder="搜索关键词…"
+            placeholder="搜索标题或内容，空格分隔多关键词…"
             allowClear
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -132,9 +171,9 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
           )}
         </div>
 
-        {searchText.trim() && (
+        {kw && (
           <div className={styles.searchHint}>
-            找到 {filteredGuides.length} 条
+            找到 <strong>{filteredGuides.length}</strong> 条匹配「{kw}」
           </div>
         )}
 
@@ -142,7 +181,7 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
           <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
         ) : filteredGuides.length === 0 ? (
           <Empty
-            description={searchText.trim() ? '未找到匹配的指南条目' : '该模块暂无指南'}
+            description={kw ? `未找到与「${kw}」相关的指南条目` : '该模块暂无指南'}
           />
         ) : (
           <Collapse
@@ -151,7 +190,11 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
             className={styles.guideCollapse}
             items={filteredGuides.map((g) => ({
               key: g.id,
-              label: <span className={styles.collapseLabel}>{g.title}</span>,
+              label: (
+                <span className={styles.collapseLabel}>
+                  {kw ? highlightText(g.title, kw) : g.title}
+                </span>
+              ),
               extra: canEdit ? (
                 <div
                   className={styles.collapseExtra}
@@ -180,7 +223,9 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
               ) : undefined,
               children: (
                 <>
-                  <div className={styles.guideCardContent}>{g.content}</div>
+                  <div className={styles.guideCardContent}>
+                    {kw ? highlightText(g.content, kw) : g.content}
+                  </div>
                   <div className={styles.guideCardMeta}>
                     {g.updater_name ?? g.creator_name ?? '系统'} 编辑于 {formatTime(g.updated_at)}
                   </div>
