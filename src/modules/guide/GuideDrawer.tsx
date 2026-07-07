@@ -3,7 +3,7 @@ import { Drawer, Tabs, Button, Spin, Empty, Popconfirm, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole } from '../../utils/helpers';
-import { fetchGuides, deleteGuide } from './guideService';
+import { fetchGuides, deleteGuide, seedDefaultGuides } from './guideService';
 import type { GuideEntry } from './guideService';
 import GuideForm from './GuideForm';
 import styles from './guide.module.css';
@@ -31,6 +31,7 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
 
   const loadGuides = useCallback(async () => {
     setLoading(true);
+    await seedDefaultGuides(); // 幂等：首次打开自动写入默认内容
     const data = await fetchGuides(activeTab);
     setGuides(data);
     setLoading(false);
