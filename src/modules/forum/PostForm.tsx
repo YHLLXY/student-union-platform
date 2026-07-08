@@ -61,7 +61,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
   const [form] = Form.useForm();
   const [category, setCategory] = useState('discussion');
   const [templateType, setTemplateType] = useState<string | null>(null);
-  const canCollab = hasMinRole(user.role, 'presidium');
+  const canCollab = hasMinRole(user.role, 'dept_head');
   const canPostKnowledge = hasMinRole(user.role, 'dept_head');
 
   const isKnowledge = category === 'knowledge';
@@ -174,7 +174,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
           </>
         )}
 
-        {!isKnowledge && (
+        {!isKnowledge && category !== 'casual' && (
           <>
             {canCollab && (
               <Form.Item name="collaborating_departments" label="协同部门（可选）">
