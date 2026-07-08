@@ -61,6 +61,163 @@
 .heatmapLegend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #95a5a6; margin-top: 8px; }
 .heatmapLegendCell { width: 13px; height: 13px; border-radius: 2px; }
 
+/* 年度热力图（GitHub 贡献图风格） */
+.yearHeatmapContainer {
+  padding: 4px 0;
+}
+
+.yearHeatmapHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.yearHeatmapTitle {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.yearHeatmapStats {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.yearHeatmapNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.yearNavBtn {
+  cursor: pointer;
+  font-size: 14px;
+  color: #2c3e50;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.yearNavBtn:hover {
+  background: #f0f0f0;
+}
+
+.yearNavDisabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.yearNavDisabled:hover {
+  background: transparent;
+}
+
+.yearLabel {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.yearHeatmapGrid {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* 月份标签行 */
+.yearMonthRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.yearMonthLabels {
+  display: grid;
+  grid-template-columns: repeat(53, 15px);
+  gap: 3px;
+  flex: 1;
+}
+
+.yearMonthLabel {
+  font-size: 11px;
+  color: #7f8c8d;
+  line-height: 1.3;
+}
+
+/* 主体：星期标签 + 格子 */
+.yearGridBody {
+  display: flex;
+  align-items: flex-start;
+}
+
+.yearWeekLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-right: 4px;
+  padding-top: 0;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.yearWeekLabel {
+  font-size: 11px;
+  color: #95a5a6;
+  height: 15px;
+  line-height: 15px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.yearCellsWrapper {
+  overflow-x: auto;
+}
+
+.yearCellsGrid {
+  display: flex;
+  gap: 3px;
+}
+
+.yearWeekColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.yearCell {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  transition: outline 0.1s;
+  cursor: default;
+}
+
+.yearCell:hover {
+  outline: 1.5px solid rgba(0, 0, 0, 0.35);
+  outline-offset: -1px;
+}
+
+/* 图例 */
+.yearLegend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
+  padding-right: 0;
+}
+
+.yearLegendLabel {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.yearLegendCell {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+}
+
 /* 排行榜 */
 .leaderboardContainer { padding: 4px 0; }
 .leaderboardHeader { margin-bottom: 16px; }

@@ -44,6 +44,70 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   };
 }
 
+// ========== 年度热力图数据 ==========
+export interface YearHeatmapDay {
+  date: string;
+  count: number;
+  level: number;
+  tasks: { id: string; title: string }[];
+}
+
+/** 获取用户全年任务提交热力图数据（基于实际提交日期） */
+export async function fetchYearHeatmapData(userId: string, year: number): Promise<YearHeatmapDay[]> {
+  const start = new Date(year, 0, 1).toISOString();
+  const end = new Date(year, 11, 31, 23, 59, 59).toISOString();
+
+  const { data, error } = await supabase
+    .from('task_submissions')
+    .select('submitted_at, task:tasks!inner(id, title)')
+    .eq('user_id', userId)
+    .gte('submitted_at', start)
+    .lte('submitted_at', end)
+    .order('submitted_at', { ascending: true });
+
+  if (error) {
+    log.error('fetchYearHeatmapData 查询失败', error);
+    return [];
+  }
+
+  // 按日期分组，去重（同一天同一任务多次提交算一次）
+  const dayMap: Record<string, { id: string; title: string }[]> = {};
+  for (const s of data || []) {
+    if (s.submitted_at) {
+      const day = (s.submitted_at as string).slice(0, 10);
+      if (!dayMap[day]) dayMap[day] = [];
+      const task = s.task as unknown as { id: string; title: string } | { id: string; title: string }[] | null;
+      if (task) {
+        const taskObj = Array.isArray(task) ? task[0] : task;
+        if (taskObj && !dayMap[day].some((t) => t.id === taskObj.id)) {
+          dayMap[day].push({ id: taskObj.id, title: taskObj.title });
+        }
+      }
+    }
+  }
+
+  // 填充全年 365/366 天
+  const daysInYear = (new Date(year, 2, 0).getDate() === 29 ? 366 : 365);
+  const days: YearHeatmapDay[] = [];
+  const startDate = new Date(year, 0, 1);
+
+  for (let i = 0; i < daysInYear; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const tasks = dayMap[date] ?? [];
+    const count = tasks.length;
+    let level = 0;
+    if (count >= 5) level = 4;
+    else if (count >= 3) level = 3;
+    else if (count >= 2) level = 2;
+    else if (count >= 1) level = 1;
+    days.push({ date, count, level, tasks });
+  }
+
+  return days;
+}
+
 /** 按月份获取用户任务（用于日历） */
 export async function fetchUserTasksByMonth(userId: string, year: number, month: number) {
   const start = new Date(year, month - 1, 1).toISOString();

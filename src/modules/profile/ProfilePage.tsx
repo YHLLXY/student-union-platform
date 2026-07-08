@@ -98,8 +98,8 @@ export default function ProfilePage() {
         <DeptGuide />
       </Card>
 
-      {/* 任务日历 */}
-      <Card title="📅 任务日历" style={{ marginBottom: 16 }}>
+      {/* 年度任务热力图 */}
+      <Card title="📊 年度任务热力图" style={{ marginBottom: 16 }}>
         <TaskCalendar />
       </Card>
 
