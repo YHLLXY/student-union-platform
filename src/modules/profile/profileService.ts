@@ -198,7 +198,7 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-/** 获取本部门成员本月完成数排名 */
+/** 获取本部门成员本月完成数排名（优化：N+1 → 1 次批量查询） */
 export async function fetchLeaderboard(department: string): Promise<LeaderboardEntry[]> {
   const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
@@ -210,17 +210,34 @@ export async function fetchLeaderboard(department: string): Promise<LeaderboardE
 
   if (!members || members.length === 0) return [];
 
-  const results: LeaderboardEntry[] = [];
-  for (const m of members) {
-    const { count } = await supabase
-      .from('tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('assigned_to', m.id)
-      .eq('status', 'completed')
-      .gte('deadline', start);
+  const memberIds = members.map((m) => m.id);
 
-    results.push({ user_id: m.id, name: m.name, avatar_url: m.avatar_url ?? null, completed: count ?? 0, rank: 0 });
+  // 一次查询所有人的本月完成任务 → 客户端分组计数
+  const { data: tasks, error: taskErr } = await supabase
+    .from('tasks')
+    .select('assigned_to')
+    .in('assigned_to', memberIds)
+    .eq('status', 'completed')
+    .gte('deadline', start);
+
+  if (taskErr) {
+    log.error('fetchLeaderboard 批量查询失败', taskErr);
+    return members.map((m) => ({ user_id: m.id, name: m.name, avatar_url: m.avatar_url ?? null, completed: 0, rank: 0 }));
   }
+
+  const countMap: Record<string, number> = {};
+  for (const t of tasks || []) {
+    const uid = t.assigned_to as string;
+    countMap[uid] = (countMap[uid] || 0) + 1;
+  }
+
+  const results: LeaderboardEntry[] = members.map((m) => ({
+    user_id: m.id,
+    name: m.name,
+    avatar_url: m.avatar_url ?? null,
+    completed: countMap[m.id] ?? 0,
+    rank: 0,
+  }));
 
   results.sort((a, b) => b.completed - a.completed);
   results.forEach((r, i) => { r.rank = i + 1; });
@@ -240,7 +257,7 @@ export interface MemberInfo {
   overdue: number;
 }
 
-/** 获取所有成员（含任务计数），不包含已移除的用户 */
+/** 获取所有成员（含任务计数），不包含已移除的用户（优化：N+1 → 2 次批量查询） */
 export async function fetchAllMembers(): Promise<MemberInfo[]> {
   const { data: users, error } = await supabase
     .from('users')
@@ -256,36 +273,51 @@ export async function fetchAllMembers(): Promise<MemberInfo[]> {
 
   if (!users || users.length === 0) return [];
 
-  // 并行聚合每个成员的任务计数
-  const members = await Promise.all(
-    users.map(async (u: Record<string, unknown>) => {
-      const { count: inProgress } = await supabase
-        .from('tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', u.id)
-        .in('status', ['pending', 'in_progress', 'review']);
+  const userIds = users.map((u) => u.id);
+  const now = new Date().toISOString();
 
-      const { count: overdue } = await supabase
-        .from('tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', u.id)
-        .neq('status', 'completed')
-        .lt('deadline', new Date().toISOString());
+  // 一次查询所有人的进行中任务 → 客户端分组
+  const { data: inProgressTasks, error: err1 } = await supabase
+    .from('tasks')
+    .select('assigned_to')
+    .in('assigned_to', userIds)
+    .in('status', ['pending', 'in_progress', 'review']);
 
-      return {
-        id: u.id as string,
-        name: u.name as string,
-        student_id: u.student_id as string,
-        department: u.department as string,
-        role: u.role as string,
-        avatar_url: u.avatar_url as string | null,
-        in_progress: inProgress ?? 0,
-        overdue: overdue ?? 0,
-      };
-    }),
-  );
+  if (err1) log.error('fetchAllMembers inProgress 查询失败', err1);
 
-  return members;
+  // 一次查询所有人的逾期任务 → 客户端分组
+  const { data: overdueTasks, error: err2 } = await supabase
+    .from('tasks')
+    .select('assigned_to')
+    .in('assigned_to', userIds)
+    .neq('status', 'completed')
+    .lt('deadline', now);
+
+  if (err2) log.error('fetchAllMembers overdue 查询失败', err2);
+
+  // 客户端分组计数
+  const inProgressMap: Record<string, number> = {};
+  for (const t of inProgressTasks || []) {
+    const uid = t.assigned_to as string;
+    inProgressMap[uid] = (inProgressMap[uid] || 0) + 1;
+  }
+
+  const overdueMap: Record<string, number> = {};
+  for (const t of overdueTasks || []) {
+    const uid = t.assigned_to as string;
+    overdueMap[uid] = (overdueMap[uid] || 0) + 1;
+  }
+
+  return users.map((u: Record<string, unknown>) => ({
+    id: u.id as string,
+    name: u.name as string,
+    student_id: u.student_id as string,
+    department: u.department as string,
+    role: u.role as string,
+    avatar_url: u.avatar_url as string | null,
+    in_progress: inProgressMap[u.id as string] ?? 0,
+    overdue: overdueMap[u.id as string] ?? 0,
+  }));
 }
 
 // ========== 里程碑汇总 ==========
