@@ -9,38 +9,35 @@ export interface UserStats {
   overdue: number;
 }
 
-/** 获取用户任务统计 */
+/** 获取用户任务统计（优化：3 次独立查询改为 Promise.all 并行） */
 export async function fetchUserStats(userId: string): Promise<UserStats> {
-  const { data: completed, error: err1 } = await supabase
-    .from('tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('assigned_to', userId)
-    .eq('status', 'completed');
+  const [completedRes, pendingRes, overdueRes] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('assigned_to', userId)
+      .eq('status', 'completed'),
+    supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('assigned_to', userId)
+      .in('status', ['pending', 'in_progress', 'review']),
+    supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('assigned_to', userId)
+      .neq('status', 'completed')
+      .lt('deadline', new Date().toISOString()),
+  ]);
 
-  if (err1) log.error('fetchUserStats completed 查询失败', err1);
-
-  const { data: pending, error: err2 } = await supabase
-    .from('tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('assigned_to', userId)
-    .in('status', ['pending', 'in_progress', 'review']);
-
-  if (err2) log.error('fetchUserStats pending 查询失败', err2);
-
-  // 逾期：状态不是completed且截止时间已过
-  const { data: overdue, error: err3 } = await supabase
-    .from('tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('assigned_to', userId)
-    .neq('status', 'completed')
-    .lt('deadline', new Date().toISOString());
-
-  if (err3) log.error('fetchUserStats overdue 查询失败', err3);
+  if (completedRes.error) log.error('fetchUserStats completed 查询失败', completedRes.error);
+  if (pendingRes.error) log.error('fetchUserStats pending 查询失败', pendingRes.error);
+  if (overdueRes.error) log.error('fetchUserStats overdue 查询失败', overdueRes.error);
 
   return {
-    completed: completed?.length ?? 0,
-    pending: pending?.length ?? 0,
-    overdue: overdue?.length ?? 0,
+    completed: completedRes.data?.length ?? 0,
+    pending: pendingRes.data?.length ?? 0,
+    overdue: overdueRes.data?.length ?? 0,
   };
 }
 
@@ -276,34 +273,33 @@ export async function fetchAllMembers(): Promise<MemberInfo[]> {
   const userIds = users.map((u) => u.id);
   const now = new Date().toISOString();
 
-  // 一次查询所有人的进行中任务 → 客户端分组
-  const { data: inProgressTasks, error: err1 } = await supabase
-    .from('tasks')
-    .select('assigned_to')
-    .in('assigned_to', userIds)
-    .in('status', ['pending', 'in_progress', 'review']);
+  // 并行查询进行中 + 逾期任务 → 各自客户端分组
+  const [inProgressRes, overdueRes] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('assigned_to')
+      .in('assigned_to', userIds)
+      .in('status', ['pending', 'in_progress', 'review']),
+    supabase
+      .from('tasks')
+      .select('assigned_to')
+      .in('assigned_to', userIds)
+      .neq('status', 'completed')
+      .lt('deadline', now),
+  ]);
 
-  if (err1) log.error('fetchAllMembers inProgress 查询失败', err1);
-
-  // 一次查询所有人的逾期任务 → 客户端分组
-  const { data: overdueTasks, error: err2 } = await supabase
-    .from('tasks')
-    .select('assigned_to')
-    .in('assigned_to', userIds)
-    .neq('status', 'completed')
-    .lt('deadline', now);
-
-  if (err2) log.error('fetchAllMembers overdue 查询失败', err2);
+  if (inProgressRes.error) log.error('fetchAllMembers inProgress 查询失败', inProgressRes.error);
+  if (overdueRes.error) log.error('fetchAllMembers overdue 查询失败', overdueRes.error);
 
   // 客户端分组计数
   const inProgressMap: Record<string, number> = {};
-  for (const t of inProgressTasks || []) {
+  for (const t of inProgressRes.data || []) {
     const uid = t.assigned_to as string;
     inProgressMap[uid] = (inProgressMap[uid] || 0) + 1;
   }
 
   const overdueMap: Record<string, number> = {};
-  for (const t of overdueTasks || []) {
+  for (const t of overdueRes.data || []) {
     const uid = t.assigned_to as string;
     overdueMap[uid] = (overdueMap[uid] || 0) + 1;
   }
@@ -340,24 +336,26 @@ export async function fetchMilestoneSummary(userId: string): Promise<{
 
   const taskIds = tasks.map((t: { id: string }) => t.id);
 
-  const { count: overdue } = await supabase
-    .from('task_milestones')
-    .select('id', { count: 'exact', head: true })
-    .in('task_id', taskIds)
-    .eq('status', 'pending')
-    .lt('deadline', now);
-
-  const { count: upcoming } = await supabase
-    .from('task_milestones')
-    .select('id', { count: 'exact', head: true })
-    .in('task_id', taskIds)
-    .eq('status', 'pending')
-    .gte('deadline', now)
-    .lte('deadline', threeDays);
+  // 并行查询逾期 + 近日截止
+  const [overdueRes, upcomingRes] = await Promise.all([
+    supabase
+      .from('task_milestones')
+      .select('id', { count: 'exact', head: true })
+      .in('task_id', taskIds)
+      .eq('status', 'pending')
+      .lt('deadline', now),
+    supabase
+      .from('task_milestones')
+      .select('id', { count: 'exact', head: true })
+      .in('task_id', taskIds)
+      .eq('status', 'pending')
+      .gte('deadline', now)
+      .lte('deadline', threeDays),
+  ]);
 
   return {
-    milestoneOverdue: overdue ?? 0,
-    milestoneUpcoming: upcoming ?? 0,
+    milestoneOverdue: overdueRes.count ?? 0,
+    milestoneUpcoming: upcomingRes.count ?? 0,
   };
 }
 
