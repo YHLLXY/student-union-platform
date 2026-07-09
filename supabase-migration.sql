@@ -341,3 +341,145 @@ END $$;
 -- 3. 初始数据由应用层 seedDefaultGuides() 自动播种，不在此处 INSERT
 --    原因：SQL 中 \n 需要 E'' 前缀才能正确转义，JS 客户端无此问题
 --    首次打开功能指南 Drawer 时自动检测空表并写入默认内容
+
+-- ============================================================
+-- 第八部分：通知中心（2026-07-08）
+-- ============================================================
+
+-- 1. 通知表
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,          -- task_assigned | submission_approved | submission_rejected | forum_reply | new_notice | milestone_overdue
+  title TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  related_link TEXT,           -- 跳转路径，如 /tasks、/forum、/notices
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 索引：按用户 + 未读 + 时间排序
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id
+  ON notifications(user_id, is_read, created_at DESC);
+
+-- 2. RLS 策略
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can read own notifications' AND tablename = 'notifications'
+  ) THEN
+    CREATE POLICY "Users can read own notifications"
+      ON notifications FOR SELECT
+      USING (user_id IN (SELECT id FROM users WHERE auth_id = auth.uid()));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own notifications' AND tablename = 'notifications'
+  ) THEN
+    CREATE POLICY "Users can update own notifications"
+      ON notifications FOR UPDATE
+      USING (user_id IN (SELECT id FROM users WHERE auth_id = auth.uid()));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Authenticated users can insert notifications' AND tablename = 'notifications'
+  ) THEN
+    CREATE POLICY "Authenticated users can insert notifications"
+      ON notifications FOR INSERT
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+-- ============================================================
+-- 第九部分：公告已读确认（2026-07-08）
+-- ============================================================
+
+-- 1. 已读记录表
+CREATE TABLE IF NOT EXISTS notice_reads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  notice_id UUID NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  read_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(notice_id, user_id)
+);
+
+-- 索引：按公告查已读用户
+CREATE INDEX IF NOT EXISTS idx_notice_reads_notice_id
+  ON notice_reads(notice_id);
+
+-- 2. RLS 策略
+ALTER TABLE notice_reads ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can read notice_reads of own dept' AND tablename = 'notice_reads'
+  ) THEN
+    CREATE POLICY "Users can read notice_reads of own dept"
+      ON notice_reads FOR SELECT
+      USING (
+        notice_id IN (
+          SELECT id FROM notices WHERE department = (
+            SELECT department FROM users WHERE auth_id = auth.uid()
+          )
+        )
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert own notice_reads' AND tablename = 'notice_reads'
+  ) THEN
+    CREATE POLICY "Users can insert own notice_reads"
+      ON notice_reads FOR INSERT
+      WITH CHECK (
+        user_id IN (SELECT id FROM users WHERE auth_id = auth.uid())
+      );
+  END IF;
+END $$;
+
+-- ============================================================
+-- 第十部分：文件上传（2026-07-08）
+-- ============================================================
+
+-- 1. Storage bucket 说明
+--    请在 Supabase Dashboard > Storage 中手动创建名为 "attachments" 的公开 bucket
+--    或执行以下 SQL（需要 storage 模式权限）：
+--    INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true);
+
+-- 2. Storage 对象 RLS 策略
+--    公开读：任何人都可以下载附件
+--    登录用户可上传 / 可删除自己上传的文件
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read attachments' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Public read attachments"
+      ON storage.objects FOR SELECT
+      USING (bucket_id = 'attachments');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Auth users can upload attachments' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Auth users can upload attachments"
+      ON storage.objects FOR INSERT
+      WITH CHECK (bucket_id = 'attachments' AND auth.role() = 'authenticated');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete own attachments' AND tablename = 'objects'
+  ) THEN
+    CREATE POLICY "Users can delete own attachments"
+      ON storage.objects FOR DELETE
+      USING (bucket_id = 'attachments' AND auth.role() = 'authenticated');
+  END IF;
+END $$;
+
+-- 3. 各表新增 attachments 列（JSONB 数组，默认空）
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
+ALTER TABLE forum_posts ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
+ALTER TABLE notices ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';

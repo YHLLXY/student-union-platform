@@ -7,6 +7,7 @@ import { formatDateTime, hasMinRole, getDepartmentLabel } from '../../utils/help
 import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
 import { fetchPostDetail, fetchReplies, createReply, deletePost, updateCollaboratingDepts } from './forumService';
 import type { ForumPost, ForumReply } from './forumService';
+import FileList from '../../components/FileList';
 import styles from './forum.module.css';
 
 const { TextArea } = Input;
@@ -132,6 +133,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
         ) : (
           <ReactMarkdown>{post.content || '暂无内容'}</ReactMarkdown>
         )}
+        <FileList attachments={post.attachments} />
       </div>
 
       {/* 追加协同部门（presidium+） */}

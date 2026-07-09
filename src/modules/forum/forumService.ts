@@ -1,5 +1,7 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
+import { createNotification } from '../notification/notificationService';
+import type { Attachment } from '../../components/FileUpload';
 
 const log = logger.for('forum/forumService');
 
@@ -17,6 +19,7 @@ export interface ForumPost {
   updated_at: string;
   template_type?: string | null;
   template_data?: Record<string, unknown> | null;
+  attachments?: Attachment[] | null;
 }
 
 export interface ForumReply {
@@ -112,12 +115,14 @@ export async function createPost(post: {
   collaborating_departments?: string[];
   template_type?: string | null;
   template_data?: Record<string, unknown> | null;
+  attachments?: Attachment[];
 }): Promise<ForumPost | null> {
   const { data, error } = await supabase
     .from('forum_posts')
     .insert({
       ...post,
       collaborating_departments: post.collaborating_departments ?? [],
+      attachments: post.attachments ?? [],
     })
     .select('*')
     .single();
@@ -158,5 +163,23 @@ export async function createReply(postId: string, userId: string, content: strin
     .insert({ post_id: postId, content, created_by: userId });
 
   if (error) { log.error('createReply 回复失败', error); return false; }
+
+  // 通知帖主（fire-and-forget）
+  const { data: postData } = await supabase
+    .from('forum_posts')
+    .select('created_by, title')
+    .eq('id', postId)
+    .single();
+
+  if (postData && (postData as Record<string, unknown>).created_by !== userId) {
+    createNotification({
+      userId: (postData as Record<string, unknown>).created_by as string,
+      type: 'forum_reply',
+      title: '💬 论坛新回复',
+      content: `你的帖子「${(postData as Record<string, unknown>).title}」有新回复`,
+      relatedLink: '/forum',
+    }).catch(() => {});
+  }
+
   return true;
 }

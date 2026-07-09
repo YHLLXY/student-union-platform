@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Form, Input, Select, Switch, Button, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { createNotice, fetchActiveTasksForLinking } from './noticeService';
+import FileUpload, { type Attachment } from '../../components/FileUpload';
 
 const { TextArea } = Input;
 
@@ -14,6 +15,7 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
   const user = useAuth();
   const [loading, setLoading] = useState(false);
   const [taskOptions, setTaskOptions] = useState<{ value: string; label: string }[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     fetchActiveTasksForLinking(user.department).then((tasks) => {
@@ -36,6 +38,7 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
       is_pinned: values.is_pinned,
       created_by: user.id,
       linked_tasks: values.linked_tasks ?? [],
+      attachments,
     });
     setLoading(false);
     if (notice) { message.success('公告发布成功'); onSuccess(); }
@@ -84,6 +87,8 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
         <Form.Item name="is_pinned" label="置顶" valuePropName="checked">
           <Switch />
         </Form.Item>
+
+        <FileUpload module="notices" value={attachments} onChange={setAttachments} />
 
         <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
           <Button onClick={onClose} style={{ marginRight: 8 }}>取消</Button>

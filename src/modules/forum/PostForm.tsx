@@ -4,6 +4,7 @@ import { useAuth } from '../../components/AuthContext';
 import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
 import { hasMinRole } from '../../utils/helpers';
 import { createPost } from './forumService';
+import FileUpload, { type Attachment } from '../../components/FileUpload';
 
 const { TextArea } = Input;
 
@@ -61,6 +62,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
   const [form] = Form.useForm();
   const [category, setCategory] = useState('discussion');
   const [templateType, setTemplateType] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const canCollab = hasMinRole(user.role, 'dept_head');
   const canPostKnowledge = hasMinRole(user.role, 'dept_head');
 
@@ -97,6 +99,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
       collaborating_departments: (values.collaborating_departments as string[]) ?? [],
       template_type: isKnowledge ? templateType : null,
       template_data: templateData,
+      attachments,
     });
 
     setLoading(false);
@@ -186,6 +189,8 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
             </Form.Item>
           </>
         )}
+
+        <FileUpload module="forum" value={attachments} onChange={setAttachments} />
 
         <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
           <Button onClick={onClose} style={{ marginRight: 8 }}>取消</Button>

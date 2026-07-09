@@ -58,6 +58,17 @@
 - **影响范围：** 14 个文件，14 处 `destroyOnClose`
 - **修复方案：** 全局替换 `destroyOnClose` → `destroyOnHidden`
 
+### #5 大部分数据表未启用 RLS 行级安全
+
+- **日期：** 2026-07-08
+- **类型：** 安全隐患
+- **严重程度：** 中（仅当攻击者知道 Supabase 项目 URL 且有技术能力直接调 REST API 时才可被利用）
+- **现象：** 16 张数据表中，仅 `platform_guides` 启用了 RLS。其余 15 张表（`users`、`tasks`、`task_submissions`、`notices`、`school_notices`、`forum_posts`、`forum_replies`、`tickets`、`ticket_records`、`invite_codes`、`task_templates`、`task_milestones`、`department_guides`）均未启用 RLS
+- **风险：** 前端 JS bundle 中暴露了 Supabase anon key，任何人拿到后可绕过 UI 层权限判断，直接通过 REST API 读写所有未启用 RLS 的表
+- **当前缓解措施：** 前端 `hasMinRole()` 在 UI 层做了权限控制，普通用户的操作入口已被阻挡。且攻击者需具备一定的技术能力才能利用此漏洞，对于当前学生会内部平台场景实际风险较低
+- **修复方案：** 为全部 16 张表设计完整 RLS 策略（SELECT / INSERT / UPDATE / DELETE），按角色权限逐表定义。参考 `supabase-migration.sql` Part 4 中已注释的初版策略。注意：启用 RLS 后需全功能回归测试，部分联表查询可能因 `auth.uid()` 不匹配而静默失败
+- **暂不处理原因：** 工作量较大（16 张表 × 4 种操作 = 60+ 条策略），当前阶段功能完善优先级更高。后续平台面向公网或存储敏感数据时再处理
+
 ### #1 antd `message` 静态方法主题警告
 
 - **日期：** 2026-07-02

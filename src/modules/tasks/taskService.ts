@@ -1,6 +1,8 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
 import { hasMinRole } from '../../utils/helpers';
+import { createNotification } from '../notification/notificationService';
+import type { Attachment } from '../../components/FileUpload';
 
 const log = logger.for('tasks/taskService');
 
@@ -27,6 +29,8 @@ export interface Task {
   // 二期新增
   linked_notice_id?: string | null;
   has_milestones?: boolean;
+  // 五期：文件上传
+  attachments?: Attachment[] | null;
 }
 
 export interface TaskSubmission {
@@ -139,6 +143,7 @@ export async function createTask(task: {
   collaborating_departments?: string[];
   has_milestones?: boolean;    // 二期新增
   linked_notice_id?: string;   // 二期新增
+  attachments?: Attachment[];  // 五期：文件上传
 }): Promise<Task | null> {
   const { data, error } = await supabase
     .from('tasks')
@@ -155,6 +160,7 @@ export async function createTask(task: {
       collaborating_departments: task.collaborating_departments ?? [],
       has_milestones: task.has_milestones ?? false,
       linked_notice_id: task.linked_notice_id ?? null,
+      attachments: task.attachments ?? [],
     })
     .select('*')
     .single();
@@ -163,7 +169,20 @@ export async function createTask(task: {
     log.error('createTask 创建失败', error);
     return null;
   }
-  return data as Task;
+
+  // 通知被指派者（fire-and-forget，不阻塞主流程）
+  const created = data as Task;
+  if (created.assigned_to) {
+    createNotification({
+      userId: created.assigned_to,
+      type: 'task_assigned',
+      title: '📋 新任务指派',
+      content: `你被指派了新任务「${created.title}」`,
+      relatedLink: '/tasks',
+    }).catch(() => {});
+  }
+
+  return created;
 }
 
 /** 更新任务状态 */
@@ -232,6 +251,13 @@ export async function reviewSubmission(
   approved: boolean,
   reviewNote: string,
 ): Promise<boolean> {
+  // 查询提交者 + 任务标题（用于通知）
+  const { data: subData } = await supabase
+    .from('task_submissions')
+    .select('user_id, task:tasks!inner(title)')
+    .eq('id', submissionId)
+    .single();
+
   const { error: subError } = await supabase
     .from('task_submissions')
     .update({
@@ -245,6 +271,22 @@ export async function reviewSubmission(
 
   // 更新任务状态
   await updateTaskStatus(taskId, approved ? 'completed' : 'in_progress');
+
+  // 通知提交者审核结果（fire-and-forget）
+  if (subData) {
+    const submitterId = subData.user_id as string;
+    const taskTitle = (subData.task as unknown as { title: string } | { title: string }[] | null);
+    const title = Array.isArray(taskTitle) ? taskTitle[0]?.title : taskTitle?.title;
+    if (submitterId) {
+      createNotification({
+        userId: submitterId,
+        type: approved ? 'submission_approved' : 'submission_rejected',
+        title: approved ? '✅ 提交审核通过' : '↩️ 提交被驳回',
+        content: `任务「${title ?? taskId}」${approved ? '已审核通过' : '被驳回'}${reviewNote ? `：${reviewNote}` : ''}`,
+        relatedLink: '/tasks',
+      }).catch(() => {});
+    }
+  }
 
   return true;
 }

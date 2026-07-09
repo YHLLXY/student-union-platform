@@ -1,5 +1,7 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
+import { createBatchNotifications, fetchDeptMemberIds } from '../notification/notificationService';
+import type { Attachment } from '../../components/FileUpload';
 
 const log = logger.for('notices/noticeService');
 
@@ -14,6 +16,7 @@ export interface Notice {
   creator_name?: string;
   created_at: string;
   linked_tasks?: string[];
+  attachments?: Attachment[] | null;
 }
 
 /** 获取部门公告（置顶优先+时间倒序） */
@@ -45,6 +48,7 @@ export async function createNotice(notice: {
   is_pinned: boolean;
   created_by: string;
   linked_tasks?: string[];
+  attachments?: Attachment[];
 }): Promise<Notice | null> {
   const { data, error } = await supabase
     .from('notices')
@@ -56,7 +60,21 @@ export async function createNotice(notice: {
     log.error('createNotice 创建失败', error);
     return null;
   }
-  return data as Notice;
+
+  // 通知本部门所有成员（fire-and-forget）
+  const created = data as Notice;
+  fetchDeptMemberIds(notice.department).then((userIds) => {
+    if (userIds.length > 0) {
+      createBatchNotifications(userIds, {
+        type: 'new_notice',
+        title: '📢 新部门公告',
+        content: `本部门发布了新公告「${created.title}」`,
+        relatedLink: '/notices',
+      }).catch(() => {});
+    }
+  }).catch(() => {});
+
+  return created;
 }
 
 /** 实时订阅部门公告 */
@@ -104,6 +122,52 @@ export async function fetchLinkedTaskInfos(taskIds: string[]): Promise<{ id: str
     status: t.status as string,
     assignee_name: (t.assignee as { name: string } | null)?.name ?? undefined,
   }));
+}
+
+// ========== 公告已读确认 ==========
+
+/** 标记公告已读（用户打开公告时自动调用） */
+export async function markNoticeRead(noticeId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('notice_reads')
+    .upsert({ notice_id: noticeId, user_id: userId, read_at: new Date().toISOString() });
+
+  if (error) {
+    log.error('markNoticeRead 失败', error);
+  }
+}
+
+/** 获取公告已读/未读用户名单 */
+export async function fetchNoticeReaders(
+  noticeId: string,
+  department: string,
+): Promise<{ read: { id: string; name: string }[]; unread: { id: string; name: string }[] }> {
+  // 获取本部门所有用户
+  const { data: allUsers } = await supabase
+    .from('users')
+    .select('id, name')
+    .eq('department', department)
+    .neq('role', 'removed');
+
+  // 获取已读用户
+  const { data: reads } = await supabase
+    .from('notice_reads')
+    .select('user_id')
+    .eq('notice_id', noticeId);
+
+  const readIds = new Set((reads || []).map((r) => r.user_id));
+  const read: { id: string; name: string }[] = [];
+  const unread: { id: string; name: string }[] = [];
+
+  for (const u of allUsers || []) {
+    if (readIds.has(u.id)) {
+      read.push({ id: u.id, name: u.name });
+    } else {
+      unread.push({ id: u.id, name: u.name });
+    }
+  }
+
+  return { read, unread };
 }
 
 /** 从公告创建任务（公告一键转任务） */

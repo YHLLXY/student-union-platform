@@ -10,6 +10,7 @@ import {
 import type { Task, TaskSubmission, LinkedNotice } from './taskService';
 import styles from './tasks.module.css';
 import MilestonePanel from './MilestonePanel';
+import FileList from '../../components/FileList';
 
 const { TextArea } = Input;
 
@@ -116,6 +117,9 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
         )}
         <Descriptions.Item label="任务内容" span={2}>
           {task.content || '暂无详细内容'}
+        </Descriptions.Item>
+        <Descriptions.Item label="附件" span={2}>
+          <FileList attachments={task.attachments} />
         </Descriptions.Item>
         {task.handover_note && (
           <Descriptions.Item label="📝 交接备注" span={2}>

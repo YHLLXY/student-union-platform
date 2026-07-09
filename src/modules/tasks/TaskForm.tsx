@@ -6,6 +6,7 @@ import { DEPARTMENTS } from '../../utils/constants';
 import { isAdmin } from '../../utils/helpers';
 import { createTask, fetchTemplates } from './taskService';
 import type { TaskTemplate } from './taskService';
+import FileUpload, { type Attachment } from '../../components/FileUpload';
 
 const { TextArea } = Input;
 
@@ -20,6 +21,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
   const [form] = Form.useForm();
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     fetchTemplates(user.department).then(setTemplates);
@@ -64,6 +66,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
       template_id: selectedTemplate || null,
       collaborating_departments: values.collaborating_departments ?? [],
       has_milestones: values.enableMilestones ?? false,
+      attachments,
     });
 
     setLoading(false);
@@ -145,6 +148,8 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
         <Form.Item name="deadline" label="截止时间">
           <DatePicker showTime style={{ width: '100%' }} placeholder="选择截止时间（可选）" />
         </Form.Item>
+
+        <FileUpload module="tasks" value={attachments} onChange={setAttachments} />
 
         <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
           <Button onClick={onClose} style={{ marginRight: 8 }}>取消</Button>

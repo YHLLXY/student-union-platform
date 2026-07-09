@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message } from 'antd';
-import { PlusOutlined, PushpinFilled, FileTextOutlined } from '@ant-design/icons';
+import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
+import supabase from '../../supabaseClient';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
 import { NOTICE_TYPES, TASK_STATUSES } from '../../utils/constants';
-import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos, createTaskFromNotice } from './noticeService';
+import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos, createTaskFromNotice, markNoticeRead, fetchNoticeReaders } from './noticeService';
 import type { Notice } from './noticeService';
 import NoticeForm from './NoticeForm';
+import FileList from '../../components/FileList';
 import styles from './notices.module.css';
 
 export default function NoticeList() {
@@ -19,6 +21,46 @@ export default function NoticeList() {
   const [convertTarget, setConvertTarget] = useState<Notice | null>(null);
   const [convertLoading, setConvertLoading] = useState(false);
   const [convertForm] = Form.useForm();
+  const [readStats, setReadStats] = useState<Record<string, { read: number; total: number }>>({});
+  const [myReadIds, setMyReadIds] = useState<Set<string>>(new Set());
+  const [readersModal, setReadersModal] = useState<{ open: boolean; noticeId: string; readers: { read: { id: string; name: string }[]; unread: { id: string; name: string }[] } } | null>(null);
+
+  const loadReadStats = useCallback(async (noticesData: Notice[]) => {
+    if (noticesData.length === 0) return;
+    const ids = noticesData.map((n) => n.id);
+    // 并行查已读统计 + 部门人数
+    const [allReads, deptCount] = await Promise.all([
+      supabase
+        .from('notice_reads')
+        .select('notice_id, user_id')
+        .in('notice_id', ids),
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('department', user.department)
+        .neq('role', 'removed'),
+    ]);
+
+    const total = deptCount.count ?? 0;
+    const readMap: Record<string, number> = {};
+    const myReadSet = new Set<string>();
+
+    for (const r of allReads.data || []) {
+      const nid = r.notice_id as string;
+      readMap[nid] = (readMap[nid] || 0) + 1;
+      if (r.user_id === user.id) {
+        myReadSet.add(nid);
+      }
+    }
+
+    const stats: Record<string, { read: number; total: number }> = {};
+    for (const nid of ids) {
+      stats[nid] = { read: readMap[nid] ?? 0, total };
+    }
+
+    setReadStats(stats);
+    setMyReadIds(myReadSet);
+  }, [user.department, user.id]);
 
   const loadNotices = useCallback(async () => {
     const data = await fetchNotices(user.department);
@@ -35,7 +77,9 @@ export default function NoticeList() {
       }
       setLinkedTasks(map);
     }
-  }, [user.department]);
+    // 加载已读统计
+    loadReadStats(data);
+  }, [user.department, loadReadStats]);
 
   useEffect(() => {
     loadNotices();
@@ -44,6 +88,26 @@ export default function NoticeList() {
   }, [loadNotices, user.department]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
+
+  const handleExpand = async (noticeId: string) => {
+    const isCurrentlyExpanded = expandedId === noticeId;
+    setExpandedId(isCurrentlyExpanded ? null : noticeId);
+    // 展开时标记已读
+    if (!isCurrentlyExpanded && !myReadIds.has(noticeId)) {
+      setMyReadIds((prev) => new Set(prev).add(noticeId));
+      setReadStats((prev) => {
+        const cur = prev[noticeId];
+        return { ...prev, [noticeId]: { read: (cur?.read ?? 0) + 1, total: cur?.total ?? 0 } };
+      });
+      markNoticeRead(noticeId, user.id);
+    }
+  };
+
+  const handleShowReaders = async (noticeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const readers = await fetchNoticeReaders(noticeId, user.department);
+    setReadersModal({ open: true, noticeId, readers });
+  };
 
   return (
     <div>
@@ -64,8 +128,8 @@ export default function NoticeList() {
         notices.map((notice) => (
           <Card
             key={notice.id}
-            className={`${styles.noticeCard} ${notice.is_pinned ? styles.pinnedCard : styles.normalCard}`}
-            onClick={() => setExpandedId(expandedId === notice.id ? null : notice.id)}
+            className={`${styles.noticeCard} ${notice.is_pinned ? styles.pinnedCard : styles.normalCard} ${myReadIds.has(notice.id) ? styles.readCard : ''}`}
+            onClick={() => handleExpand(notice.id)}
           >
             <div className={styles.cardHeader}>
               {notice.is_pinned && <PushpinFilled style={{ color: '#e67e22' }} />}
@@ -73,14 +137,24 @@ export default function NoticeList() {
               {notice.linked_tasks && notice.linked_tasks.length > 0 && (
                 <Tag color="orange" style={{ fontSize: 11 }}>🔗 {notice.linked_tasks.length} 个关联任务</Tag>
               )}
-              <span className={styles.cardTitle}>{notice.title}</span>
+              <span className={`${styles.cardTitle} ${myReadIds.has(notice.id) ? styles.readTitle : ''}`}>{notice.title}</span>
             </div>
             <div className={styles.cardMeta}>
               {notice.creator_name} · {formatDateTime(notice.created_at)}
+              {readStats[notice.id] && (
+                <span
+                  className={styles.readCount}
+                  onClick={(e) => handleShowReaders(notice.id, e)}
+                >
+                  <EyeOutlined style={{ marginRight: 2 }} />
+                  {readStats[notice.id].read}/{readStats[notice.id].total}
+                </span>
+              )}
             </div>
             {expandedId === notice.id && (
               <div className={styles.cardContent}>
                 {notice.content || '暂无详细内容'}
+                <FileList attachments={notice.attachments} />
                 {linkedTasks[notice.id] && linkedTasks[notice.id].length > 0 && (
                   <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
                     <p style={{ fontWeight: 500, marginBottom: 8, fontSize: 14 }}>🔗 关联任务</p>
@@ -202,6 +276,49 @@ export default function NoticeList() {
             </>
           )}
         </div>
+      </Modal>
+
+      {/* 已读/未读名单弹窗 */}
+      <Modal
+        open={readersModal?.open ?? false}
+        onCancel={() => setReadersModal(null)}
+        footer={null}
+        width={420}
+        title="📊 已读确认详情"
+        destroyOnClose
+      >
+        {readersModal && (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 500, color: '#27ae60', marginBottom: 4 }}>
+                ✅ 已读 ({readersModal.readers.read.length} 人)
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {readersModal.readers.read.length === 0 ? (
+                  <span style={{ color: '#bdc3c7', fontSize: 13 }}>暂无</span>
+                ) : (
+                  readersModal.readers.read.map((u) => (
+                    <Tag key={u.id} color="green">{u.name}</Tag>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
+              <p style={{ fontWeight: 500, color: '#e67e22', marginBottom: 4 }}>
+                ⏳ 未读 ({readersModal.readers.unread.length} 人)
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {readersModal.readers.unread.length === 0 ? (
+                  <span style={{ color: '#bdc3c7', fontSize: 13 }}>全部已读</span>
+                ) : (
+                  readersModal.readers.unread.map((u) => (
+                    <Tag key={u.id} color="orange">{u.name}</Tag>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
