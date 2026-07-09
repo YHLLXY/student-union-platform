@@ -105,6 +105,7 @@ export default function NoticeList() {
 
   const handleShowReaders = async (noticeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canCreate) return; // 仅 dept_head+ 可查看具体已读/未读人名单
     const readers = await fetchNoticeReaders(noticeId, user.department);
     setReadersModal({ open: true, noticeId, readers });
   };
@@ -144,7 +145,9 @@ export default function NoticeList() {
               {readStats[notice.id] && (
                 <span
                   className={styles.readCount}
-                  onClick={(e) => handleShowReaders(notice.id, e)}
+                  style={canCreate ? {} : { cursor: 'default' }}
+                  onClick={canCreate ? (e) => handleShowReaders(notice.id, e) : undefined}
+                  title={canCreate ? '点击查看已读/未读名单' : undefined}
                 >
                   <EyeOutlined style={{ marginRight: 2 }} />
                   {readStats[notice.id].read}/{readStats[notice.id].total}
