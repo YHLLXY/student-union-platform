@@ -14,6 +14,7 @@ import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/help
 import { TASK_STATUSES } from '../../utils/constants';
 import { fetchDashboardStats, fetchRecentActivity, fetchDashboardReviewTasks } from './dashboardService';
 import type { DashboardStats, ActivityItem } from './dashboardService';
+import WeeklyBriefCard from './WeeklyBriefCard';
 import styles from './dashboard.module.css';
 
 const TYPE_ICON: Record<string, string> = {
@@ -166,6 +167,8 @@ export default function DashBoardPage() {
           </div>
         )}
       </Card>
+
+      <WeeklyBriefCard />
 
       {/* 待审核任务弹窗 */}
       <Modal

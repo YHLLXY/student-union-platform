@@ -1,6 +1,10 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
-import { hasMinRole } from '../../utils/helpers';
+import { hasMinRole, getDepartmentLabel } from '../../utils/helpers';
+import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
+
+dayjs.extend(isoWeek);
 
 const log = logger.for('dashboard/dashboardService');
 
@@ -176,4 +180,210 @@ export async function fetchDashboardReviewTasks(
     return [];
   }
   return (data || []) as { id: string; title: string; deadline: string | null }[];
+}
+
+// ========== 数据简报（Phase 6）==========
+
+export interface WeeklyBrief {
+  weekLabel: string;
+  completedThisWeek: number;
+  completedLastWeek: number;
+  totalThisWeek: number;
+  overdueThisWeek: number;
+  topDepartment: { dept: string; label: string; count: number } | null;
+}
+
+export interface MonthlyReport {
+  monthLabel: string;
+  byDepartment: { dept: string; label: string; completed: number; total: number; overdue: number }[];
+  byPerson: { userId: string; name: string; completed: number }[];
+  totalCompleted: number;
+  totalOverdue: number;
+  totalTasks: number;
+}
+
+/** 本周简报 — 仅 dept_head+ 可见 */
+export async function fetchWeeklyBrief(
+  department: string,
+  role: string,
+): Promise<WeeklyBrief | null> {
+  if (!hasMinRole(role, 'dept_head')) return null;
+
+  const now = dayjs();
+  const weekStart = now.startOf('isoWeek').toISOString();
+  const weekEnd = now.endOf('isoWeek').toISOString();
+  const lastWeekStart = now.subtract(1, 'week').startOf('isoWeek').toISOString();
+  const lastWeekEnd = now.subtract(1, 'week').endOf('isoWeek').toISOString();
+
+  const isGlobalRole = hasMinRole(role, 'president');
+  const addDeptFilter = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
+    isGlobalRole ? q : q.eq('assigned_department', department);
+
+  const weekLabel = `${now.startOf('isoWeek').format('M/D')} - ${now.endOf('isoWeek').format('M/D')}`;
+
+  // 并行：4 个 count + 1 个数据查询（用于 Top 部门统计）
+  const [
+    completedThisRes,
+    completedLastRes,
+    totalThisRes,
+    overdueThisRes,
+    topDeptRes,
+  ] = await Promise.all([
+    (async () => {
+      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('updated_at', weekStart).lte('updated_at', weekEnd);
+      q = addDeptFilter(q);
+      const { count } = await q;
+      return count ?? 0;
+    })(),
+    (async () => {
+      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('updated_at', lastWeekStart).lte('updated_at', lastWeekEnd);
+      q = addDeptFilter(q);
+      const { count } = await q;
+      return count ?? 0;
+    })(),
+    (async () => {
+      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+        .gte('created_at', weekStart).lte('created_at', weekEnd);
+      q = addDeptFilter(q);
+      const { count } = await q;
+      return count ?? 0;
+    })(),
+    (async () => {
+      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+        .neq('status', 'completed')
+        .lt('deadline', weekEnd);
+      q = addDeptFilter(q);
+      const { count } = await q;
+      return count ?? 0;
+    })(),
+    (async () => {
+      let q = supabase.from('tasks').select('assigned_department')
+        .eq('status', 'completed')
+        .gte('updated_at', weekStart).lte('updated_at', weekEnd);
+      q = addDeptFilter(q);
+      const { data } = await q;
+      return data || [];
+    })(),
+  ]);
+
+  // 客户端 GROUP BY：计算本周最活跃部门
+  const deptMap: Record<string, number> = {};
+  for (const row of topDeptRes) {
+    const d = (row as { assigned_department: string }).assigned_department;
+    deptMap[d] = (deptMap[d] || 0) + 1;
+  }
+  let topDepartment: WeeklyBrief['topDepartment'] = null;
+  let maxCount = 0;
+  for (const [dept, count] of Object.entries(deptMap)) {
+    if (count > maxCount) {
+      maxCount = count;
+      topDepartment = { dept, label: getDepartmentLabel(dept), count };
+    }
+  }
+
+  return {
+    weekLabel,
+    completedThisWeek: completedThisRes,
+    completedLastWeek: completedLastRes,
+    totalThisWeek: totalThisRes,
+    overdueThisWeek: overdueThisRes,
+    topDepartment,
+  };
+}
+
+/** 月报详细数据 — 仅 dept_head+ 可见 */
+export async function fetchMonthlyReport(
+  department: string,
+  role: string,
+): Promise<MonthlyReport | null> {
+  if (!hasMinRole(role, 'dept_head')) return null;
+
+  const now = dayjs();
+  const monthStart = now.startOf('month').toISOString();
+  const monthEnd = now.endOf('month').toISOString();
+  const monthLabel = now.format('YYYY年M月');
+
+  const isGlobalRole = hasMinRole(role, 'president');
+  const addDeptFilter = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
+    isGlobalRole ? q : q.eq('assigned_department', department);
+
+  // 并行：3 个数据查询
+  const [allTasksRes, completedRes, usersRes] = await Promise.all([
+    // 本月全部任务
+    (async () => {
+      let q = supabase.from('tasks')
+        .select('id, assigned_department, assigned_to, status')
+        .gte('created_at', monthStart).lte('created_at', monthEnd);
+      q = addDeptFilter(q);
+      const { data } = await q;
+      return (data || []) as { id: string; assigned_department: string; assigned_to: string | null; status: string }[];
+    })(),
+    // 本月完成任务（按执行人分组用于排行榜）
+    (async () => {
+      let q = supabase.from('tasks')
+        .select('id, assigned_to')
+        .eq('status', 'completed')
+        .gte('updated_at', monthStart).lte('updated_at', monthEnd);
+      q = addDeptFilter(q);
+      const { data } = await q;
+      return (data || []) as { id: string; assigned_to: string | null }[];
+    })(),
+    // 用户名列表（用于排行榜展示）
+    supabase.from('users').select('id, name').neq('role', 'removed'),
+  ]);
+
+  // 客户端 GROUP BY：按部门
+  const deptStats: Record<string, { completed: number; total: number; overdue: number }> = {};
+  for (const t of allTasksRes) {
+    const d = t.assigned_department;
+    if (!deptStats[d]) deptStats[d] = { completed: 0, total: 0, overdue: 0 };
+    deptStats[d].total++;
+    if (t.status === 'completed') deptStats[d].completed++;
+  }
+  // 按部门统计已完成 + 总数（逾期率由首页统计卡片覆盖）
+  const byDepartment = Object.entries(deptStats).map(([dept, s]) => ({
+    dept,
+    label: getDepartmentLabel(dept),
+    completed: s.completed,
+    total: s.total,
+    overdue: 0, // 不从月报查逾期，用主页面的逾期卡片替代
+  }));
+
+  // 客户端 GROUP BY：按人（仅已完成任务）
+  const personMap: Record<string, number> = {};
+  for (const t of completedRes) {
+    if (t.assigned_to) {
+      personMap[t.assigned_to] = (personMap[t.assigned_to] || 0) + 1;
+    }
+  }
+  const userNameMap: Record<string, string> = {};
+  for (const u of (usersRes.data || [])) {
+    const user = u as { id: string; name: string };
+    userNameMap[user.id] = user.name;
+  }
+  const byPerson = Object.entries(personMap)
+    .map(([userId, completed]) => ({
+      userId,
+      name: userNameMap[userId] ?? '未知',
+      completed,
+    }))
+    .sort((a, b) => b.completed - a.completed)
+    .slice(0, 10);
+
+  const totalCompleted = completedRes.length;
+  const totalOverdue = 0; // 月报暂不统计逾期明细
+  const totalTasks = allTasksRes.length;
+
+  return {
+    monthLabel,
+    byDepartment,
+    byPerson,
+    totalCompleted,
+    totalOverdue,
+    totalTasks,
+  };
 }
