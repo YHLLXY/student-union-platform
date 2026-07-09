@@ -43,7 +43,9 @@ src/
     ├── forum/                # 部门论坛（分类浏览/Markdown发帖/知识库模板）
     ├── profile/              # 个人中心（统计/热力图/排行榜/日历/通讯录/新人指南）
     ├── admin/                # 权限管理（成员角色/邀请码/工作看板）
-    └── tickets/              # 活动抢票（发布/抢票/退票/我的票券）
+    ├── tickets/              # 活动抢票（发布/抢票/退票/我的票券）
+    ├── notification/         # 通知中心（Bell组件/Realtime推送/CRUD service）
+    └── dashboard/            # 首页工作台（统计卡片/活动时间线/快捷操作）
 ```
 
 ## 角色权限体系
@@ -137,6 +139,14 @@ module/
 - **类型定义：** 接口放在对应的 Service 文件中，组件通过 `import type` 引用
 - **Supabase 查询：** 用 `.select('*, join:foreign_key(fields)')` 做联表，`.maybeSingle()` 查可能不存在的行
 - **错误处理：** Service 层 catch 后 `log.error()` + 返回安全默认值（`[]` / `null` / `false`）
+- **性能铁律：**
+  - 所有独立查询必须 `Promise.all` 并行，禁止串行 `await`
+  - 所有列表查询必须 `LIMIT`（通知 20，活动流 5，搜索 5）
+  - 禁止在 `.map()` / `for` 循环内调用 `supabase.from()`（N+1 反模式）
+  - 非关键操作（通知、日志）使用 fire-and-forget：`.catch(() => {})`
+- **乐观更新：** 拖拽/标记已读等操作先改本地 state → 后台同步 → 失败回滚。**必须用 `setState(prev => prev.map(...))` 而非对象 mutation。**
+- **组件受控模式：** 可复用组件使用标准 `value` + `onChange` 接口，与 antd Form 无缝集成
+- **类型导入：** 跨模块引用类型用 `import type`，避免循环依赖
 
 ### 数据库变更流程
 
@@ -144,6 +154,35 @@ module/
 2. **代码中先写好对应的 Service 函数**（查询新表/新列的代码）
 3. **提醒用户手动执行迁移**（复制 SQL → Supabase Dashboard → SQL Editor）
 4. 用户确认执行后，功能才能正常使用
+
+### Realtime 订阅登记
+
+**每新增一个 `.channel().subscribe()` 必须在下方登记。** Supabase 免费层上限 200 并发连接。
+
+| 模块 | 表 | 事件 | 过滤条件 |
+|------|-----|------|------|
+| tasks | `tasks` | INSERT, UPDATE | `assigned_department` |
+| notices | `notices` | INSERT | `department` |
+| notification | `notifications` | INSERT | `user_id` |
+| tickets | `tickets`, `ticket_records` | * | 无 |
+| school | `school_notices` | INSERT | 无 |
+
+**规则：**
+- 所有订阅必须在 `useEffect` cleanup 中取消
+- 新增订阅前确认不会超出连接上限
+
+### Phase 自检清单
+
+**每个 Phase 完成后必须逐项检查：**
+
+```
+□ build: npm run build → 0 error
+□ Promise.all: grep 连续 await → 无串行化
+□ N+1: grep .map( + supabase → 无循环内查询
+□ 死代码: grep export + grep 调用方 → 无孤立函数
+□ 角色矩阵: 用 volunteer/dept_head/president 三视角验证数据过滤
+□ Realtime: 新增订阅了吗？cleanup 正确吗？
+```
 
 ### 问题管理
 
@@ -206,9 +245,17 @@ git push origin master
 - **Auth：** 邮箱 = `学号@stuunion.org`，`users` 表通过 `auth_id` 关联 `auth.users`
 
 **核心表：**
-`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `school_notices` | `forum_posts` | `tickets` | `ticket_records` | `invite_codes` | `department_guides`
+`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides`
 
-**迁移文件：** `supabase-migration.sql`（6 部分，含一期 + 二期所有 DDL）
+**迁移文件：** `supabase-migration.sql`（10 部分，含一期 + 二期 + Phase1-5 所有 DDL）
+
+## 三期增强功能（2026-07-08 ~ 2026-07-09）
+
+1. **通知中心** — NotificationBell.tsx，Realtime 推送 + Bell Badge + 5 类自动触发
+2. **公告已读确认** — 阅读标记 UPSERT + 已读/未读人名弹窗
+3. **首页工作台** — DashBoardPage.tsx，统计卡片 + 活动时间线 + 快捷操作
+4. **任务看板** — KanbanBoard.tsx，@dnd-kit 拖拽 + 列表/看板切换 + 乐观更新
+5. **文件上传** — FileUpload/FileList，Supabase Storage + 3 表单集成
 
 ## 二期增强功能（2026-07-02）
 
