@@ -51,3 +51,27 @@
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+/* 已读公告样式 */
+.readCard {
+  opacity: 0.75;
+}
+
+.readTitle {
+  color: #95a5a6 !important;
+}
+
+.readCount {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  font-size: 12px;
+  color: #3498db;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.readCount:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
