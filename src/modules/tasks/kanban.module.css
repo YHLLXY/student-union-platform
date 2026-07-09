@@ -1,0 +1,149 @@
+/* 看板容器 */
+.board {
+  display: flex;
+  gap: 16px;
+  min-height: 400px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+/* 列 */
+.column {
+  flex: 1;
+  min-width: 240px;
+  max-width: 320px;
+  background: #f5f6f8;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s;
+}
+
+.columnOver {
+  background: #eef1f5;
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  flex-shrink: 0;
+}
+
+.columnDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.columnTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.columnCount {
+  font-size: 12px;
+  color: #95a5a6;
+  background: #e8e8e8;
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin-left: auto;
+}
+
+.columnBody {
+  flex: 1;
+  padding: 4px 10px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 60px;
+}
+
+.columnEmpty {
+  text-align: center;
+  padding: 20px 0;
+  font-size: 12px;
+  color: #bdc3c7;
+  border: 1px dashed #ddd;
+  border-radius: 6px;
+}
+
+/* 卡片 */
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s;
+  user-select: none;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.cardDragging {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: rotate(2deg);
+}
+
+.cardPriorityBar {
+  height: 3px;
+}
+
+.cardBody {
+  padding: 10px 12px;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardMeta {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.cardFooterItem {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 拖拽覆盖层 */
+.dragOverlay {
+  transform: rotate(3deg);
+  opacity: 0.9;
+  width: 260px;
+}
+
+/* 视图切换按钮组 */
+.viewToggle {
+  margin-left: 16px;
+}
