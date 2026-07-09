@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ModuleErrorBoundary from './components/ModuleErrorBoundary';
 
 // 各模块页面（懒加载）
+const DashBoardPage = lazy(() => import('./modules/dashboard/DashBoardPage'));
 const TaskListPage = lazy(() => import('./modules/tasks/TaskListPage'));
 const NoticeList = lazy(() => import('./modules/notices/NoticeList'));
 const SchoolNoticeList = lazy(() => import('./modules/school/SchoolNoticeList'));
@@ -54,6 +55,7 @@ export default function App() {
         <AppLayout>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              <Route path="/dashboard" element={<ModuleErrorBoundary moduleName="首页工作台"><DashBoardPage /></ModuleErrorBoundary>} />
               <Route path="/tasks" element={<ModuleErrorBoundary moduleName="任务管理"><TaskListPage /></ModuleErrorBoundary>} />
               <Route path="/notices" element={<ModuleErrorBoundary moduleName="部门公告"><NoticeList /></ModuleErrorBoundary>} />
               <Route path="/school" element={<ModuleErrorBoundary moduleName="学校信息"><SchoolNoticeList /></ModuleErrorBoundary>} />
@@ -61,7 +63,7 @@ export default function App() {
               <Route path="/tickets" element={<ModuleErrorBoundary moduleName="活动抢票"><TicketList /></ModuleErrorBoundary>} />
               <Route path="/admin" element={<ModuleErrorBoundary moduleName="权限管理"><MemberManage /></ModuleErrorBoundary>} />
               <Route path="/profile" element={<ModuleErrorBoundary moduleName="个人中心"><ProfilePage /></ModuleErrorBoundary>} />
-              <Route path="*" element={<Navigate to="/tasks" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </AppLayout>

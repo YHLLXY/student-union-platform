@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout, Menu, Dropdown, Avatar, Button } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
+  HomeOutlined,
   CheckSquareOutlined,
   BellOutlined,
   BankOutlined,
@@ -20,6 +21,7 @@ import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import { GuideDrawer } from '../modules/guide';
+import { NotificationBell } from '../modules/notification';
 import styles from './AppLayout.module.css';
 
 const { Header, Sider, Content } = Layout;
@@ -29,6 +31,7 @@ interface AppLayoutProps {
 }
 
 const iconMap: Record<string, React.ReactNode> = {
+  HomeOutlined: <HomeOutlined />,
   CheckSquareOutlined: <CheckSquareOutlined />,
   BellOutlined: <BellOutlined />,
   BankOutlined: <BankOutlined />,
@@ -105,6 +108,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
             title="反馈与建议"
           />
+          <NotificationBell />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
               <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />

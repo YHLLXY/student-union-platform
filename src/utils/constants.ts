@@ -78,6 +78,7 @@ export interface MenuItem {
 }
 
 export const MENU_ITEMS: MenuItem[] = [
+  { key: 'dashboard', label: '首页工作台', icon: 'HomeOutlined', path: '/dashboard', minRole: 0 },
   { key: 'tasks', label: '任务管理', icon: 'CheckSquareOutlined', path: '/tasks', minRole: 0 },
   { key: 'notices', label: '部门公告', icon: 'BellOutlined', path: '/notices', minRole: 0 },
   { key: 'school', label: '学校信息', icon: 'BankOutlined', path: '/school', minRole: 0 },
