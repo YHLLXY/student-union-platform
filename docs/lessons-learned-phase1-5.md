@@ -232,6 +232,47 @@ Phase 3 结束时的自检发现了 3 个问题，如果不检查直接上线：
 
 ---
 
+## 十一、补遗：Phase 1-7 全量自检（2026-07-09）
+
+全部 7 个 Phase 完成后执行了一次全面自检，发现：
+
+### 发现并修复的问题
+
+| # | 严重度 | 位置 | 问题 | 修复 |
+|:--:|:--:|------|------|------|
+| 1 | 🔴 | [NoticeList.tsx:106](../src/modules/notices/NoticeList.tsx#L106) | 志愿者可点击已读数字查看具体"谁读了/谁没读"名单 — 隐私泄露 | `handleShowReaders` 加 `canCreate` 守卫 |
+| 2 | 🟡 | [FileUpload.tsx:201](../src/components/FileUpload.tsx#L201) | `attachmentToUploadFile` 导出但无外部引用 | 保留（预留 API） |
+| 3 | 🟢 | FileUpload.tsx + FileList.tsx | `formatSize` / `getFileIcon` 重复定义 | 已知，暂无大碍 |
+
+### 新代码全部通过的检查项
+
+- `Promise.all` 并行：`fetchDashboardStats`、`fetchRecentActivity`、`fetchWeeklyBrief`、`fetchMonthlyReport`、`globalSearch` 全部正确并行
+- `LIMIT`：notifications(20)、activity(5×3)、search(5×4) 全有限制
+- N+1：新代码无循环内查询
+- Realtime cleanup：所有订阅在 useEffect 中正确返回
+- 角色权限：Dashboard/BriefCard/ReportModal/Search 全部有 `hasMinRole` 守卫
+- Type imports：跨模块类型引用全部用 `import type`
+- 防抖：GlobalSearch 300ms debounce + 空输入不查询
+
+### 既有代码的问题（非本次引入，记录备忘）
+
+| 类别 | 数量 | 典型位置 |
+|------|:--:|------|
+| 串行 await | 5 处 | `forumService.fetchPostDetail`、`noticeService.fetchNoticeReaders`、`TaskDetail.tsx`、`PostDetail.tsx`、`NoticeList.tsx` |
+| N+1 查询 | 2 处 | `forumService.fetchPosts`(每帖查回复数)、`TaskListPage.loadTasks`(每任务查里程碑) |
+| 缺少 LIMIT | 14 处 | `fetchTasks`、`fetchPosts`、`fetchNotices`、`fetchReplies` 等均无限制 |
+| N×5 爆炸 | 1 处 | `adminService.fetchMemberWorkSummaries`(每人 5 个 count 查询) |
+
+### 新增教训
+
+**#11：权限检查不能只靠 UI 隐藏。**
+志愿者看不到"发布公告"按钮 → 但能看到 `👁 3/12` 已读数字。点击后直接调 `fetchNoticeReaders` 拿到了具体名单。**UI 隐藏 ≠ 权限守卫，每个数据接口入口都要独立做角色检查。**
+
+**#12：全量自检必须模拟最低权限角色。**
+以 `volunteer`(0) / `dept_head`(1) / `president`(3) 三个视角，逐一过每个可见元素：这个角色应该能点击吗？点击后能拿到什么数据？仅此一次自检就发现了 1 个隐私漏洞。
+
+---
+
 ## 检查清单（后续 Phase 复用）
 
 每个 Phase 结束时执行：
