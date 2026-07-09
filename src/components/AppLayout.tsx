@@ -22,6 +22,7 @@ import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import { GuideDrawer } from '../modules/guide';
 import { NotificationBell } from '../modules/notification';
+import GlobalSearch from './GlobalSearch';
 import styles from './AppLayout.module.css';
 
 const { Header, Sider, Content } = Layout;
@@ -93,6 +94,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <Layout style={{ minHeight: '100vh' }}>
       <Header className={styles.header}>
         <div className={styles.logo}>🏛 学生会</div>
+        <GlobalSearch />
         <div className={styles.headerRight}>
           <Button
             type="text"

@@ -1,0 +1,106 @@
+.container {
+  position: relative;
+  width: 280px;
+  margin: 0 auto;
+}
+
+.input {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: background 0.2s, border 0.2s;
+}
+
+.input:hover,
+.input:focus-within {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* override antd dark-text-on-white-bg when focused */
+.input :global(.ant-input) {
+  color: #fff;
+  background: transparent;
+}
+
+.input :global(.ant-input)::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.prefixIcon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---- 下拉面板 ---- */
+.dropdown {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 1050;
+  padding: 6px 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 24px;
+  color: #bdc3c7;
+  font-size: 13px;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.item:hover,
+.itemSelected {
+  background: #f0f4ff;
+}
+
+.itemIcon {
+  font-size: 16px;
+  color: #95a5a6;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.itemSubtitle {
+  font-size: 12px;
+  color: #95a5a6;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight {
+  background: #fff3b0;
+  color: #2c3e50;
+  padding: 0 2px;
+  border-radius: 2px;
+}
