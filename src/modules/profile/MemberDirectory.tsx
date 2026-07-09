@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, Input, Tag, Avatar, Empty, Spin, Tooltip } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
@@ -24,7 +24,7 @@ export default function MemberDirectory() {
     });
   }, []);
 
-  const filtered = members.filter((m) => {
+  const filtered = useMemo(() => members.filter((m) => {
     const matchSearch =
       !search ||
       m.name.includes(search) ||
@@ -32,7 +32,7 @@ export default function MemberDirectory() {
       getRoleLabel(m.role).includes(search);
     const matchDept = deptFilter === 'all' || m.department === deptFilter;
     return matchSearch && matchDept;
-  });
+  }), [members, search, deptFilter]);
 
   if (loading) {
     return (

@@ -3,6 +3,7 @@ import { Upload, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
 import supabase from '../supabaseClient';
+import { formatFileSize as formatSize, getFileIcon } from '../utils/helpers';
 import styles from './file-upload.module.css';
 
 const { Dragger } = Upload;
@@ -56,24 +57,6 @@ const ALLOWED_EXTENSIONS = [
   '.ppt', '.pptx',
   '.zip', '.rar', '.7z', '.tar', '.gz',
 ];
-
-// ---- 辅助 ----
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getFileIcon(type: string): string {
-  if (type.startsWith('image/')) return '🖼️';
-  if (type.includes('pdf')) return '📕';
-  if (type.includes('word') || type.includes('document')) return '📝';
-  if (type.includes('excel') || type.includes('sheet')) return '📊';
-  if (type.includes('powerpoint') || type.includes('presentation')) return '📽️';
-  if (type.includes('zip') || type.includes('rar') || type.includes('7z') || type.includes('tar') || type.includes('gzip')) return '📦';
-  return '📄';
-}
 
 // ---- 组件 ----
 

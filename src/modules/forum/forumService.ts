@@ -67,18 +67,19 @@ export async function fetchPosts(userDepartment: string, category?: string): Pro
 
 /** 获取帖子详情 */
 export async function fetchPostDetail(postId: string): Promise<ForumPost | null> {
-  const { data, error } = await supabase
-    .from('forum_posts')
-    .select('*, author:created_by(name)')
-    .eq('id', postId)
-    .single();
+  const [{ data, error }, { count }] = await Promise.all([
+    supabase
+      .from('forum_posts')
+      .select('*, author:created_by(name)')
+      .eq('id', postId)
+      .single(),
+    supabase
+      .from('forum_replies')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', postId),
+  ]);
 
   if (error || !data) { log.error('fetchPostDetail 查询失败', error); return null; }
-
-  const { count } = await supabase
-    .from('forum_replies')
-    .select('id', { count: 'exact', head: true })
-    .eq('post_id', postId);
 
   const p = data as Record<string, unknown>;
   return {
@@ -158,18 +159,20 @@ export async function updateCollaboratingDepts(postId: string, depts: string[]):
 
 /** 回复 */
 export async function createReply(postId: string, userId: string, content: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('forum_replies')
-    .insert({ post_id: postId, content, created_by: userId });
+  const [{ error }, { data: postData }] = await Promise.all([
+    supabase
+      .from('forum_replies')
+      .insert({ post_id: postId, content, created_by: userId }),
+    supabase
+      .from('forum_posts')
+      .select('created_by, title')
+      .eq('id', postId)
+      .single(),
+  ]);
 
   if (error) { log.error('createReply 回复失败', error); return false; }
 
   // 通知帖主（fire-and-forget）
-  const { data: postData } = await supabase
-    .from('forum_posts')
-    .select('created_by, title')
-    .eq('id', postId)
-    .single();
 
   if (postData && (postData as Record<string, unknown>).created_by !== userId) {
     createNotification({

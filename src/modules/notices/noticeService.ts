@@ -142,18 +142,18 @@ export async function fetchNoticeReaders(
   noticeId: string,
   department: string,
 ): Promise<{ read: { id: string; name: string }[]; unread: { id: string; name: string }[] }> {
-  // 获取本部门所有用户
-  const { data: allUsers } = await supabase
-    .from('users')
-    .select('id, name')
-    .eq('department', department)
-    .neq('role', 'removed');
-
-  // 获取已读用户
-  const { data: reads } = await supabase
-    .from('notice_reads')
-    .select('user_id')
-    .eq('notice_id', noticeId);
+  // 并行获取本部门所有用户 + 已读用户
+  const [{ data: allUsers }, { data: reads }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('id, name')
+      .eq('department', department)
+      .neq('role', 'removed'),
+    supabase
+      .from('notice_reads')
+      .select('user_id')
+      .eq('notice_id', noticeId),
+  ]);
 
   const readIds = new Set((reads || []).map((r) => r.user_id));
   const read: { id: string; name: string }[] = [];

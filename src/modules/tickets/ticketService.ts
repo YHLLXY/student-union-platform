@@ -98,22 +98,22 @@ export async function grabTicket(
     return { success: false, message: '尚未到开抢时间' };
   }
 
-  // 3. 检查用户已抢数量
-  const { count: myCount } = await supabase
-    .from('ticket_records')
-    .select('id', { count: 'exact', head: true })
-    .eq('ticket_id', ticketId)
-    .eq('user_id', userId);
+  // 3+4. 并行检查用户已抢数量 + 剩余票数
+  const [{ count: myCount }, { count: totalGrabbed }] = await Promise.all([
+    supabase
+      .from('ticket_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('ticket_id', ticketId)
+      .eq('user_id', userId),
+    supabase
+      .from('ticket_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('ticket_id', ticketId),
+  ]);
 
   if (myCount && myCount >= ticket.per_user_limit) {
     return { success: false, message: `每人限抢 ${ticket.per_user_limit} 张` };
   }
-
-  // 4. 检查剩余票数
-  const { count: totalGrabbed } = await supabase
-    .from('ticket_records')
-    .select('id', { count: 'exact', head: true })
-    .eq('ticket_id', ticketId);
 
   if (totalGrabbed && totalGrabbed >= ticket.total_count) {
     return { success: false, message: '票已被抢完' };

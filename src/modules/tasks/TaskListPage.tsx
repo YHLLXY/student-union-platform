@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message } from 'antd';
 import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
@@ -69,12 +69,14 @@ export default function TaskListPage() {
     return unsubscribe;
   }, [loadTasks, user.department]);
 
-  // 应用 member 筛选
-  let filteredTasks = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
-  if (memberFilter) {
-    filteredTasks = filteredTasks.filter((t) =>
-      t.assigned_to === memberFilter || t.created_by === memberFilter);
-  }
+  const filteredTasks = useMemo(() => {
+    let result = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
+    if (memberFilter) {
+      result = result.filter((t) =>
+        t.assigned_to === memberFilter || t.created_by === memberFilter);
+    }
+    return result;
+  }, [filter, memberFilter, tasks]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
 
