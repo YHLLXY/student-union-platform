@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Tag } from 'antd';
 import { ClockCircleOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
@@ -8,10 +9,11 @@ import styles from './kanban.module.css';
 
 interface KanbanCardProps {
   task: Task;
-  onClick: () => void;
+  onClick?: () => void;
+  onTaskClick?: (task: Task) => void;
 }
 
-export default function KanbanCard({ task, onClick }: KanbanCardProps) {
+export default memo(function KanbanCard({ task, onClick, onTaskClick }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -25,6 +27,11 @@ export default function KanbanCard({ task, onClick }: KanbanCardProps) {
     opacity: isDragging ? 0.5 : 1,
   } : undefined;
 
+  const handleClick = () => {
+    if (onTaskClick) onTaskClick(task);
+    else onClick?.();
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -32,7 +39,7 @@ export default function KanbanCard({ task, onClick }: KanbanCardProps) {
       style={style}
       {...listeners}
       {...attributes}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <div className={styles.cardPriorityBar} style={{ background: priority.color }} />
       <div className={styles.cardBody}>
@@ -58,4 +65,4 @@ export default function KanbanCard({ task, onClick }: KanbanCardProps) {
       </div>
     </div>
   );
-}
+});

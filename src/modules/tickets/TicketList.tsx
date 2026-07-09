@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
@@ -33,7 +33,7 @@ export default function TicketList() {
     return unsubscribe;
   }, [loadTickets]);
 
-  const handleGrab = async (ticket: Ticket) => {
+  const handleGrab = useCallback(async (ticket: Ticket) => {
     const result = await grabTicket(ticket.id, user.id, user.student_id, user.name);
     if (result.success) {
       message.success(result.message);
@@ -41,11 +41,11 @@ export default function TicketList() {
     } else {
       message.error(result.message);
     }
-  };
+  }, [user.id, user.student_id, user.name, loadTickets]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
 
-  const tabItems = [
+  const tabItems = useMemo(() => [
     {
       key: 'available',
       label: '可抢票务',
@@ -105,7 +105,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
       label: '我的票券',
       children: <MyTickets />,
     },
-  ];
+  ], [loading, tickets, grabbedIds, handleGrab]);
 
   return (
     <div>

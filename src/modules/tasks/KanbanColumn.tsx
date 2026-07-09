@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { Task } from './taskService';
 import KanbanCard from './KanbanCard';
@@ -12,7 +13,7 @@ interface KanbanColumnProps {
   onTaskClick: (task: Task) => void;
 }
 
-export default function KanbanColumn({ status, title, color, tasks, count, onTaskClick }: KanbanColumnProps) {
+export default memo(function KanbanColumn({ status, title, color, tasks, count, onTaskClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -30,10 +31,10 @@ export default function KanbanColumn({ status, title, color, tasks, count, onTas
           <div className={styles.columnEmpty}>拖拽任务到此处</div>
         ) : (
           tasks.map((task) => (
-            <KanbanCard key={task.id} task={task} onClick={() => onTaskClick(task)} />
+            <KanbanCard key={task.id} task={task} onTaskClick={onTaskClick} />
           ))
         )}
       </div>
     </div>
   );
-}
+});

@@ -140,30 +140,46 @@ export async function fetchMemberWorkSummaries(userRole: string, userDept: strin
   const { data: members } = await memberQuery;
   if (!members || members.length === 0) return [];
 
-  const summaries: MemberWorkSummary[] = [];
+  const memberIds = members.map(m => m.id);
   const now = new Date().toISOString();
 
+  // 一次性拉取所有成员的任务，客户端聚合（替代 N×5 查询）
+  const { data: allTasks } = await supabase
+    .from('tasks')
+    .select('assigned_to, status, deadline')
+    .in('assigned_to', memberIds);
+
+  // 初始化计数器
+  const map = new Map<string, { pending: number; in_progress: number; review: number; completed: number; overdue: number }>();
   for (const m of members) {
-    const user = m as UserProfile;
-
-    const [pendingRes, progressRes, reviewRes, completedRes, overdueRes] = await Promise.all([
-      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'pending'),
-      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'in_progress'),
-      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'review'),
-      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).eq('status', 'completed'),
-      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('assigned_to', user.id).neq('status', 'completed').lt('deadline', now),
-    ]);
-
-    summaries.push({
-      user,
-      pending: pendingRes.count ?? 0,
-      in_progress: progressRes.count ?? 0,
-      review: reviewRes.count ?? 0,
-      completed: completedRes.count ?? 0,
-      overdue: overdueRes.count ?? 0,
-      total: (pendingRes.count ?? 0) + (progressRes.count ?? 0) + (reviewRes.count ?? 0) + (completedRes.count ?? 0),
-    });
+    map.set(m.id, { pending: 0, in_progress: 0, review: 0, completed: 0, overdue: 0 });
   }
 
-  return summaries;
+  // 单次遍历聚合
+  for (const t of allTasks || []) {
+    const c = map.get(t.assigned_to);
+    if (!c) continue;
+    switch (t.status) {
+      case 'pending': c.pending++; break;
+      case 'in_progress': c.in_progress++; break;
+      case 'review': c.review++; break;
+      case 'completed': c.completed++; break;
+    }
+    if (t.status !== 'completed' && t.deadline && t.deadline < now) {
+      c.overdue++;
+    }
+  }
+
+  return members.map(m => {
+    const c = map.get(m.id)!;
+    return {
+      user: m as UserProfile,
+      pending: c.pending,
+      in_progress: c.in_progress,
+      review: c.review,
+      completed: c.completed,
+      overdue: c.overdue,
+      total: c.pending + c.in_progress + c.review + c.completed,
+    };
+  });
 }
