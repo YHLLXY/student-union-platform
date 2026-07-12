@@ -194,6 +194,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 | 日期 | 版本 | 内容 |
 |------|------|------|
+| 2026-07-12 | v2.7 | **邀请码状态三态修正 + 删除功能** — 用 used_by 拆解 is_used 歧义（可用/已使用/已停用），presidium+ 可删除未使用码 |
 | 2026-07-12 | v2.6 | **全局移动端溢出修复** — 5 模块 15 文件：Table scroll.x + 11 处 Modal 宽度 + 8 处 CSS flex-wrap + Select/Descriptions 响应式 |
 | 2026-07-12 | v2.5 | **移动端适配 Phase 2** — Dashboard 统计卡片/时间线/简报 + Tickets Modal/表单/票券全部响应式 |
 | 2026-07-12 | v2.4 | **移动端适配 Phase 1** — AppLayout Sider→Drawer（断点 768px）、Header 移动端精简、公告模块 Modals/CSS 响应式 |

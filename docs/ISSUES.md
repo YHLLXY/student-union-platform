@@ -20,6 +20,20 @@
 - **Commit:** `69ab3af6`
 - **教训：** Supabase Realtime 的 channel 名是全局唯一的——不要在同一会话中对同一 channel 名调两次 `.subscribe()`。如需多个消费者，要么共享 channel 回调（通过 Context），要么用不同 channel 名
 
+### #8 停用邀请码后状态显示"已使用"而非"已停用"
+
+- **日期：** 2026-07-12
+- **类型：** Bug（数据模型语义过载）
+- **严重程度：** 低（不影响功能正确性，仅展示有歧义）
+- **现象：** 管理员点击"停用"后，邀请码状态列显示"已使用"而非"已停用"，且无法删除已停用和无用的邀请码
+- **原因：** `is_used`（布尔值）一个字段承载了两种语义——"被用户注册使用"（`used_by` 有值）和"被管理员手动停用"（`used_by` 为 null）。`deactivateInviteCode` 设置 `is_used = true`（阻止注册），但前端渲染用 `is_used` 单一判断导致两种状态都显示"已使用"
+- **解决方案：** 
+  1. 状态列改用 `is_used + used_by` 三态判定：`!is_used` → 🟢 可用，`is_used && used_by` → ⚪ 已使用，`is_used && !used_by` → 🔴 已停用
+  2. 新增 `deleteInviteCode()` 函数（DELETE 行），presidium+ 可删除 `used_by IS NULL` 的邀请码（含可用的和已停用的），president/teacher 可跨部门删除
+  3. 操作列增加删除按钮（Popconfirm 二次确认），权限守卫：`isGlobalAdmin || (canDelete && 本部门)`
+- **修改位置：** [adminService.ts](src/modules/admin/adminService.ts) + [InviteCodeManage.tsx](src/modules/admin/InviteCodeManage.tsx)
+- **Commit:** `ab2cd87f`
+
 ### #7 全局移动端横向溢出 — 多个模块 Table/Modal/flex 导致页面撑破
 
 - **日期：** 2026-07-12
