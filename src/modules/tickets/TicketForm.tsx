@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Form, Input, InputNumber, DatePicker, Button, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { createTicket } from './ticketService';
+import styles from './tickets.module.css';
 
 const { TextArea } = Input;
 
@@ -64,7 +65,7 @@ export default function TicketForm({ onSuccess, onClose }: TicketFormProps) {
           <Input placeholder="https://..." />
         </Form.Item>
 
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div className={styles.formRow}>
           <Form.Item name="total_count" label="总票数" style={{ flex: 1 }} rules={[{ required: true }]}>
             <InputNumber min={1} max={9999} style={{ width: '100%' }} />
           </Form.Item>

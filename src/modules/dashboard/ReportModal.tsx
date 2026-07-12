@@ -1,4 +1,4 @@
-import { Modal, Table, Tag, Descriptions, Empty, Spin } from 'antd';
+import { Modal, Table, Tag, Descriptions, Empty, Spin, Grid } from 'antd';
 import { TrophyOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MonthlyReport, WeeklyBrief } from './dashboardService';
@@ -60,6 +60,7 @@ const personColumns: ColumnsType<PersonRow> = [
 ];
 
 export default function ReportModal({ open, loading, data, onClose, weekBrief }: ReportModalProps) {
+  const { md } = Grid.useBreakpoint();
   const weekChange = weekBrief && weekBrief.completedLastWeek > 0
     ? Math.round(((weekBrief.completedThisWeek - weekBrief.completedLastWeek) / weekBrief.completedLastWeek) * 100)
     : null;
@@ -89,7 +90,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
       open={open}
       onCancel={onClose}
       footer={null}
-      width={720}
+      width={md ? 720 : undefined}
       title="📊 月度工作简报"
       destroyOnClose
     >
@@ -100,7 +101,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
       ) : (
         <div className={styles.reportBody}>
           {/* 概览 */}
-          <Descriptions bordered size="small" column={3} style={{ marginBottom: 20 }}>
+          <Descriptions bordered size="small" column={md ? 3 : 2} style={{ marginBottom: 20 }}>
             <Descriptions.Item label="统计月份">
               <Tag color="blue">{data.monthLabel}</Tag>
             </Descriptions.Item>
@@ -135,6 +136,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
               dataSource={deptRows}
               pagination={false}
               size="small"
+              scroll={{ x: 'max-content' }}
               style={{ marginBottom: 20 }}
             />
           )}
@@ -149,6 +151,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
               dataSource={personRows}
               pagination={false}
               size="small"
+              scroll={{ x: 'max-content' }}
             />
           )}
         </div>

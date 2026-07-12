@@ -86,3 +86,49 @@
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
+
+/* 表单并排字段 */
+.formRow {
+  display: flex;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pageHeader h2 {
+    font-size: 16px !important;
+  }
+
+  .cardCover {
+    height: 100px;
+  }
+
+  .cardTitle {
+    font-size: 14px;
+  }
+
+  .cardMeta {
+    font-size: 12px;
+  }
+
+  .remaining {
+    font-size: 15px;
+  }
+
+  /* 表单并排字段堆叠 */
+  .formRow {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* 我的票券：允许折行 */
+  .myTicketItem {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

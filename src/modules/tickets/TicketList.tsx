@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message } from 'antd';
+import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message, Grid } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
@@ -11,6 +11,7 @@ import styles from './tickets.module.css';
 
 export default function TicketList() {
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -124,7 +125,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
         open={showForm}
         onCancel={() => setShowForm(false)}
         footer={null}
-        width={600}
+        width={md ? 600 : undefined}
         destroyOnClose
       >
         <TicketForm

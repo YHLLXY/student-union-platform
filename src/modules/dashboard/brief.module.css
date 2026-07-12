@@ -86,3 +86,18 @@
   color: #bdc3c7;
   font-size: 13px;
 }
+
+@media (max-width: 768px) {
+  .briefBody {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .briefStat {
+    min-width: unset;
+  }
+
+  .briefStatValue {
+    font-size: 15px;
+  }
+}

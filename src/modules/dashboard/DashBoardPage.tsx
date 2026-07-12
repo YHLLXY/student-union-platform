@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Spin, Modal, List, Tag } from 'antd';
+import { Card, Spin, Modal, List, Tag, Grid } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircleOutlined,
@@ -25,6 +25,7 @@ const TYPE_ICON: Record<string, string> = {
 
 export default function DashBoardPage() {
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({ reviewTasks: 0, overdueTasks: 0, todayDeadline: 0 });
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -176,7 +177,7 @@ export default function DashBoardPage() {
         onCancel={() => setReviewModalOpen(false)}
         footer={null}
         title="🔍 待审核任务"
-        width={500}
+        width={md ? 500 : undefined}
         destroyOnClose
       >
         {reviewTasks.length === 0 ? (
