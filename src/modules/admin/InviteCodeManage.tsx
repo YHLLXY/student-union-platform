@@ -84,7 +84,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h4 style={{ margin: 0 }}>🔑 邀请码管理</h4>
         <div style={{ display: 'flex', gap: 8 }}>
           <Select
@@ -139,6 +139,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
         ]}
         rowKey="id"
         size="small"
+        scroll={{ x: 'max-content' }}
         loading={loading}
         pagination={{ pageSize: 10 }}
       />
