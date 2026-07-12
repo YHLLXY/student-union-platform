@@ -98,6 +98,17 @@ export async function fetchInviteCodes(department?: string): Promise<InviteCode[
   })) as unknown as InviteCode[];
 }
 
+/** 删除邀请码（仅限未被使用的） */
+export async function deleteInviteCode(codeId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('invite_codes')
+    .delete()
+    .eq('id', codeId);
+
+  if (error) { log.error('deleteInviteCode 删除失败', error); return false; }
+  return true;
+}
+
 /** 停用邀请码 */
 export async function deactivateInviteCode(codeId: string): Promise<boolean> {
   const { error } = await supabase

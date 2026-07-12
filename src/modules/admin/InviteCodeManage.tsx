@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Select, message, Tag } from 'antd';
+import { Table, Button, Select, message, Tag, Popconfirm } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
 import { DEPARTMENTS, ROLES } from '../../utils/constants';
 import { getDepartmentLabel, getRoleLabel, hasMinRole } from '../../utils/helpers';
-import { fetchInviteCodes, generateInviteCode, deactivateInviteCode } from './adminService';
+import { fetchInviteCodes, generateInviteCode, deactivateInviteCode, deleteInviteCode } from './adminService';
 import type { InviteCode } from './adminService';
 
 const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
@@ -23,6 +23,8 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
 
   // 部门负责人只看本部门（hasMinRole 替代硬编码字符串比较）
   const isDeptHead = hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium');
+  const canDelete = hasMinRole(userRole, 'presidium');
+  const isGlobalAdmin = hasMinRole(userRole, 'president');
 
   const loadCodes = useCallback(async () => {
     const data = await fetchInviteCodes(isDeptHead ? userDept : undefined);
@@ -55,6 +57,16 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
     }
   };
 
+  const handleDelete = async (id: string) => {
+    const ok = await deleteInviteCode(id);
+    if (ok) {
+      message.success('已删除');
+      loadCodes();
+    } else {
+      message.error('删除失败');
+    }
+  };
+
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code).then(
       () => message.success('已复制到剪贴板'),
@@ -74,10 +86,12 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
       render: (r: string) => getRoleLabel(r),
     },
     {
-      title: '状态', dataIndex: 'is_used', key: 'is_used',
-      render: (used: boolean) => used
-        ? <Tag color="default">已使用</Tag>
-        : <Tag color="green">可用</Tag>,
+      title: '状态', dataIndex: 'is_used', key: 'status',
+      render: (_: boolean, record: InviteCode) => {
+        if (!record.is_used) return <Tag color="green">可用</Tag>;
+        if (record.used_by) return <Tag color="default">已使用</Tag>;
+        return <Tag color="red">已停用</Tag>;
+      },
     },
     { title: '使用者', dataIndex: 'used_by_name', key: 'used_by_name' },
   ];
@@ -121,20 +135,37 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
           ...columns,
           {
             title: '操作', key: 'actions',
-            render: (_: unknown, record: InviteCode) => (
-              <div style={{ display: 'flex', gap: 4 }}>
-                {!record.is_used && (
-                  <>
-                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(record.code)}>
-                      复制
-                    </Button>
-                    <Button size="small" danger onClick={() => handleDeactivate(record.id)}>
-                      停用
-                    </Button>
-                  </>
-                )}
-              </div>
-            ),
+            render: (_: unknown, record: InviteCode) => {
+              const isAvailable = !record.is_used;
+              const isDeactivated = record.is_used && !record.used_by;
+              const canDeleteThis = (isAvailable || isDeactivated)
+                && (isGlobalAdmin || (canDelete && record.department === userDept));
+
+              return (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {isAvailable && (
+                    <>
+                      <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(record.code)}>
+                        复制
+                      </Button>
+                      <Button size="small" danger onClick={() => handleDeactivate(record.id)}>
+                        停用
+                      </Button>
+                    </>
+                  )}
+                  {canDeleteThis && (
+                    <Popconfirm
+                      title="确认删除该邀请码？删除后不可恢复"
+                      onConfirm={() => handleDelete(record.id)}
+                      okText="确认"
+                      cancelText="取消"
+                    >
+                      <Button size="small" danger>删除</Button>
+                    </Popconfirm>
+                  )}
+                </div>
+              );
+            },
           },
         ]}
         rowKey="id"
