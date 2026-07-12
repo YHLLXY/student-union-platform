@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message } from 'antd';
+import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid } from 'antd';
 import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
@@ -21,6 +21,7 @@ const priorityBorderClass: Record<string, string> = {
 
 export default function TaskListPage() {
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const [searchParams] = useSearchParams();
   const memberFilter = searchParams.get('member') ?? '';
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -187,13 +188,13 @@ export default function TaskListPage() {
         </div>
       )}
 
-      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={700} destroyOnClose>
+      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={md ? 700 : undefined} destroyOnClose>
         {detailTask && (
           <TaskDetail task={detailTask} user={user} onUpdate={loadTasks} onClose={() => setDetailTask(null)} />
         )}
       </Modal>
 
-      <Modal open={showForm} onCancel={() => setShowForm(false)} footer={null} width={600} destroyOnClose>
+      <Modal open={showForm} onCancel={() => setShowForm(false)} footer={null} width={md ? 600 : undefined} destroyOnClose>
         <TaskForm
           onSuccess={() => { setShowForm(false); loadTasks(); }}
           onClose={() => setShowForm(false)}

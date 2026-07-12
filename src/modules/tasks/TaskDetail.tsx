@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox } from 'antd';
+import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid } from 'antd';
 import type { UserProfile } from '../auth';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '../../utils/constants';
@@ -22,6 +22,7 @@ interface TaskDetailProps {
 }
 
 export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetailProps) {
+  const { md } = Grid.useBreakpoint();
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [note, setNote] = useState('');
   const [handoverNote, setHandoverNote] = useState(task.handover_note ?? '');
@@ -97,7 +98,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
 
   return (
     <div>
-      <Descriptions title={task.title} bordered column={2} size="small" style={{ marginBottom: 20 }}>
+      <Descriptions title={task.title} bordered column={md ? 2 : 1} size="small" style={{ marginBottom: 20 }}>
         <Descriptions.Item label="优先级">
           <Tag color={priority.color}>{priority.label}</Tag>
         </Descriptions.Item>
