@@ -329,6 +329,43 @@ const unsubscribe = subscribeToNotifications(user.id, () => { ... });
 
 ---
 
+## 十三、移动端适配必须逐模块全量检查（2026-07-12 补遗）
+
+### 问题
+
+Phase 1+2 完成了 AppLayout、公告、Dashboard、Tickets 的适配，以为覆盖了主要页面。但用户在手机上使用后发现权限管理、任务管理、论坛等模块仍有横向溢出——原因是我们没有逐模块、逐文件的系统性检查。
+
+### 全量审计发现的溢出模式
+
+| 根因类型 | 数量 | 影响模块 |
+|------|:--:|------|
+| Table 缺 `scroll.x` | 3 处 | admin、tasks |
+| Modal 固定 `width` | 11 处 | tasks、forum、school、profile、admin |
+| CSS flex 缺 `flex-wrap` | 8 处 | forum、school、tasks |
+| 固定宽度 Select/组件 | 1 处 | forum |
+| Descriptions `column` 硬编码 | 1 处 | tasks |
+
+### 教训
+
+**#14：移动端适配不能只靠"设计阶段覆盖"，必须做全量逐文件审计。**
+
+检查清单（每个模块）：
+```
+□ Modal: grep 'width={' → 固定值需改为 md ? N : undefined
+□ Table: 没有 scroll.x 的必须加 scroll={{ x: 'max-content' }}
+□ CSS flex: 没有 flex-wrap 的容器在 @media 中补 wrap
+□ 固定宽度: grep 'width: \d+px' → 超过 300px 的在小屏上可能溢出
+□ Descriptions: column 固定值 → md ? N : 1
+□ Select/Input: style={{ width: N }} → md ? N : '100%'
+```
+
+**关键原则：** 不要假设"这个模块用了 Ant Design 组件所以自然响应式"。Ant Design 的默认行为是容器自适应，但 `Table`（无 scroll.x 不启用内部滚动）、`Modal`（固定宽度不缩小）、自定义 CSS flex（不自动折行）都需要显式处理。
+
+**修改位置：** [ISSUES.md #7](./ISSUES.md#7-全局移动端横向溢出--多个模块-tablemodalflex-导致页面撑破)
+**Commits:** `54169010` + `d5b92a03` + `0462b3b9`
+
+---
+
 ## 对 CLAUDE.md 规范的补充建议
 
 以上发现的部分模式已在本次开发中落实，建议将以下条目纳入 CLAUDE.md：

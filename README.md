@@ -194,6 +194,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 | 日期 | 版本 | 内容 |
 |------|------|------|
+| 2026-07-12 | v2.6 | **全局移动端溢出修复** — 5 模块 15 文件：Table scroll.x + 11 处 Modal 宽度 + 8 处 CSS flex-wrap + Select/Descriptions 响应式 |
 | 2026-07-12 | v2.5 | **移动端适配 Phase 2** — Dashboard 统计卡片/时间线/简报 + Tickets Modal/表单/票券全部响应式 |
 | 2026-07-12 | v2.4 | **移动端适配 Phase 1** — AppLayout Sider→Drawer（断点 768px）、Header 移动端精简、公告模块 Modals/CSS 响应式 |
 | 2026-07-12 | v2.3 | **侧边栏导航徽标** — 任务/公告/论坛三模块未读小圆点提醒，复用现有通知表 + Realtime 订阅 |

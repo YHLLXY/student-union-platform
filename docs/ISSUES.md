@@ -20,6 +20,27 @@
 - **Commit:** `69ab3af6`
 - **教训：** Supabase Realtime 的 channel 名是全局唯一的——不要在同一会话中对同一 channel 名调两次 `.subscribe()`。如需多个消费者，要么共享 channel 回调（通过 Context），要么用不同 channel 名
 
+### #7 全局移动端横向溢出 — 多个模块 Table/Modal/flex 导致页面撑破
+
+- **日期：** 2026-07-12
+- **类型：** 响应式缺陷（CSS + 组件配置）
+- **严重程度：** 中（移动端体验差，需左右滑动才能看到完整内容，但不影响功能可用）
+- **现象：** 权限管理、任务管理、论坛、学校信息、个人中心等多个模块在 768px 以下屏幕出现横向滚动条，页面内容超出视口宽度
+- **根因：**
+  1. **Table 缺 `scroll.x`**（3 处）：Ant Design Table 未设 `scroll.x`，在窄屏下无法启用内部横向滚动，表格直接撑破外层容器
+  2. **Modal 固定 `width`**（11 处）：`width={600/640/700/720}` 等硬编码值超出手机屏宽 375px
+  3. **CSS flex 容器缺 `flex-wrap`**（8 处）：pageHeader、cardHeader、postMeta、replyInput、layout 等 flex 行没有折行机制
+  4. **固定宽度 Select**（1 处）：PostDetail 协作部门 Select `width: 360` 硬编码
+  5. **Descriptions `column` 硬编码**（1 处）：TaskDetail `column={2}` 在小屏上挤扁内容
+- **修复方案：**
+  - Table：加 `scroll={{ x: 'max-content' }}`
+  - Modal：引入 `Grid.useBreakpoint()`，`width={md ? N : undefined}`
+  - CSS：为 `@media (max-width: 768px)` 添加 `flex-wrap: wrap` + `flex-direction: column`
+  - Select：`style={{ width: md ? 360 : '100%' }}`
+  - Descriptions：`column={md ? 2 : 1}`
+- **修改位置：** 15 个文件，涉及 admin/tasks/forum/school/profile 五个模块
+- **Commits:** `54169010` + `d5b92a03` + `0462b3b9`
+
 ### #3 老用户登录被邀请码校验拦截
 
 - **日期：** 2026-07-02
