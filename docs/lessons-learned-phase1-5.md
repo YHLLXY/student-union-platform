@@ -288,6 +288,47 @@ Phase 3 结束时的自检发现了 3 个问题，如果不检查直接上线：
 
 ---
 
+## 十二、Realtime channel 名全局唯一（2026-07-12 补遗）
+
+### 问题
+
+v2.3 侧边栏徽标功能导致全局 ErrorBoundary 崩溃，强制白屏。根因是 `AppLayout.tsx` 和 `NotificationBell.tsx` 都调用了 `subscribeToNotifications()`，但该函数硬编码了 channel 名 `notifications-changes`。Supabase Realtime 禁止在 `subscribe()` 后对同一 channel 追加 `.on()` 回调。
+
+### 教训
+
+**#13：Supabase Realtime channel 名是全局唯一的。** 如果多个组件需要订阅同一张表的变化，有三个选择：
+
+1. **不同 channel 名**（本次修复）：给 `subscribeToNotifications(userId, callback, 'sidebar')` 加可选后缀，各自独立 channel，互不干扰
+2. **共享回调链**（更优）：父组件订阅 → 通过 Context/props 下发给子组件，一个 channel 服务多个消费者
+3. **合并为单组件**：如果两个消费者在同一个组件树中，合并为一个 useEffect
+
+### 修复
+
+```typescript
+// notificationService.ts
+export function subscribeToNotifications(
+  userId: string,
+  onNewNotification: (notification: Notification) => void,
+  channelSuffix?: string,  // ← 新增
+): () => void {
+  const channelName = channelSuffix
+    ? `notifications-${channelSuffix}`
+    : 'notifications-changes';
+  // ...
+}
+
+// AppLayout.tsx — 使用独立 channel
+const unsubscribe = subscribeToNotifications(user.id, () => loadBadges(), 'sidebar');
+// NotificationBell.tsx — 不受影响，仍用默认 channel
+const unsubscribe = subscribeToNotifications(user.id, () => { ... });
+```
+
+**修改位置：** [notificationService.ts:162](../src/modules/notification/notificationService.ts#L162) + [AppLayout.tsx:75](../src/components/AppLayout.tsx#L75)
+**Commit:** `69ab3af6`
+**记录于：** [ISSUES.md #6](./ISSUES.md#6-supabase-realtime-channel-名冲突导致全局渲染崩溃)
+
+---
+
 ## 对 CLAUDE.md 规范的补充建议
 
 以上发现的部分模式已在本次开发中落实，建议将以下条目纳入 CLAUDE.md：

@@ -4,7 +4,21 @@
 
 ---
 
+---
+
 ## 已修复
+
+### #6 Supabase Realtime channel 名冲突导致全局渲染崩溃
+
+- **日期：** 2026-07-12
+- **类型：** Bug（Realtime 冲突）
+- **严重程度：** 高（全局 ErrorBoundary 拦截，白屏不可用）
+- **现象：** 桌面端（PC）打开页面即崩溃，控制台报 `cannot add postgres_changes callbacks for realtime:notifications-changes after subscribe()`
+- **原因：** v2.3 侧边栏徽标功能中，`AppLayout.tsx` 和 `NotificationBell.tsx` 都调用了 `subscribeToNotifications()`，但该函数硬编码了 channel 名 `notifications-changes`。Supabase Realtime 禁止在 `subscribe()` 后对同一 channel 追加回调——第一个组件 subscribe 后第二个再 `.on()` 就抛异常
+- **解决方案：** `subscribeToNotifications` 增加可选 `channelSuffix` 参数。默认行为不变（NotificationBell 无后缀 → `notifications-changes`），AppLayout 传入 `'sidebar'` → `notifications-sidebar`。两个独立 channel 各管各的
+- **修改位置：** [notificationService.ts:162](src/modules/notification/notificationService.ts#L162) + [AppLayout.tsx:75](src/components/AppLayout.tsx#L75)
+- **Commit:** `69ab3af6`
+- **教训：** Supabase Realtime 的 channel 名是全局唯一的——不要在同一会话中对同一 channel 名调两次 `.subscribe()`。如需多个消费者，要么共享 channel 回调（通过 Context），要么用不同 channel 名
 
 ### #3 老用户登录被邀请码校验拦截
 
