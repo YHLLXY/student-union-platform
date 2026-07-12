@@ -194,6 +194,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 | 日期 | 版本 | 内容 |
 |------|------|------|
+| 2026-07-12 | v2.5 | **移动端适配 Phase 2** — Dashboard 统计卡片/时间线/简报 + Tickets Modal/表单/票券全部响应式 |
 | 2026-07-12 | v2.4 | **移动端适配 Phase 1** — AppLayout Sider→Drawer（断点 768px）、Header 移动端精简、公告模块 Modals/CSS 响应式 |
 | 2026-07-12 | v2.3 | **侧边栏导航徽标** — 任务/公告/论坛三模块未读小圆点提醒，复用现有通知表 + Realtime 订阅 |
 | 2026-07-09 | v2.2 | **性能优化** — Promise.all 并行化 4 处串行 await、React.memo 看板组件、useMemo 优化、N+1 批量重构 admin 工作摘要 |
