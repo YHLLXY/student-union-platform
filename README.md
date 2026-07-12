@@ -152,7 +152,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 | [CLAUDE.md](./CLAUDE.md) | AI 辅助开发上下文（全链路流程 + 性能铁律） |
 | [技术设计文档](./docs/superpowers/specs/2026-06-24-学生会交流平台-技术设计文档.md) | 完整技术方案 |
 | [实施计划](./docs/superpowers/plans/2026-06-24-学生会交流平台-实施计划.md) | 分阶段实施计划 |
-| [经验教训](./docs/lessons-learned-phase1-5.md) | Phase 1-7 开发经验总结（12 条教训） |
+| [经验教训](./docs/lessons-learned-phase1-5.md) | Phase 1-7 开发经验总结（15 条教训） |
 | [问题跟踪](./docs/ISSUES.md) | 已知问题与修复记录 |
 | [数据库迁移](./supabase-migration.sql) | 全部 SQL DDL + RLS 策略 |
 | [邀请码参考](./docs/邀请码参考表.md) | 各部门邀请码（开发用） |
