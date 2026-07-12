@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Form, Input, Button, message } from 'antd';
+import { Modal, Form, Input, Button, message, Grid } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { updateDeptGuide } from './profileService';
@@ -14,6 +14,7 @@ interface DeptGuideFormProps {
 }
 
 export default function DeptGuideForm({ open, department, currentGuide, onClose, onSaved }: DeptGuideFormProps) {
+  const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
       open={open}
       onCancel={onClose}
       title="✏️ 编辑部门新人指南"
-      width={600}
+      width={md ? 600 : undefined}
       onOk={handleSubmit}
       confirmLoading={loading}
       destroyOnClose

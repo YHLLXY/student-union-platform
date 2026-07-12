@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions } from 'antd';
+import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions, Grid } from 'antd';
 import { SendOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../components/AuthContext';
@@ -37,6 +37,7 @@ interface PostDetailProps {
 }
 
 export default function PostDetail({ postId, onClose, onDeleted }: PostDetailProps) {
+  const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [post, setPost] = useState<ForumPost | null>(null);
   const [replies, setReplies] = useState<ForumReply[]>([]);
@@ -143,7 +144,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
           <Select
             mode="multiple"
             size="small"
-            style={{ width: 360 }}
+            style={{ width: md ? 360 : '100%' }}
             value={addingDept}
             onChange={setAddingDept}
             options={deptOptions}

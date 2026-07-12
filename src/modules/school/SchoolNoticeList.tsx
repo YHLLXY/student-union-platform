@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty } from 'antd';
+import { Card, Tag, Button, Modal, Spin, Empty, Grid } from 'antd';
 import { PlusOutlined, PushpinFilled } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
@@ -9,6 +9,7 @@ import SchoolNoticeForm from './SchoolNoticeForm';
 import styles from './school.module.css';
 
 export default function SchoolNoticeList() {
+  const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [notices, setNotices] = useState<SchoolNotice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,7 @@ export default function SchoolNoticeList() {
         open={showForm}
         onCancel={() => setShowForm(false)}
         footer={null}
-        width={600}
+        width={md ? 600 : undefined}
         destroyOnClose
       >
         <SchoolNoticeForm

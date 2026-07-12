@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Menu, Modal, Spin, Empty } from 'antd';
+import { Card, Tag, Button, Menu, Modal, Spin, Empty, Grid } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { formatDateTime, hasMinRole } from '../../utils/helpers';
@@ -15,6 +15,7 @@ const categoryItems = Object.entries(FORUM_CATEGORIES)
   .map(([key, label]) => ({ key, label }));
 
 export default function PostList() {
+  const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +85,7 @@ export default function PostList() {
         open={!!detailId}
         onCancel={() => setDetailId(null)}
         footer={null}
-        width={720}
+        width={md ? 720 : undefined}
         destroyOnClose
       >
         {detailId && <PostDetail postId={detailId} onClose={() => setDetailId(null)} onDeleted={loadPosts} />}
@@ -94,7 +95,7 @@ export default function PostList() {
         open={showForm}
         onCancel={() => setShowForm(false)}
         footer={null}
-        width={600}
+        width={md ? 600 : undefined}
         destroyOnClose
       >
         <PostForm

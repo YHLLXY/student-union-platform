@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, Tag, Empty, Spin } from 'antd';
+import { Modal, Tabs, Tag, Empty, Spin, Grid } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { fetchAllUserTasks } from './profileService';
 import type { TaskBrief } from './profileService';
@@ -15,6 +15,7 @@ interface TaskListModalProps {
 }
 
 export default function TaskListModal({ open, initialTab, userId, onClose }: TaskListModalProps) {
+  const { md } = Grid.useBreakpoint();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState<TaskBrief[]>([]);
@@ -77,7 +78,7 @@ export default function TaskListModal({ open, initialTab, userId, onClose }: Tas
       open={open}
       onCancel={onClose}
       footer={null}
-      width={640}
+      width={md ? 640 : undefined}
       title="📋 我的任务"
       destroyOnClose
     >

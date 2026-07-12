@@ -51,3 +51,20 @@
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+@media (max-width: 768px) {
+  .pageHeader {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .cardTitle {
+    font-size: 14px;
+    flex-basis: 100%;
+  }
+}
