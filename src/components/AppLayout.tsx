@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Layout, Menu, Dropdown, Avatar, Button } from 'antd';
+import { useState, useEffect } from 'react';
+import { Layout, Menu, Dropdown, Avatar, Button, Badge } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -22,6 +22,11 @@ import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import { GuideDrawer } from '../modules/guide';
 import { NotificationBell } from '../modules/notification';
+import {
+  fetchUnreadByModule,
+  markAsReadByTypes,
+  subscribeToNotifications,
+} from '../modules/notification/notificationService';
 import GlobalSearch from './GlobalSearch';
 import styles from './AppLayout.module.css';
 
@@ -47,8 +52,44 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [badges, setBadges] = useState({ tasks: false, notices: false, forum: false });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+
+  // 加载侧边栏徽标状态 + Realtime 订阅
+  useEffect(() => {
+    const loadBadges = async () => {
+      const result = await fetchUnreadByModule(user.id);
+      setBadges({
+        tasks: result.tasks > 0,
+        notices: result.notices > 0,
+        forum: result.forum > 0,
+      });
+    };
+    loadBadges();
+
+    // 复用 Realtime 订阅：新通知到达时刷新三个模块的徽标
+    const unsubscribe = subscribeToNotifications(user.id, () => loadBadges());
+    return unsubscribe;
+  }, [user.id]);
+
+  // 进入模块页面时自动清除该模块的徽标
+  useEffect(() => {
+    const typeMap: Record<string, string[]> = {
+      '/tasks':   ['task_assigned', 'submission_approved', 'submission_rejected', 'milestone_overdue'],
+      '/notices': ['new_notice'],
+      '/forum':   ['forum_reply'],
+    };
+    const types = typeMap[location.pathname];
+    if (!types) return;
+
+    // 后端标记已读（fire-and-forget，不阻塞导航）
+    markAsReadByTypes(user.id, types).catch(() => {});
+
+    // 乐观更新：前端立即清除圆点
+    const key = location.pathname.slice(1) as 'tasks' | 'notices' | 'forum';
+    setBadges(prev => ({ ...prev, [key]: false }));
+  }, [location.pathname, user.id]);
 
   const visibleMenus = MENU_ITEMS.filter((item) => {
     // admin 需要 dept_head+，其他菜单所有人可见
@@ -56,11 +97,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return hasMinRole(user.role, requiredRole);
   });
 
-  const menuItems = visibleMenus.map((item) => ({
-    key: item.path,
-    icon: iconMap[item.icon] ?? <BellOutlined />,
-    label: item.label,
-  }));
+  const badgePaths = ['/tasks', '/notices', '/forum'];
+
+  const menuItems = visibleMenus.map((item) => {
+    const icon = iconMap[item.icon] ?? <BellOutlined />;
+    const badgeKey = item.path.slice(1) as 'tasks' | 'notices' | 'forum';
+    const showBadge = badgePaths.includes(item.path) && badges[badgeKey];
+
+    return {
+      key: item.path,
+      icon: showBadge ? <Badge dot offset={[-2, 2]}>{icon}</Badge> : icon,
+      label: item.label,
+    };
+  });
 
   const handleLogout = async () => {
     await signOut();

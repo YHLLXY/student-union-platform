@@ -183,3 +183,65 @@ export function subscribeToNotifications(
     supabase.removeChannel(channel);
   };
 }
+
+// ========== 侧边栏徽标 ==========
+
+/** 一次查询获取三个核心模块的未读通知数量（用于侧边栏小圆点） */
+export async function fetchUnreadByModule(userId: string): Promise<{
+  tasks: number; notices: number; forum: number;
+}> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('type')
+    .eq('user_id', userId)
+    .eq('is_read', false)
+    .in('type', [
+      'task_assigned',
+      'submission_approved',
+      'submission_rejected',
+      'milestone_overdue',
+      'new_notice',
+      'forum_reply',
+    ]);
+
+  if (error) {
+    log.error('fetchUnreadByModule 查询失败', error);
+    return { tasks: 0, notices: 0, forum: 0 };
+  }
+
+  // 客户端聚合（未读量 <50，单次遍历 O(N) 开销可忽略）
+  const result = { tasks: 0, notices: 0, forum: 0 };
+  for (const row of data || []) {
+    switch (row.type) {
+      case 'new_notice':
+        result.notices++;
+        break;
+      case 'forum_reply':
+        result.forum++;
+        break;
+      default:
+        // task_assigned / submission_approved / submission_rejected / milestone_overdue
+        result.tasks++;
+    }
+  }
+  return result;
+}
+
+/** 批量标记指定类型的通知为已读（用于进入模块时清除角标） */
+export async function markAsReadByTypes(
+  userId: string,
+  types: string[],
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', userId)
+    .eq('is_read', false)
+    .in('type', types);
+
+  if (error) {
+    log.error('markAsReadByTypes 失败', error);
+    return false;
+  }
+  return true;
+}
