@@ -162,9 +162,13 @@ export async function fetchDeptMemberIds(department: string): Promise<string[]> 
 export function subscribeToNotifications(
   userId: string,
   onNewNotification: (notification: Notification) => void,
+  channelSuffix?: string,
 ): () => void {
+  const channelName = channelSuffix
+    ? `notifications-${channelSuffix}`
+    : 'notifications-changes';
   const channel = supabase
-    .channel('notifications-changes')
+    .channel(channelName)
     .on(
       'postgres_changes',
       {

@@ -72,7 +72,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     loadBadges();
 
     // 复用 Realtime 订阅：新通知到达时刷新三个模块的徽标
-    const unsubscribe = subscribeToNotifications(user.id, () => loadBadges());
+    const unsubscribe = subscribeToNotifications(user.id, () => loadBadges(), 'sidebar');
     return unsubscribe;
   }, [user.id]);
 
