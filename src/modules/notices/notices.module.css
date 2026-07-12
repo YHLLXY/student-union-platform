@@ -75,3 +75,33 @@
   color: #2980b9;
   text-decoration: underline;
 }
+
+@media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pageHeader h2 {
+    font-size: 16px !important;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .cardTitle {
+    font-size: 14px;
+    flex-basis: 100%;
+  }
+
+  .cardMeta {
+    font-size: 12px;
+  }
+
+  .cardContent {
+    font-size: 13px;
+  }
+}

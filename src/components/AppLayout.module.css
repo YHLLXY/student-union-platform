@@ -66,3 +66,13 @@
   flex-direction: row;
   height: calc(100vh - 56px);
 }
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 12px;
+  }
+
+  .contentArea {
+    padding: 12px;
+  }
+}

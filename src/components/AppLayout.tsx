@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Dropdown, Avatar, Button, Badge } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Button, Badge, Drawer, Grid } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -13,6 +13,7 @@ import {
   LogoutOutlined,
   BugOutlined,
   QuestionCircleOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
@@ -55,6 +56,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [badges, setBadges] = useState({ tasks: false, notices: false, forum: false });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const { md } = Grid.useBreakpoint();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // 加载侧边栏徽标状态 + Realtime 订阅
   useEffect(() => {
@@ -142,23 +145,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header className={styles.header}>
+        {!md && <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ color: '#fff', fontSize: 16 }} />}
         <div className={styles.logo}>🏛 学生会</div>
-        <GlobalSearch />
+        {md && <GlobalSearch />}
         <div className={styles.headerRight}>
-          <Button
-            type="text"
-            icon={<QuestionCircleOutlined />}
-            onClick={() => setGuideOpen(true)}
-            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
-            title="功能指南"
-          />
-          <Button
-            type="text"
-            icon={<BugOutlined />}
-            onClick={() => setFeedbackOpen(true)}
-            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
-            title="反馈与建议"
-          />
+          {md && (
+            <Button
+              type="text"
+              icon={<QuestionCircleOutlined />}
+              onClick={() => setGuideOpen(true)}
+              style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
+              title="功能指南"
+            />
+          )}
+          {md && (
+            <Button
+              type="text"
+              icon={<BugOutlined />}
+              onClick={() => setFeedbackOpen(true)}
+              style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
+              title="反馈与建议"
+            />
+          )}
           <NotificationBell />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
@@ -170,21 +178,47 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </Header>
 
       <Layout hasSider className={styles.innerLayout}>
-        <Sider
-          width={200}
-          collapsible
-          collapsed={collapsed}
-          onCollapse={setCollapsed}
-          style={{ background: '#ffffff', height: '100%', overflowY: 'auto' }}
-        >
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            items={menuItems}
-            onClick={({ key }) => navigate(key)}
-            style={{ borderRight: 0, marginTop: 4 }}
-          />
-        </Sider>
+        {md ? (
+          <Sider
+            width={200}
+            collapsible
+            collapsed={collapsed}
+            onCollapse={setCollapsed}
+            style={{ background: '#ffffff', height: '100%', overflowY: 'auto' }}
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={({ key }) => navigate(key)}
+              style={{ borderRight: 0, marginTop: 4 }}
+            />
+          </Sider>
+        ) : (
+          <Drawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            placement="left"
+            width={220}
+            styles={{ body: { padding: 0 } }}
+          >
+            <div style={{
+              padding: '12px 16px',
+              fontWeight: 700,
+              fontSize: 16,
+              borderBottom: '1px solid #f0f0f0',
+            }}>
+              🏛 学生会
+            </div>
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={({ key }) => { navigate(key); setDrawerOpen(false); }}
+              style={{ borderRight: 0 }}
+            />
+          </Drawer>
+        )}
 
         <Content className={styles.contentArea}>{children}</Content>
       </Layout>

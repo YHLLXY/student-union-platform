@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message } from 'antd';
+import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message, Grid } from 'antd';
 import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import supabase from '../../supabaseClient';
@@ -13,6 +13,7 @@ import styles from './notices.module.css';
 
 export default function NoticeList() {
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -204,7 +205,7 @@ export default function NoticeList() {
         open={showForm}
         onCancel={() => setShowForm(false)}
         footer={null}
-        width={600}
+        width={md ? 600 : undefined}
         destroyOnClose
       >
         <NoticeForm
@@ -217,7 +218,7 @@ export default function NoticeList() {
         open={!!convertTarget}
         onCancel={() => setConvertTarget(null)}
         footer={null}
-        width={500}
+        width={md ? 500 : undefined}
         destroyOnClose
       >
         <div>
@@ -286,7 +287,7 @@ export default function NoticeList() {
         open={readersModal?.open ?? false}
         onCancel={() => setReadersModal(null)}
         footer={null}
-        width={420}
+        width={md ? 420 : undefined}
         title="📊 已读确认详情"
         destroyOnClose
       >
