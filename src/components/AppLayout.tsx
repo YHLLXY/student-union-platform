@@ -21,6 +21,7 @@ import { useAuth } from './AuthContext';
 import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
+import PwaInstallButton from './PwaInstallButton';
 import { GuideDrawer } from '../modules/guide';
 import { NotificationBell } from '../modules/notification';
 import {
@@ -167,6 +168,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               title="反馈与建议"
             />
           )}
+          <PwaInstallButton />
           <NotificationBell />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
