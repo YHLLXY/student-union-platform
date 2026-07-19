@@ -54,3 +54,15 @@
 .tabContainer {
   margin-bottom: 4px;
 }
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .loginCard {
+    width: calc(100vw - 32px);
+    padding: 32px 20px;
+  }
+
+  .platformName {
+    font-size: 24px;
+  }
+}

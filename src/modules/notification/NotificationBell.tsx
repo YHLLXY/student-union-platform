@@ -130,6 +130,7 @@ export default function NotificationBell() {
       onOpenChange={handlePanelOpen}
       placement="bottomRight"
       overlayStyle={{ padding: 0 }}
+      overlayInnerStyle={{ maxWidth: 'calc(100vw - 32px)' }}
     >
       <span className={`${styles.bell} ${unreadCount > 0 ? styles.bellHasUnread : ''}`}>
         <BellOutlined />

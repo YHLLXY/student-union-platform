@@ -37,6 +37,7 @@
 /* 下拉面板 */
 .panel {
   width: 360px;
+  max-width: calc(100vw - 48px);
   max-height: 420px;
   display: flex;
   flex-direction: column;
