@@ -7,6 +7,7 @@ import { AuthContext } from './components/AuthContext';
 import AppLayout from './components/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import ModuleErrorBoundary from './components/ModuleErrorBoundary';
+import { useVersionNotification } from './hooks/useVersionNotification';
 
 // 各模块页面（懒加载）
 const DashBoardPage = lazy(() => import('./modules/dashboard/DashBoardPage'));
@@ -24,6 +25,12 @@ function PageLoader() {
       <Spin size="large" />
     </div>
   );
+}
+
+/** PWA 版本通知组件 — 检测新版本并弹出更新公告 */
+function VersionNotifier() {
+  useVersionNotification();
+  return null;
 }
 
 export default function App() {
@@ -52,6 +59,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthContext.Provider value={user}>
+        <VersionNotifier />
         <AppLayout>
           <Suspense fallback={<PageLoader />}>
             <Routes>

@@ -27,6 +27,7 @@
 | 🔔 **通知中心** | Realtime 推送 + Bell Badge | 5 类自动触发、火后不理模式 |
 | 📎 **文件上传** | Supabase Storage，拖拽上传 | 3 模块共享组件、类型白名单、10MB 限制 |
 | 🔍 **全局搜索** | Ctrl+K 唤起，4 表并行搜索 | 300ms 防抖、关键词高亮、键盘导航 |
+| 📱 **PWA 支持** | 添加到主屏幕 → 全屏 App 体验 | 离线访问、版本更新公告推送、自动安装提示 |
 
 ---
 
@@ -65,6 +66,8 @@ src/
 │   ├── ErrorBoundary.tsx        #   全局错误边界
 │   ├── ModuleErrorBoundary.tsx  #   模块级错误边界
 │   └── FeedbackModal.tsx        #   反馈与建议
+├── hooks/
+│   └── useVersionNotification.ts # PWA 版本更新通知 hook
 ├── utils/
 │   ├── constants.ts             # 12 部门、5 角色、任务状态等常量
 │   └── helpers.ts               # hasMinRole()、formatDateTime() 等工具
@@ -190,10 +193,41 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ---
 
+## 📱 PWA（渐进式 Web 应用）
+
+本平台支持 PWA，在 Android 手机上通过 Chrome 浏览器打开后：
+
+1. 浏览器菜单自动出现 **"添加到主屏幕"**（或弹出安装横幅）
+2. 点击后桌面出现应用图标，点击图标 → **全屏 App 体验**（无浏览器边框）
+3. 首次访问后静态资源被缓存，**离线也能打开**已访问过的页面
+
+### 版本更新机制
+
+- Service Worker 每 60 分钟自动检查新版本
+- 检测到新版本后，页面底部弹出"新版本已就绪"提示，点击刷新即可
+- 刷新后 React 端自动弹出**更新公告通知**，列出本次更新内容
+
+### 手动安装引导
+
+如果浏览器未自动弹出安装横幅，React 端检测到 `beforeinstallprompt` 事件后会提供手动安装入口。
+
+### 技术细节
+
+| 组件 | 文件 | 说明 |
+|------|------|------|
+| Manifest | `public/manifest.json` | PWA 清单：名称、图标、全屏模式、竖屏锁定 |
+| Service Worker | `public/sw.js` | 运行时缓存：HTML 网络优先 / 静态资源缓存优先 / API 不缓存 |
+| 版本追踪 | `public/version.json` | 版本号 + 更新日志，供 SW 和 React 共同读取 |
+| 更新通知 | `src/hooks/useVersionNotification.ts` | React hook — 检测版本变更并弹出 antd 通知 |
+| 安装引导 | `index.html` SW 注册脚本 | beforeinstallprompt 监听 + updatefound 刷新提示 |
+
+---
+
 ## 📋 更新日志
 
 | 日期 | 版本 | 内容 |
 |------|------|------|
+| 2026-07-19 | v3.0 | **PWA 支持** — 添加到主屏幕、全屏 App 体验、离线访问、SW 运行时缓存、版本更新公告自动推送 |
 | 2026-07-12 | v2.7 | **邀请码状态三态修正 + 删除功能** — 用 used_by 拆解 is_used 歧义（可用/已使用/已停用），presidium+ 可删除未使用码 |
 | 2026-07-12 | v2.6 | **全局移动端溢出修复** — 5 模块 15 文件：Table scroll.x + 11 处 Modal 宽度 + 8 处 CSS flex-wrap + Select/Descriptions 响应式 |
 | 2026-07-12 | v2.5 | **移动端适配 Phase 2** — Dashboard 统计卡片/时间线/简报 + Tickets Modal/表单/票券全部响应式 |

@@ -1,13 +1,137 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>学生会线上交流平台</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/student-union-platform/manifest.json" />
+
+    <!-- 主题色（亮色 + 暗色） -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1677ff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141414" />
+
+    <!-- iOS Safari 全屏 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="学生会平台" />
+
+    <!-- 移动端颜色 -->
+    <meta name="msapplication-TileColor" content="#1677ff" />
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- 版本更新 Toast 容器（SW 注册前创建，确保 updatefound 时可用） -->
+    <div id="pwa-update-toast" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;z-index:99999;
+      background:#1677ff;color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.25);
+      font-family:system-ui,sans-serif;font-size:14px;text-align:center;cursor:pointer;" onclick="this.style.display='none';window.location.reload()">
+      🆕 新版本已就绪，点击刷新
+    </div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- ==================== PWA Service Worker 注册 ==================== -->
+    <script>
+      (function () {
+        var BASE = location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+        var LAST_VERSION_KEY = 'pwa_last_version';
+
+        // 仅在 HTTPS 或 localhost 下注册 SW
+        if (!('serviceWorker' in navigator)) return;
+        if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
+
+        var updateToast = document.getElementById('pwa-update-toast');
+        var newWorker = null;
+
+        function showUpdateToast() {
+          if (updateToast) updateToast.style.display = 'block';
+        }
+
+        // 监听 SW 更新
+        function trackUpdate(registration) {
+          if (!registration) return;
+          // 已有 waiting 状态的 SW（首次访问时 SW 已在等待激活）
+          if (registration.waiting) {
+            newWorker = registration.waiting;
+            showUpdateToast();
+          }
+          // 监听新 SW 安装
+          registration.addEventListener('updatefound', function () {
+            var installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener('statechange', function () {
+              if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker = installing;
+                showUpdateToast();
+              }
+            });
+          });
+        }
+
+        // SW 激活后，通知 React 应用检查版本更新
+        function onControllerChange() {
+          // SW 已更新并激活，刷新页面让 React 检查 changelog
+          if (navigator.serviceWorker.controller) {
+            console.log('[PWA] SW 已激活，即将检查版本更新公告');
+          }
+        }
+
+        // 版本检查（检查 version.json）
+        function checkVersion() {
+          fetch(BASE + '/version.json?t=' + Date.now())
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              var lastVer = localStorage.getItem(LAST_VERSION_KEY);
+              if (data.version && data.version !== lastVer) {
+                // 有新版本 → 存储版本号和 changelog，React 启动后读取
+                localStorage.setItem('pwa_new_version', JSON.stringify(data));
+              }
+            })
+            .catch(function () { /* 静默降级 */ });
+        }
+
+        // 注册 SW
+        navigator.serviceWorker.register(BASE + '/sw.js', { scope: BASE + '/' })
+          .then(function (registration) {
+            console.log('[PWA] SW 已注册，scope:', registration.scope);
+
+            // 检查是否有更新 waiting
+            trackUpdate(registration);
+
+            // 定期检查更新（每 60 分钟）
+            setInterval(function () {
+              registration.update().catch(function () {});
+            }, 60 * 60 * 1000);
+
+            // 版本检查
+            checkVersion();
+          })
+          .catch(function (err) {
+            console.warn('[PWA] SW 注册失败（非关键错误）:', err);
+          });
+
+        // SW 激活时刷新页面（用户点击了"跳过等待"后）
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          onControllerChange();
+        });
+
+        // 手动安装按钮兜底（beforeinstallprompt）
+        var deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          // 存储到 window，React 可以读取
+          window.__pwaInstallPrompt = deferredPrompt;
+        });
+        window.addEventListener('appinstalled', function () {
+          deferredPrompt = null;
+          window.__pwaInstallPrompt = null;
+          console.log('[PWA] 应用已安装');
+        });
+      })();
+    </script>
   </body>
 </html>
