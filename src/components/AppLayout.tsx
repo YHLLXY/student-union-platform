@@ -14,6 +14,7 @@ import {
   BugOutlined,
   QuestionCircleOutlined,
   MenuOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
@@ -115,6 +116,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   });
 
+  // 追加以外部链接打开的使用指南
+  const GUIDE_URL = 'https://yhllxy.github.io/student-union-platform/使用指南.md';
+  menuItems.push({
+    key: 'guide',
+    icon: <BookOutlined />,
+    label: '使用指南',
+  });
+
   const handleLogout = async () => {
     await signOut();
     window.location.reload();
@@ -192,7 +201,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
               mode="inline"
               selectedKeys={[location.pathname]}
               items={menuItems}
-              onClick={({ key }) => navigate(key)}
+              onClick={({ key }) => {
+                if (key === 'guide') {
+                  window.open(GUIDE_URL, '_blank');
+                  return;
+                }
+                navigate(key);
+              }}
               style={{ borderRight: 0, marginTop: 4 }}
             />
           </Sider>
@@ -216,7 +231,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               mode="inline"
               selectedKeys={[location.pathname]}
               items={menuItems}
-              onClick={({ key }) => { navigate(key); setDrawerOpen(false); }}
+              onClick={({ key }) => {
+                if (key === 'guide') {
+                  window.open(GUIDE_URL, '_blank');
+                  setDrawerOpen(false);
+                  return;
+                }
+                navigate(key);
+                setDrawerOpen(false);
+              }}
               style={{ borderRight: 0 }}
             />
           </Drawer>
