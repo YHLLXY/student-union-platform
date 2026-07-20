@@ -564,4 +564,61 @@ CSS `max-width` 只能把内容变窄，但**弹窗的定位原点已经被 floa
 3. **判断标准：** 如果弹窗内容是列表/表单/需要滚动 → 移动端优先考虑 Drawer；如果只是确认/提示 → Popover/Tooltip 可以。
 
 **相关文件：** [NotificationBell.tsx](../src/modules/notification/NotificationBell.tsx)
+
+---
+
+## 教训 #20：共享组件复用前必须确认 Props 接口
+
+> 日期：2026-07-20 | 版本：v3.1
+
+### 问题
+
+在 TaskDetail 编辑 Modal 中复用 `FileUpload` 组件时，只传了 `value` 和 `onChange`，Build 时报错：
+
+```
+Property 'module' is missing in type '{ value: Attachment[]; onChange: ... }'
+but required in type 'FileUploadProps'.
+```
+
+### 根因
+
+先入为主地认为 `FileUpload` 的 Props 就是 `value` + `onChange`（标准受控组件模式），但实际上它还有一个必填的 `module` 属性（`'tasks' | 'forum' | 'notices'`），用于确定文件上传到 Supabase Storage 的哪个子目录。
+
+### 解决方案
+
+补上 `module="tasks"` 属性。
+
+### 教训
+
+1. **复用共享组件时，不要假设它的接口**——用 Grep 搜一下现有调用方看看别人怎么传的，或者直接看组件文件的 Props 接口定义。
+2. **不要因为"看起来很眼熟"就跳过类型检查。** TypeScript 的 `Property is missing` 错误是最常见也最容易避免的——看一眼 Props 接口就行。
+
+**相关文件：** [FileUpload.tsx](../src/components/FileUpload.tsx) | [TaskDetail.tsx](../src/modules/tasks/TaskDetail.tsx)
+
+---
+
+## 教训 #21：Supabase `.select()` 只返回你指定的字段
+
+> 日期：2026-07-20 | 版本：v3.1
+
+### 问题
+
+修复月报逾期 Bug 时，在已有 `allTasksRes` 上过滤 `t.deadline`，但 Build 报 `Property 'deadline' does not exist`。
+
+### 根因
+
+原始查询只 `.select('id, assigned_department, assigned_to, status')` 没选 `deadline`——TypeScript 类型断言也没有包含 `deadline` 字段。
+
+Supabase 的 `.select()` 语法是**精确匹配**，不会像 GraphQL 那样自动展开关联字段。你没写在 `select()` 里的字段，返回数据里就不会有。
+
+### 解决方案
+
+两步：①在 `.select()` 字符串中追加 `deadline`；②在 TypeScript 类型断言中追加 `deadline: string | null`。
+
+### 教训
+
+1. **修改 Supabase 查询时，先确认 `.select()` 里有没有目标字段。** 加过滤条件前先看数据源是否包含该字段。
+2. **TypeScript 类型断言和 SQL select 要保持同步。** 如果 select 改了但类型没改，TS 会在真正用到那个字段的时候才报错——可能不在你改的位置，排查费时。
+
+**相关文件：** [dashboardService.ts](../src/modules/dashboard/dashboardService.ts)
 **Commit:** `ddb9d08f`
