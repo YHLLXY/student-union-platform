@@ -13,7 +13,7 @@
 
 // ======================== 配置 ========================
 
-var CACHE_VERSION = 'v3.0.2';
+var CACHE_VERSION = 'v3.1.0';
 var APP_SHELL = 'app-shell-' + CACHE_VERSION;
 var APP_ASSETS = 'app-assets-' + CACHE_VERSION;
 

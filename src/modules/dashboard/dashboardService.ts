@@ -316,11 +316,11 @@ export async function fetchMonthlyReport(
     // 本月全部任务
     (async () => {
       let q = supabase.from('tasks')
-        .select('id, assigned_department, assigned_to, status')
+        .select('id, assigned_department, assigned_to, status, deadline')
         .gte('created_at', monthStart).lte('created_at', monthEnd);
       q = addDeptFilter(q);
       const { data } = await q;
-      return (data || []) as { id: string; assigned_department: string; assigned_to: string | null; status: string }[];
+      return (data || []) as { id: string; assigned_department: string; assigned_to: string | null; status: string; deadline: string | null }[];
     })(),
     // 本月完成任务（按执行人分组用于排行榜）
     (async () => {
@@ -343,14 +343,15 @@ export async function fetchMonthlyReport(
     if (!deptStats[d]) deptStats[d] = { completed: 0, total: 0, overdue: 0 };
     deptStats[d].total++;
     if (t.status === 'completed') deptStats[d].completed++;
+    if (t.status !== 'completed' && t.deadline && dayjs(t.deadline).isBefore(now)) deptStats[d].overdue++;
   }
-  // 按部门统计已完成 + 总数（逾期率由首页统计卡片覆盖）
+  // 按部门统计已完成 + 总数
   const byDepartment = Object.entries(deptStats).map(([dept, s]) => ({
     dept,
     label: getDepartmentLabel(dept),
     completed: s.completed,
     total: s.total,
-    overdue: 0, // 不从月报查逾期，用主页面的逾期卡片替代
+    overdue: s.overdue,
   }));
 
   // 客户端 GROUP BY：按人（仅已完成任务）
@@ -375,7 +376,9 @@ export async function fetchMonthlyReport(
     .slice(0, 10);
 
   const totalCompleted = completedRes.length;
-  const totalOverdue = 0; // 月报暂不统计逾期明细
+  const totalOverdue = allTasksRes.filter(
+    t => t.status !== 'completed' && t.deadline && dayjs(t.deadline).isBefore(now),
+  ).length;
   const totalTasks = allTasksRes.length;
 
   return {

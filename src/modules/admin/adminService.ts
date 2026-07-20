@@ -120,15 +120,16 @@ export async function deactivateInviteCode(codeId: string): Promise<boolean> {
   return true;
 }
 
-/** 管理员重置成员密码（默认 123456） */
-export async function resetMemberPassword(authId: string): Promise<boolean> {
+/** 管理员重置成员密码（随机 8 位字符串） */
+export async function resetMemberPassword(authId: string): Promise<string | false> {
+  const newPassword = Math.random().toString(36).slice(-8);
   const { error } = await supabase.rpc('reset_user_password', {
     user_id: authId,
-    new_password: '123456',
+    new_password: newPassword,
   });
 
   if (error) { log.error('resetMemberPassword 重置失败', error); return false; }
-  return true;
+  return newPassword;
 }
 
 // ========== 成员任务聚合 ==========

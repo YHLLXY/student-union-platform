@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid } from 'antd';
+import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid, Modal, Form, Select, DatePicker } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import type { UserProfile } from '../auth';
-import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
+import { hasMinRole, formatDateTime, getDepartmentLabel, isAdmin } from '../../utils/helpers';
 import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '../../utils/constants';
 import {
   submitTask, fetchTaskSubmissions, reviewSubmission,
-  updateHandoverNote, fetchLinkedNotices,
+  updateHandoverNote, fetchLinkedNotices, updateTask,
 } from './taskService';
 import type { Task, TaskSubmission, LinkedNotice } from './taskService';
 import styles from './tasks.module.css';
 import MilestonePanel from './MilestonePanel';
 import FileList from '../../components/FileList';
+import FileUpload, { type Attachment } from '../../components/FileUpload';
 
 const { TextArea } = Input;
 
@@ -28,6 +31,10 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
   const [handoverNote, setHandoverNote] = useState(task.handover_note ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [linkedNotices, setLinkedNotices] = useState<LinkedNotice[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
+  const [editAttachments, setEditAttachments] = useState<Attachment[]>(task.attachments ?? []);
   const priority = TASK_PRIORITIES[task.priority] ?? TASK_PRIORITIES.normal;
   const status = TASK_STATUSES[task.status] ?? TASK_STATUSES.pending;
 
@@ -95,10 +102,64 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
 
   const canSubmit = task.status === 'pending' || task.status === 'in_progress';
   const canReview = hasMinRole(user.role, 'dept_head');
+  const canEdit = (task.created_by === user.id || isAdmin(user.role)) && task.status !== 'completed';
+
+  const openEditModal = () => {
+    editForm.setFieldsValue({
+      title: task.title,
+      content: task.content,
+      priority: task.priority,
+      deadline: task.deadline ? dayjs(task.deadline) : null,
+      assigned_to: task.assigned_to || undefined,
+    });
+    setEditAttachments(task.attachments ?? []);
+    setEditing(true);
+  };
+
+  const handleEdit = async () => {
+    try {
+      const values = await editForm.validateFields();
+      setEditLoading(true);
+      const ok = await updateTask(task.id, {
+        title: values.title,
+        content: values.content ?? '',
+        priority: values.priority,
+        deadline: values.deadline ? values.deadline.toISOString() : null,
+        assigned_to: values.assigned_to || null,
+        attachments: editAttachments,
+      });
+      setEditLoading(false);
+      if (ok) {
+        message.success('任务已更新');
+        setEditing(false);
+        onUpdate();
+        onClose();
+      } else {
+        message.error('更新失败');
+      }
+    } catch {
+      // 表单校验失败，不做任何操作
+    }
+  };
 
   return (
     <div>
-      <Descriptions title={task.title} bordered column={md ? 2 : 1} size="small" style={{ marginBottom: 20 }}>
+      <Descriptions
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <span>{task.title}</span>
+            {canEdit && (
+              <Button icon={<EditOutlined />} type="link" onClick={openEditModal}>
+                编辑
+              </Button>
+            )}
+          </div>
+        }
+        bordered
+        column={md ? 2 : 1}
+        size="small"
+        style={{ marginBottom: 20 }}
+      >
         <Descriptions.Item label="优先级">
           <Tag color={priority.color}>{priority.label}</Tag>
         </Descriptions.Item>
@@ -284,6 +345,67 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       <div style={{ textAlign: 'right', marginTop: 16 }}>
         <Button onClick={onClose}>关闭</Button>
       </div>
+
+      {/* 编辑任务 Modal */}
+      <Modal
+        title="编辑任务"
+        open={editing}
+        onCancel={() => setEditing(false)}
+        onOk={handleEdit}
+        confirmLoading={editLoading}
+        okText="保存"
+        cancelText="取消"
+        width={md ? 600 : undefined}
+        destroyOnClose
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          initialValues={{
+            priority: task.priority,
+            title: task.title,
+            content: task.content,
+          }}
+        >
+          <Form.Item
+            label="标题"
+            name="title"
+            rules={[{ required: true, message: '请输入任务标题' }]}
+          >
+            <Input maxLength={100} />
+          </Form.Item>
+
+          <Form.Item label="内容" name="content">
+            <Input.TextArea rows={4} maxLength={2000} />
+          </Form.Item>
+
+          <Form.Item
+            label="优先级"
+            name="priority"
+            rules={[{ required: true, message: '请选择优先级' }]}
+          >
+            <Select
+              options={Object.entries(TASK_PRIORITIES).map(([key, p]) => ({ value: key, label: p.label }))}
+            />
+          </Form.Item>
+
+          <Form.Item label="截止时间" name="deadline">
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              placeholder="选择截止时间（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item label="执行人" name="assigned_to">
+            <Input placeholder="输入成员 ID（留空=部门全体）" />
+          </Form.Item>
+
+          <Form.Item label="附件">
+            <FileUpload module="tasks" value={editAttachments} onChange={setEditAttachments} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

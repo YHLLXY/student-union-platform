@@ -185,6 +185,24 @@ export async function createTask(task: {
   return created;
 }
 
+/** 更新任务内容（仅发布者或管理员可调用） */
+export async function updateTask(taskId: string, updates: {
+  title?: string;
+  content?: string;
+  priority?: string;
+  deadline?: string | null;
+  assigned_to?: string | null;
+  attachments?: Attachment[] | null;
+}): Promise<boolean> {
+  const { error } = await supabase
+    .from('tasks')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', taskId);
+
+  if (error) { log.error('updateTask 更新失败', error); return false; }
+  return true;
+}
+
 /** 更新任务状态 */
 export async function updateTaskStatus(taskId: string, status: string): Promise<boolean> {
   const { error } = await supabase

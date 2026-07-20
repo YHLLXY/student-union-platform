@@ -264,7 +264,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setDevLoading(true);
     try {
       // 1. 校验密钥
-      const VALID_DEV_KEY = 'DEV2026PRESIDENT';
+      const VALID_DEV_KEY = import.meta.env.VITE_DEV_KEY || 'DEV2026PRESIDENT';
       if (devKey.trim() !== VALID_DEV_KEY) {
         message.error('密钥无效');
         setDevLoading(false);

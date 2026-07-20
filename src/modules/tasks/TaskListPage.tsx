@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid } from 'antd';
-import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid, Input, Select, Row, Col } from 'antd';
+import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
-import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
+import { TASK_PRIORITIES, TASK_STATUSES, DEPARTMENTS } from '../../utils/constants';
 import { fetchTasks, subscribeToTasks, fetchTaskOverdueMilestones, updateTaskStatus } from './taskService';
 import type { Task } from './taskService';
 import TaskDetail from './TaskDetail';
@@ -32,6 +32,9 @@ export default function TaskListPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [overdueMilestoneMap, setOverdueMilestoneMap] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [searchText, setSearchText] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('all');
 
   const handleTaskMove = async (taskId: string, newStatus: string) => {
     // 乐观更新：立即移动卡片到新列
@@ -76,10 +79,23 @@ export default function TaskListPage() {
       result = result.filter((t) =>
         t.assigned_to === memberFilter || t.created_by === memberFilter);
     }
+    if (searchText.trim()) {
+      const kw = searchText.trim().toLowerCase();
+      result = result.filter((t) => t.title.toLowerCase().includes(kw));
+    }
+    if (priorityFilter !== 'all') result = result.filter((t) => t.priority === priorityFilter);
+    if (deptFilter !== 'all') result = result.filter((t) => t.assigned_department === deptFilter);
     return result;
-  }, [filter, memberFilter, tasks]);
+  }, [filter, memberFilter, tasks, searchText, priorityFilter, deptFilter]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
+
+  const handleReset = () => {
+    setFilter('all');
+    setSearchText('');
+    setPriorityFilter('all');
+    setDeptFilter('all');
+  };
 
   return (
     <div>
@@ -112,6 +128,48 @@ export default function TaskListPage() {
 
       {viewMode === 'list' ? (
         <>
+          {/* 搜索筛选栏 */}
+          <Row gutter={[12, 8]} style={{ marginBottom: 16 }}>
+            <Col xs={24} md={8}>
+              <Input
+                placeholder="搜索任务标题..."
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+              />
+            </Col>
+            <Col xs={12} md={6}>
+              <Select
+                value={priorityFilter}
+                onChange={setPriorityFilter}
+                style={{ width: '100%' }}
+                options={[
+                  { value: 'all', label: '全部优先级' },
+                  ...Object.entries(TASK_PRIORITIES).map(([key, p]) => ({ value: key, label: p.label })),
+                ]}
+              />
+            </Col>
+            {hasMinRole(user.role, 'president') && (
+              <Col xs={12} md={6}>
+                <Select
+                  value={deptFilter}
+                  onChange={setDeptFilter}
+                  style={{ width: '100%' }}
+                  options={[
+                    { value: 'all', label: '全部部门' },
+                    ...Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label })),
+                  ]}
+                />
+              </Col>
+            )}
+            <Col xs={24} md={4}>
+              <Button icon={<ReloadOutlined />} onClick={handleReset} block={!md}>
+                重置
+              </Button>
+            </Col>
+          </Row>
+
           <Tabs
             activeKey={filter}
             onChange={setFilter}

@@ -57,9 +57,9 @@ export default function MemberManage() {
   };
 
   const handleResetPassword = async (authId: string, name: string) => {
-    const ok = await resetMemberPassword(authId);
-    if (ok) {
-      message.success(`${name} 的密码已重置为 123456`);
+    const newPwd = await resetMemberPassword(authId);
+    if (newPwd) {
+      message.success(`${name} 的密码已重置为 ${newPwd}`);
     } else {
       message.error('重置失败，请检查 SQL 函数是否已创建');
     }
