@@ -23,6 +23,7 @@ import { MENU_ITEMS } from '../utils/constants';
 import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import PwaInstallButton from './PwaInstallButton';
+import { trackEvent } from '../utils/analytics';
 import { GuideDrawer } from '../modules/guide';
 import { NotificationBell } from '../modules/notification';
 import {
@@ -94,6 +95,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
     // 乐观更新：前端立即清除圆点
     const key = location.pathname.slice(1) as 'tasks' | 'notices' | 'forum';
     setBadges(prev => ({ ...prev, [key]: false }));
+  }, [location.pathname, user.id]);
+
+  // 页面访问埋点（fire-and-forget，独立 effect 避免干扰其他逻辑）
+  useEffect(() => {
+    trackEvent({
+      event_type: 'page_view',
+      userId: user.id,
+      module: location.pathname.replace('/', '') || 'dashboard',
+    });
   }, [location.pathname, user.id]);
 
   const visibleMenus = MENU_ITEMS.filter((item) => {
