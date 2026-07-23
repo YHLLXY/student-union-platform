@@ -3,6 +3,7 @@ import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
 import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser } from './authService';
 import type { UserProfile } from './authService';
+import { trackEvent } from '../../utils/analytics';
 import styles from './auth.module.css';
 
 interface LoginPageProps {
@@ -110,6 +111,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         return;
       }
       message.success('登录成功');
+      trackEvent({ event_type: 'login', userId: user.id, action: 'student' });
       onLoginSuccess(user);
     } catch {
       setError('登录失败，请检查网络连接');
@@ -188,6 +190,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         return;
       }
       message.success('登录成功');
+      trackEvent({ event_type: 'login', userId: user.id, action: 'teacher' });
       onLoginSuccess(user);
     } catch {
       setError('登录失败，请检查网络连接');
