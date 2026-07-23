@@ -5,8 +5,6 @@ import {
 } from '@ant-design/icons';
 import { fetchAnalyticsSummary } from './adminService';
 import type { AnalyticsSummary } from './adminService';
-import styles from './AnalyticsDashboard.module.css';
-
 const EVENT_LABELS: Record<string, string> = {
   page_view: '📄 页面访问',
   login: '👤 登录',

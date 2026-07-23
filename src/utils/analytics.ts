@@ -18,17 +18,21 @@ interface TrackPayload {
  * 调用方需要传入 userId（从 useAuth() 获取），避免每次额外查询 session。
  */
 export function trackEvent(payload: TrackPayload): void {
-  supabase
-    .from('usage_events')
-    .insert({
-      event_type: payload.event_type,
-      user_id: payload.userId,
-      module: payload.module ?? null,
-      action: payload.action ?? null,
-      metadata: payload.metadata ?? {},
-    })
-    .then(({ error }) => {
+  const doTrack = async () => {
+    try {
+      const { error } = await supabase
+        .from('usage_events')
+        .insert({
+          event_type: payload.event_type,
+          user_id: payload.userId,
+          module: payload.module ?? null,
+          action: payload.action ?? null,
+          metadata: payload.metadata ?? {},
+        });
       if (error) console.warn('[analytics]', error.message);
-    })
-    .catch(() => {});
+    } catch {
+      // 静默忽略：网络异常或 Supabase 不可用时不影响用户操作
+    }
+  };
+  doTrack();
 }
