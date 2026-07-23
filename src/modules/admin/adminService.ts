@@ -195,3 +195,83 @@ export async function fetchMemberWorkSummaries(userRole: string, userDept: strin
     };
   });
 }
+
+// ========== 数据看板：使用分析 ==========
+
+export interface AnalyticsSummary {
+  totalEvents: number;
+  activeUsers7d: number;
+  recent7d: number;
+  topModule: string;
+  pageRanking: { module: string; count: number }[];
+  eventStats: { event_type: string; count: number }[];
+  recentErrors: { created_at: string; module: string; action: string; metadata: unknown }[];
+}
+
+/** 获取数据看板汇总（仅管理员调用） */
+export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [
+    totalRes,
+    activeRes,
+    recent7dRes,
+    pageRankRes,
+    eventStatsRes,
+    errorRes,
+  ] = await Promise.all([
+    supabase.from('usage_events').select('id', { count: 'exact', head: true }),
+    supabase.from('usage_events')
+      .select('user_id', { count: 'exact', head: true })
+      .gte('created_at', sevenDaysAgo)
+      .not('user_id', 'is', null),
+    supabase.from('usage_events')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', sevenDaysAgo),
+    supabase.from('usage_events')
+      .select('module, id')
+      .eq('event_type', 'page_view')
+      .gte('created_at', sevenDaysAgo),
+    supabase.from('usage_events')
+      .select('event_type, id')
+      .gte('created_at', sevenDaysAgo),
+    supabase.from('usage_events')
+      .select('created_at, module, action, metadata')
+      .eq('event_type', 'error')
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ]);
+
+  // 页面访问排名（客户端 GROUP BY）
+  const moduleCount: Record<string, number> = {};
+  for (const r of (pageRankRes.data || [])) {
+    const m = (r as { module: string }).module || 'unknown';
+    moduleCount[m] = (moduleCount[m] || 0) + 1;
+  }
+  const pageRanking = Object.entries(moduleCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([module, count]) => ({ module, count }));
+
+  const topModule = pageRanking.length > 0 ? pageRanking[0].module : '暂无数据';
+
+  // 事件类型统计
+  const typeCount: Record<string, number> = {};
+  for (const r of (eventStatsRes.data || [])) {
+    const t = (r as { event_type: string }).event_type;
+    typeCount[t] = (typeCount[t] || 0) + 1;
+  }
+  const eventStats = Object.entries(typeCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([event_type, count]) => ({ event_type, count }));
+
+  return {
+    totalEvents: totalRes.count ?? 0,
+    activeUsers7d: activeRes.count ?? 0,
+    recent7d: recent7dRes.count ?? 0,
+    topModule,
+    pageRanking,
+    eventStats,
+    recentErrors: (errorRes.data || []) as AnalyticsSummary['recentErrors'],
+  };
+}
