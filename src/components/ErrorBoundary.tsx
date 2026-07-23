@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react';
 import { Alert, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { logger } from '../diagnostics';
+import { trackEvent } from '../utils/analytics';
 
 interface Props {
   children: ReactNode;
@@ -26,6 +27,17 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: { componentStack: string }) {
     logger.for('app/ErrorBoundary').error('全局渲染错误', error, {
       stack: info.componentStack?.slice(0, 500),
+    });
+
+    trackEvent({
+      event_type: 'error',
+      userId: 'unknown',
+      module: 'error-boundary',
+      action: 'render_error',
+      metadata: {
+        error: error.toString().slice(0, 500),
+        componentStack: info.componentStack?.slice(0, 500) ?? '',
+      },
     });
   }
 
