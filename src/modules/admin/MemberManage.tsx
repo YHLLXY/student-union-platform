@@ -7,6 +7,7 @@ import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetM
 import type { UserProfile } from '../auth';
 import InviteCodeManage from './InviteCodeManage';
 import WorkOverview from './WorkOverview';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import styles from './admin.module.css';
 
 const roleOptions = Object.entries(ROLES).map(([key, label]) => ({ value: key, label }));
@@ -161,6 +162,7 @@ export default function MemberManage() {
         items={[
           { key: 'members', label: '👥 成员管理', children: memberContent },
           { key: 'overview', label: '📊 工作看板', children: <WorkOverview /> },
+          ...(adminAccess ? [{ key: 'analytics', label: '📈 数据看板', children: <AnalyticsDashboard /> }] : []),
         ]}
       />
     </div>
