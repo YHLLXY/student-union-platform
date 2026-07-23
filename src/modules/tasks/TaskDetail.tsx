@@ -4,6 +4,7 @@ import { EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { UserProfile } from '../auth';
 import { hasMinRole, formatDateTime, getDepartmentLabel, isAdmin } from '../../utils/helpers';
+import { trackEvent } from '../../utils/analytics';
 import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '../../utils/constants';
 import {
   submitTask, fetchTaskSubmissions, reviewSubmission,
@@ -75,6 +76,13 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
     setSubmitting(false);
     if (result.success) {
       message.success('提交成功，等待审核');
+      trackEvent({
+        event_type: 'task_complete',
+        userId: user.id,
+        module: 'tasks',
+        action: 'submitted',
+        metadata: { task_id: task.id, task_title: task.title.slice(0, 50) },
+      });
       setNote('');
       fetchTaskSubmissions(task.id).then(setSubmissions);
       onUpdate();

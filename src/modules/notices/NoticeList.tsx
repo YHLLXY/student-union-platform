@@ -4,6 +4,7 @@ import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant
 import { useAuth } from '../../components/AuthContext';
 import supabase from '../../supabaseClient';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
+import { trackEvent } from '../../utils/analytics';
 import { NOTICE_TYPES, TASK_STATUSES } from '../../utils/constants';
 import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos, createTaskFromNotice, markNoticeRead, fetchNoticeReaders } from './noticeService';
 import type { Notice } from './noticeService';
@@ -101,6 +102,13 @@ export default function NoticeList() {
         return { ...prev, [noticeId]: { read: (cur?.read ?? 0) + 1, total: cur?.total ?? 0 } };
       });
       markNoticeRead(noticeId, user.id);
+      trackEvent({
+        event_type: 'notice_read',
+        userId: user.id,
+        module: 'notices',
+        action: 'read',
+        metadata: { notice_id: noticeId },
+      });
     }
   };
 

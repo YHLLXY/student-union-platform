@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Tag, Empty, Spin, Button, Popconfirm, message } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { formatDateTime } from '../../utils/helpers';
+import { trackEvent } from '../../utils/analytics';
 import { fetchMyTickets, refundTicket } from './ticketService';
 import type { MyTicket } from './ticketService';
 import styles from './tickets.module.css';
@@ -26,6 +27,13 @@ export default function MyTickets() {
     setRefunding(null);
     if (result.success) {
       message.success(result.message);
+      trackEvent({
+        event_type: 'ticket_action',
+        userId: user.id,
+        module: 'tickets',
+        action: 'refunded',
+        metadata: { ticket_id: t.ticket_id },
+      });
       loadMyTickets();
     } else {
       message.error(result.message);

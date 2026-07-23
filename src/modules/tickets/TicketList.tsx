@@ -3,6 +3,7 @@ import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message, Grid } from 'antd
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
+import { trackEvent } from '../../utils/analytics';
 import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from './ticketService';
 import type { Ticket } from './ticketService';
 import TicketForm from './TicketForm';
@@ -38,6 +39,13 @@ export default function TicketList() {
     const result = await grabTicket(ticket.id, user.id, user.student_id, user.name);
     if (result.success) {
       message.success(result.message);
+      trackEvent({
+        event_type: 'ticket_action',
+        userId: user.id,
+        module: 'tickets',
+        action: 'grabbed',
+        metadata: { ticket_id: ticket.id, ticket_title: ticket.title?.slice(0, 50) ?? '' },
+      });
       loadTickets();
     } else {
       message.error(result.message);
