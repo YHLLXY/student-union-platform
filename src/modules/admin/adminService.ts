@@ -222,7 +222,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   ] = await Promise.all([
     supabase.from('usage_events').select('id', { count: 'exact', head: true }),
     supabase.from('usage_events')
-      .select('user_id', { count: 'exact', head: true })
+      .select('user_id')
       .gte('created_at', sevenDaysAgo)
       .not('user_id', 'is', null),
     supabase.from('usage_events')
@@ -265,9 +265,16 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
     .sort((a, b) => b[1] - a[1])
     .map(([event_type, count]) => ({ event_type, count }));
 
+  // 近7天活跃用户：客户端 COUNT(DISTINCT user_id)
+  const activeUsers7d = new Set(
+    ((activeRes.data || []) as { user_id: string }[])
+      .map(r => r.user_id)
+      .filter(Boolean),
+  ).size;
+
   return {
     totalEvents: totalRes.count ?? 0,
-    activeUsers7d: activeRes.count ?? 0,
+    activeUsers7d,
     recent7d: recent7dRes.count ?? 0,
     topModule,
     pageRanking,
