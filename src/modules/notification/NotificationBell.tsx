@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Popover, Spin, Drawer, Grid } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +31,8 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [shake, setShake] = useState(false);
+  const prevCountRef = useRef(0);
   const { md } = Grid.useBreakpoint();
 
   const loadData = useCallback(async () => {
@@ -54,6 +56,17 @@ export default function NotificationBell() {
     });
     return unsubscribe;
   }, [user.id, loadData]);
+
+  // Bell 摇晃：新通知到达时触发一次
+  useEffect(() => {
+    if (unreadCount > prevCountRef.current) {
+      setShake(true);
+      const timer = setTimeout(() => setShake(false), 600);
+      prevCountRef.current = unreadCount;
+      return () => clearTimeout(timer);
+    }
+    prevCountRef.current = unreadCount;
+  }, [unreadCount]);
 
   // 面板打开时刷新数据（桌面 + 移动公用）
   const handleOpen = useCallback((visible: boolean) => {
@@ -112,7 +125,7 @@ export default function NotificationBell() {
   ), [loading, notifications, handleClick]);
 
   const bellTrigger = (
-    <span className={`${styles.bell} ${unreadCount > 0 ? styles.bellHasUnread : ''}`}>
+    <span className={`${styles.bell} ${unreadCount > 0 ? styles.bellHasUnread : ''} ${shake ? styles.bellShaking : ''}`}>
       <BellOutlined />
       {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </span>

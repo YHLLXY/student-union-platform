@@ -255,7 +255,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Drawer>
         )}
 
-        <Content className={styles.contentArea}>{children}</Content>
+        <Content className={styles.contentArea}>
+          <div key={location.pathname} className="page-transition">
+            {children}
+          </div>
+        </Content>
       </Layout>
 
       <GuideDrawer open={guideOpen} onClose={() => setGuideOpen(false)} />
