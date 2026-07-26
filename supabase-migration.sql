@@ -500,3 +500,71 @@ CREATE TABLE IF NOT EXISTS usage_events (
 
 CREATE INDEX IF NOT EXISTS idx_usage_type_time ON usage_events(event_type, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_user ON usage_events(user_id);
+
+-- ============================================================
+-- 第十四部分：抢票并发安全 RPC（P0-01）
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION grab_ticket(
+  p_ticket_id UUID,
+  p_user_id UUID,
+  p_student_id TEXT,
+  p_name TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ticket RECORD;
+  v_my_count INTEGER;
+  v_total_grabbed INTEGER;
+BEGIN
+  -- 1. 锁定票务行（FOR UPDATE 串行化并发请求，消除 TOCTOU）
+  SELECT * INTO v_ticket
+  FROM tickets
+  WHERE id = p_ticket_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'message', '票务不存在');
+  END IF;
+
+  -- 2. 检查是否到开抢时间
+  IF v_ticket.open_time > now() THEN
+    RETURN jsonb_build_object('success', false, 'message', '尚未到开抢时间');
+  END IF;
+
+  -- 3. 检查用户已抢数量（在同一事务内，count 不受并发插入影响）
+  SELECT count(*) INTO v_my_count
+  FROM ticket_records
+  WHERE ticket_id = p_ticket_id AND user_id = p_user_id;
+
+  IF v_my_count >= v_ticket.per_user_limit THEN
+    RETURN jsonb_build_object('success', false, 'message', '每人限抢 ' || v_ticket.per_user_limit || ' 张');
+  END IF;
+
+  -- 4. 检查剩余票数
+  SELECT count(*) INTO v_total_grabbed
+  FROM ticket_records
+  WHERE ticket_id = p_ticket_id;
+
+  IF v_total_grabbed >= v_ticket.total_count THEN
+    RETURN jsonb_build_object('success', false, 'message', '票已被抢完');
+  END IF;
+
+  -- 5. 插入抢票记录
+  INSERT INTO ticket_records (ticket_id, user_id, student_id, name)
+  VALUES (p_ticket_id, p_user_id, p_student_id, p_name);
+
+  RETURN jsonb_build_object('success', true, 'message', '抢票成功！');
+
+EXCEPTION
+  WHEN unique_violation THEN
+    -- UNIQUE(ticket_id, user_id) 约束冲突 = 重复抢票
+    RETURN jsonb_build_object('success', false, 'message', '你已抢过该票');
+  WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'message', '抢票失败，请重试');
+END;
+$$;

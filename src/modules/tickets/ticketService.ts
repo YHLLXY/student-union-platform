@@ -77,67 +77,27 @@ export async function createTicket(ticket: {
   return data as Ticket;
 }
 
-/** 抢票（带并发安全检查） */
+/** 抢票（RPC 原子操作，FOR UPDATE 行锁防并发超卖） */
 export async function grabTicket(
   ticketId: string,
   userId: string,
   studentId: string,
   name: string,
 ): Promise<{ success: boolean; message: string }> {
-  // 1. 获取票务信息
-  const { data: ticket } = await supabase
-    .from('tickets')
-    .select('*')
-    .eq('id', ticketId)
-    .single();
-
-  if (!ticket) return { success: false, message: '票务不存在' };
-
-  // 2. 检查是否到开抢时间
-  if (new Date(ticket.open_time) > new Date()) {
-    return { success: false, message: '尚未到开抢时间' };
-  }
-
-  // 3+4. 并行检查用户已抢数量 + 剩余票数
-  const [{ count: myCount }, { count: totalGrabbed }] = await Promise.all([
-    supabase
-      .from('ticket_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('ticket_id', ticketId)
-      .eq('user_id', userId),
-    supabase
-      .from('ticket_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('ticket_id', ticketId),
-  ]);
-
-  if (myCount && myCount >= ticket.per_user_limit) {
-    return { success: false, message: `每人限抢 ${ticket.per_user_limit} 张` };
-  }
-
-  if (totalGrabbed && totalGrabbed >= ticket.total_count) {
-    return { success: false, message: '票已被抢完' };
-  }
-
-  // 5. 插入抢票记录
-  const { error } = await supabase
-    .from('ticket_records')
-    .insert({
-      ticket_id: ticketId,
-      user_id: userId,
-      student_id: studentId,
-      name,
-    });
+  const { data, error } = await supabase.rpc('grab_ticket', {
+    p_ticket_id: ticketId,
+    p_user_id: userId,
+    p_student_id: studentId,
+    p_name: name,
+  });
 
   if (error) {
-    // 唯一约束冲突 = 重复抢票
-    if (error.code === '23505') {
-      return { success: false, message: '你已抢过该票' };
-    }
+    log.error('grab_ticket RPC 调用失败', error);
     return { success: false, message: '抢票失败，请重试' };
   }
 
-  return { success: true, message: '抢票成功！' };
+  const result = data as { success: boolean; message: string };
+  return result;
 }
 
 export interface MyTicket {
