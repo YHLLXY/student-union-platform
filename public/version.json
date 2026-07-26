@@ -1,12 +1,14 @@
 {
-  "version": "3.4.0",
+  "version": "3.5.0",
   "date": "2026-07-26",
   "changelog": [
-    "🎨 UI 全面优化：精致极简风格 + CSS 变量体系（50+ 变量）",
-    "✨ 动效注入：骨架屏 + 路由切换动画 + Bell 摇晃 + 数字滚动",
-    "🔐 登录页重设计：深色渐变背景 + 毛玻璃卡片",
-    "📐 17 个 CSS 文件硬编码色值 → CSS 变量引用，统一 4 种蓝色",
-    "📱 移动端增强：平板断点 + profile 死代码清理",
-    "♿ 动效降级：prefers-reduced-motion 支持"
+    "📱 移动端专项优化：安全区适配 + 视口修正 + 触摸目标 44px",
+    "🔍 手机端全局搜索入口恢复（Header 搜索图标 → Drawer）",
+    "📐 断点体系补全：从 1 档(768px) → 3 档(480/768/1024)",
+    "🎯 看板移动端：横向滑动 + scroll-snap + 隐藏拖拽",
+    "👆 全局按压反馈：ant-card:active + 触摸优化 + 双击缩放抑制",
+    "📋 8 模块断点补齐：profile/kanban/dashboard/admin/tickets/tasks/forum/auth",
+    "🔤 小屏 Header 优化：<480px 隐藏用户名只留头像",
+    "♿ 恢复用户缩放权限（去 user-scalable=no）+ 毛玻璃降级"
   ]
 }
