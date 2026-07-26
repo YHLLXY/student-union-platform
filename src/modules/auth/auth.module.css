@@ -1,68 +1,101 @@
+/* === 登录/注册页 === */
+
 .loginContainer {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0f2f5 0%, #dce3ea 100%);
+  background: var(--login-gradient);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 装饰光斑 */
+.loginContainer::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.loginContainer::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .loginCard {
   width: 420px;
-  padding: 48px 40px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
 }
 
 .logoSection {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 
 .platformName {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  color: #1a3a5c;
-  margin-bottom: 8px;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+  letter-spacing: 1px;
 }
 
 .platformSlogan {
-  font-size: 14px;
-  color: #7f8c8d;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 
 .tipText {
   text-align: center;
   font-size: 13px;
-  color: #95a5a6;
-  margin-top: 24px;
+  color: var(--text-tertiary);
+  margin-top: var(--space-xl);
 }
 
 .errorAlert {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-lg);
 }
 
 .stepHint {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-xl);
   padding: 10px 14px;
-  background: #e8f0fe;
-  border-radius: 6px;
+  background: var(--bg-info);
+  border-radius: var(--radius-sm);
   font-size: 13px;
-  color: #1a3a5c;
+  color: var(--color-primary);
 }
 
 .tabContainer {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-xs);
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
   .loginCard {
     width: calc(100vw - 32px);
-    padding: 32px 20px;
+    padding: 28px 20px;
   }
 
   .platformName {
-    font-size: 24px;
+    font-size: 22px;
   }
 }
