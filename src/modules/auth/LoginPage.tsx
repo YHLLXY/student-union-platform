@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
-import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser } from './authService';
+import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser, validatePasswordStrength } from './authService';
 import type { UserProfile } from './authService';
 import { trackEvent } from '../../utils/analytics';
 import styles from './auth.module.css';
@@ -406,8 +406,21 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       </div>
       {(step === 'setPassword' || !!forgotAuthId) && (
         <>
-          <Form.Item name="password" rules={[{ required: true, message: '请设置密码' }, { min: 6, message: '密码至少 6 位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="设置密码（至少 6 位）" />
+          <Form.Item
+            name="password"
+            rules={[
+              { required: true, message: '请设置密码' },
+              {
+                validator(_, value) {
+                  if (!value) return Promise.resolve();
+                  const check = validatePasswordStrength(value);
+                  if (!check.valid) return Promise.reject(new Error(check.message));
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="设置密码（至少 8 位，含字母+数字）" />
           </Form.Item>
           <Form.Item
             name="confirmPassword"

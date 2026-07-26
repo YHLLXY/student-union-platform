@@ -13,6 +13,29 @@ export interface UserProfile {
   created_at: string;
 }
 
+/**
+ * 密码强度校验
+ *
+ * 规则：
+ *   1. 至少 8 个字符
+ *   2. 必须包含至少一个字母（a-z / A-Z）
+ *   3. 必须包含至少一个数字（0-9）
+ *
+ * 不做：大小写混合、特殊字符 —— 学生内网工具过度要求适得其反
+ */
+export function validatePasswordStrength(password: string): { valid: boolean; message: string } {
+  if (!password || password.length < 8) {
+    return { valid: false, message: '密码至少需要 8 位' };
+  }
+  if (!/[a-zA-Z]/.test(password)) {
+    return { valid: false, message: '密码必须包含字母' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: '密码必须包含数字' };
+  }
+  return { valid: true, message: '' };
+}
+
 /** 检查邀请码是否有效（数据库查询 + 客户端二次校验） */
 export async function checkInviteCode(code: string) {
   const { data, error } = await supabase
@@ -69,6 +92,12 @@ export async function signUp(
   department: string,
   role: string,
 ): Promise<{ user: UserProfile | null; error: string | null }> {
+  // 0. 密码强度校验（先于任何网络请求，快速失败）
+  const pwdCheck = validatePasswordStrength(password);
+  if (!pwdCheck.valid) {
+    return { user: null, error: pwdCheck.message };
+  }
+
   const email = `${studentId}@stuunion.org`;
 
   // 1. 创建 Supabase Auth 用户
@@ -127,6 +156,12 @@ export async function signUpTeacher(
   inviteCode: string,
   password: string,
 ): Promise<{ user: UserProfile | null; error: string | null }> {
+  // 0. 密码强度校验
+  const pwdCheck = validatePasswordStrength(password);
+  if (!pwdCheck.valid) {
+    return { user: null, error: pwdCheck.message };
+  }
+
   const email = `${teacherId}@stuunion.org`;
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -268,6 +303,11 @@ export async function verifyUser(name: string, studentId: string): Promise<{ aut
 
 /** 自主重置密码（通过 auth_id 调用数据库函数） */
 export async function selfResetPassword(authId: string, newPassword: string): Promise<boolean> {
+  const pwdCheck = validatePasswordStrength(newPassword);
+  if (!pwdCheck.valid) {
+    return false;
+  }
+
   const { error } = await supabase.rpc('reset_user_password', {
     user_id: authId,
     new_password: newPassword,
