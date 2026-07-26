@@ -453,3 +453,101 @@
   font-size: 12px;
   color: var(--text-tertiary);
 }
+
+/* === 移动端适配 === */
+
+/* 平板竖屏 + 大屏手机 */
+@media (max-width: 768px) {
+  .statsRow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+
+  .directoryGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-sm);
+  }
+
+  .podiumRow {
+    gap: var(--space-sm);
+  }
+
+  .podiumCard {
+    padding: 12px 6px;
+  }
+
+  .podiumMedal {
+    font-size: 24px;
+  }
+
+  .podiumName {
+    font-size: 12px;
+  }
+
+  .leaderboardTitle {
+    font-size: 14px;
+  }
+
+  .yearHeatmapGrid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 热力图横滑渐变提示 */
+  .yearHeatmapGrid::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 24px;
+    height: 100%;
+    background: linear-gradient(to right, transparent, var(--bg-card));
+    pointer-events: none;
+  }
+}
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .directoryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .podiumRow {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .podiumName {
+    font-size: 13px;
+  }
+
+  .podiumCount {
+    font-size: 12px;
+  }
+
+  .rankItem {
+    padding: 6px 8px;
+  }
+
+  .rankName {
+    font-size: 12px;
+  }
+
+  .rankCount {
+    font-size: 13px;
+  }
+
+  .yearLabel {
+    font-size: 16px;
+  }
+
+  .profileCard {
+    margin-top: 12px;
+  }
+}

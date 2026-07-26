@@ -147,3 +147,28 @@
 .viewToggle {
   margin-left: 16px;
 }
+
+/* === 移动端看板：横向滑动 + snap === */
+@media (max-width: 768px) {
+  .board {
+    scroll-snap-type: x mandatory;
+    scroll-padding: var(--space-md);
+    gap: var(--space-md);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .column {
+    min-width: 85vw;
+    max-width: 85vw;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  .dragOverlay {
+    display: none;
+  }
+
+  .viewToggle {
+    margin-left: 8px;
+  }
+}

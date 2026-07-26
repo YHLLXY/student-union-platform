@@ -132,3 +132,15 @@
     gap: 8px;
   }
 }
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .cardCover {
+    height: 80px;
+    font-size: 32px;
+  }
+
+  .remaining {
+    font-size: 14px;
+  }
+}

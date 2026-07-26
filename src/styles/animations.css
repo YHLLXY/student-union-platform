@@ -93,6 +93,15 @@ a, button, [role="button"], input, select, textarea, [tabindex] {
   }
 }
 
+/* 移动端全局按压反馈 */
+@media (max-width: 768px) {
+  .ant-card:active,
+  .ant-card-hoverable:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
 /* 抑制双击缩放（交互密集区） */
 @media (max-width: 768px) {
   button, a, [role="button"], .ant-card, .ant-table-row, .ant-list-item {

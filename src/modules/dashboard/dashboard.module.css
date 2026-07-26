@@ -176,3 +176,26 @@
     width: 100%;
   }
 }
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .welcome {
+    font-size: 16px;
+  }
+
+  .statsRow {
+    gap: 6px;
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+
+  .quickActions {
+    gap: 6px;
+  }
+
+  .activityTitle {
+    font-size: 14px;
+  }
+}

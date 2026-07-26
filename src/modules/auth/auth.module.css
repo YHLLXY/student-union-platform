@@ -5,6 +5,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--login-gradient);
   position: relative;
   overflow: hidden;
@@ -88,7 +89,22 @@
   margin-bottom: var(--space-xs);
 }
 
-/* 移动端适配 */
+/* 毛玻璃降级：低端设备用不透明背景 */
+@supports not (backdrop-filter: blur(1px)) {
+  .loginCard {
+    background: rgba(255, 255, 255, 0.97);
+  }
+}
+
+/* 平板竖屏 */
+@media (max-width: 768px) {
+  .loginCard {
+    width: 380px;
+    padding: 36px 28px;
+  }
+}
+
+/* 小屏手机 */
 @media (max-width: 480px) {
   .loginCard {
     width: calc(100vw - 32px);

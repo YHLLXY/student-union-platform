@@ -47,3 +47,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 平板 */
+@media (max-width: 1024px) {
+  .overviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .memberCardName {
+    font-size: 13px;
+  }
+
+  .sectionTitle {
+    font-size: 14px;
+  }
+}

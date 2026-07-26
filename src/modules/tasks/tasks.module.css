@@ -157,3 +157,16 @@
     font-size: 12px;
   }
 }
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .cardMeta {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .milestoneMeta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

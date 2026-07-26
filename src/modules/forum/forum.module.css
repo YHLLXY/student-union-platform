@@ -115,3 +115,14 @@
     gap: 8px;
   }
 }
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .postTitle {
+    font-size: 14px;
+  }
+
+  .replyAuthor {
+    font-size: 13px;
+  }
+}
