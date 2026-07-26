@@ -470,13 +470,14 @@ BEGIN
       WITH CHECK (bucket_id = 'attachments' AND auth.role() = 'authenticated');
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete own attachments' AND tablename = 'objects'
-  ) THEN
-    CREATE POLICY "Users can delete own attachments"
-      ON storage.objects FOR DELETE
-      USING (bucket_id = 'attachments' AND auth.role() = 'authenticated');
-  END IF;
+  -- 删除旧策略（如果存在）—— 旧策略允许任何已登录用户删除任何附件
+  DROP POLICY IF EXISTS "Users can delete own attachments" ON storage.objects;
+
+  -- 重建：只有文件上传者本人可以删除
+  -- owner 是 storage.objects 的系统列，Supabase Storage API 上传时自动填充 auth.uid()
+  CREATE POLICY "Users can delete own attachments"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'attachments' AND auth.uid() = owner);
 END $$;
 
 -- 3. 各表新增 attachments 列（JSONB 数组，默认空）
