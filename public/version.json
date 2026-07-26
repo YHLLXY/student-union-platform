@@ -1,13 +1,12 @@
 {
-  "version": "3.3.0",
+  "version": "3.4.0",
   "date": "2026-07-26",
   "changelog": [
-    "🔒 抢票 RPC 原子化：FOR UPDATE 行锁防并发超卖",
-    "📦 helpers 按职责拆分：dateUtils/roleUtils/fileUtils + dayjs 替换为原生实现",
-    "🔑 邀请码增强：支持 max_uses/expires_at/revoked_at，管理界面可配置次数和过期",
-    "🛡️ Storage DELETE 策略修正：仅文件上传者本人可删除",
-    "🔐 密码强度校验：注册/重置时 ≥8位 + 字母 + 数字",
-    "📚 ADR 架构决策记录 + 部署交接指南",
-    "🔄 SW 版本检测优化：10分钟轮询 + changelog 联动通知"
+    "🎨 UI 全面优化：精致极简风格 + CSS 变量体系（50+ 变量）",
+    "✨ 动效注入：骨架屏 + 路由切换动画 + Bell 摇晃 + 数字滚动",
+    "🔐 登录页重设计：深色渐变背景 + 毛玻璃卡片",
+    "📐 17 个 CSS 文件硬编码色值 → CSS 变量引用，统一 4 种蓝色",
+    "📱 移动端增强：平板断点 + profile 死代码清理",
+    "♿ 动效降级：prefers-reduced-motion 支持"
   ]
 }

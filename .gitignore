@@ -26,3 +26,4 @@ supabase/.temp/
 
 # 学生资料（隐私数据，不提交）
 学生会资料准备/
+.superpowers/

@@ -347,51 +347,16 @@
 /* 通讯录 */
 .directoryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.memberCard {
-  transition: box-shadow 0.2s;
-}
-.memberCard:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-
-.memberCardBody {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.memberName {
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.memberStats {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-}
-
-.memberStatItem {
-  cursor: default;
-}
-
-/* 通讯录 */
-.directoryGrid {
-  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
 .memberCard {
   cursor: default;
+  transition: box-shadow 0.2s;
+}
+.memberCard:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
 .memberCardBody {
