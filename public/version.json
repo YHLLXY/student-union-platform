@@ -1,9 +1,13 @@
 {
-  "version": "3.2.0",
-  "date": "2026-07-23",
+  "version": "3.3.0",
+  "date": "2026-07-26",
   "changelog": [
-    "📊 数据埋点系统：6 类使用事件自动采集（页面/登录/任务/公告/抢票/错误）",
-    "📈 管理员数据看板：近7天活跃、页面排名、事件统计、错误日志",
-    "🔒 零外部依赖：数据留在 Supabase，fire-and-forget 零性能影响"
+    "🔒 抢票 RPC 原子化：FOR UPDATE 行锁防并发超卖",
+    "📦 helpers 按职责拆分：dateUtils/roleUtils/fileUtils + dayjs 替换为原生实现",
+    "🔑 邀请码增强：支持 max_uses/expires_at/revoked_at，管理界面可配置次数和过期",
+    "🛡️ Storage DELETE 策略修正：仅文件上传者本人可删除",
+    "🔐 密码强度校验：注册/重置时 ≥8位 + 字母 + 数字",
+    "📚 ADR 架构决策记录 + 部署交接指南",
+    "🔄 SW 版本检测优化：10分钟轮询 + changelog 联动通知"
   ]
 }
