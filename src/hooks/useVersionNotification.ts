@@ -81,7 +81,38 @@ export function useVersionNotification() {
       // 静默降级 — JSON 解析失败不影响应用
     }
 
-    // ---- ② 安装提示（beforeinstallprompt 兜底） ----
+    // ---- ② controllerchange 监听（SW 激活后自动弹 changelog） ----
+    const onControllerChange = () => {
+      try {
+        const raw = localStorage.getItem(NEW_VERSION_KEY);
+        if (raw) {
+          const data: VersionData = JSON.parse(raw);
+          const lastVer = localStorage.getItem(LAST_VERSION_KEY);
+          if (data.version && data.version !== lastVer) {
+            const changelogText = data.changelog?.length
+              ? data.changelog.map((c, i) => `${i + 1}. ${c}`).join('\n')
+              : '请查看应用最新变化';
+
+            notification.info({
+              message: `📢 平台已更新至 ${data.version}`,
+              description: changelogText,
+              duration: 8,
+              placement: 'topRight',
+              style: { whiteSpace: 'pre-line' },
+            });
+
+            localStorage.setItem(LAST_VERSION_KEY, data.version);
+          }
+          localStorage.removeItem(NEW_VERSION_KEY);
+        }
+      } catch {
+        // 静默降级
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange);
+
+    // ---- ③ 安装提示（beforeinstallprompt 兜底） ----
     // index.html 已监听 beforeinstallprompt 并存储到 window.__pwaInstallPrompt
     // @ts-expect-error 自定义全局变量
     const prompt = window.__pwaInstallPrompt;
@@ -98,7 +129,10 @@ export function useVersionNotification() {
       window.__pwaInstallPrompt = evt;
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
   return { installPrompt, installApp };
