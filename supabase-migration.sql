@@ -568,3 +568,31 @@ EXCEPTION
     RETURN jsonb_build_object('success', false, 'message', '抢票失败，请重试');
 END;
 $$;
+
+-- ============================================================
+-- 第十五部分：邀请码机制增强（P0-04）
+-- ============================================================
+
+-- 1. 新增字段（向后兼容，DEFAULT 确保旧数据不丢失）
+ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1;
+ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0;
+ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+
+-- 2. 数据回填：旧"已使用"的邀请码设 used_count = 1
+UPDATE invite_codes
+SET used_count = 1
+WHERE is_used = true
+  AND used_by IS NOT NULL
+  AND used_count = 0;
+
+-- 3. 数据回填：旧"手动停用"的邀请码（is_used=true 但 used_by 为空）→ 视为被撤销
+UPDATE invite_codes
+SET revoked_at = created_at
+WHERE is_used = true
+  AND used_by IS NULL
+  AND revoked_at IS NULL;
+
+-- 4. 索引：按创建者查询
+CREATE INDEX IF NOT EXISTS idx_invite_created_by ON invite_codes(created_by);

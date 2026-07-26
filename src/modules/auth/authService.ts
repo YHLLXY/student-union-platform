@@ -13,16 +13,38 @@ export interface UserProfile {
   created_at: string;
 }
 
-/** 检查邀请码是否有效，返回邀请码记录（含对应部门） */
+/** 检查邀请码是否有效（数据库查询 + 客户端二次校验） */
 export async function checkInviteCode(code: string) {
   const { data, error } = await supabase
     .from('invite_codes')
     .select('*')
     .eq('code', code)
-    .eq('is_used', false)
     .single();
 
   if (error || !data) return null;
+
+  // 客户端二次校验（数据库 RLS 不保证业务规则）
+
+  // 1. 已被撤销
+  if (data.revoked_at) {
+    console.warn('[auth] 邀请码已被撤销:', code);
+    return null;
+  }
+
+  // 2. 已过期
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    console.warn('[auth] 邀请码已过期:', code, data.expires_at);
+    return null;
+  }
+
+  // 3. 已用完
+  const usedCount = data.used_count ?? (data.is_used ? 1 : 0);
+  const maxUses = data.max_uses ?? 1;
+  if (usedCount >= maxUses) {
+    console.warn('[auth] 邀请码已用完:', code, usedCount, '/', maxUses);
+    return null;
+  }
+
   return data;
 }
 
@@ -76,10 +98,23 @@ export async function signUp(
     return { user: null, error: userError.message };
   }
 
-  // 3. 标记邀请码已使用
+  // 3. 标记邀请码使用（used_count + 1）
+  const { data: currentCode } = await supabase
+    .from('invite_codes')
+    .select('used_count, max_uses')
+    .eq('code', inviteCode)
+    .single();
+
+  const newCount = (currentCode?.used_count ?? 0) + 1;
+  const maxUses = currentCode?.max_uses ?? 1;
+
   await supabase
     .from('invite_codes')
-    .update({ is_used: true, used_by: userData.id })
+    .update({
+      used_count: newCount,
+      is_used: newCount >= maxUses,
+      used_by: userData.id,
+    })
     .eq('code', inviteCode);
 
   return { user: userData as UserProfile, error: null };
@@ -119,25 +154,46 @@ export async function signUpTeacher(
     return { user: null, error: userError.message };
   }
 
+  // 3. 标记邀请码使用（used_count + 1）
+  const { data: currentCode } = await supabase
+    .from('invite_codes')
+    .select('used_count, max_uses')
+    .eq('code', inviteCode)
+    .single();
+
+  const newCount = (currentCode?.used_count ?? 0) + 1;
+  const maxUses = currentCode?.max_uses ?? 1;
+
   await supabase
     .from('invite_codes')
-    .update({ is_used: true, used_by: userData.id })
+    .update({
+      used_count: newCount,
+      is_used: newCount >= maxUses,
+      used_by: userData.id,
+    })
     .eq('code', inviteCode);
 
   return { user: userData as UserProfile, error: null };
 }
 
-/** 检查教师邀请码是否有效（role=teacher 的邀请码） */
+/** 检查教师邀请码是否有效（role=teacher） */
 export async function checkTeacherCode(code: string) {
   const { data, error } = await supabase
     .from('invite_codes')
     .select('*')
     .eq('code', code)
-    .eq('is_used', false)
     .eq('role', 'teacher')
     .single();
 
   if (error || !data) return null;
+
+  // 同样做客户端二次校验
+  if (data.revoked_at) return null;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
+  const usedCount = data.used_count ?? (data.is_used ? 1 : 0);
+  const maxUses = data.max_uses ?? 1;
+  if (usedCount >= maxUses) return null;
+
   return data;
 }
 

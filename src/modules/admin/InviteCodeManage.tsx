@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Select, message, Tag, Popconfirm } from 'antd';
+import { Table, Button, Select, message, Tag, Popconfirm, InputNumber } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
 import { DEPARTMENTS, ROLES } from '../../utils/constants';
 import { getDepartmentLabel, getRoleLabel, hasMinRole } from '../../utils/helpers';
@@ -20,6 +20,8 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
   const [genDept, setGenDept] = useState(userDept);
   const [genRole, setGenRole] = useState('volunteer');
   const [genLoading, setGenLoading] = useState(false);
+  const [genMaxUses, setGenMaxUses] = useState(1);
+  const [genExpiresDays, setGenExpiresDays] = useState<number | null>(null);
 
   // 部门负责人只看本部门（hasMinRole 替代硬编码字符串比较）
   const isDeptHead = hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium');
@@ -36,7 +38,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
 
   const handleGenerate = async () => {
     setGenLoading(true);
-    const code = await generateInviteCode(genDept, genRole);
+    const code = await generateInviteCode(genDept, genRole, genMaxUses, genExpiresDays);
     setGenLoading(false);
 
     if (code) {
@@ -88,12 +90,23 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
     {
       title: '状态', dataIndex: 'is_used', key: 'status',
       render: (_: boolean, record: InviteCode) => {
-        if (!record.is_used) return <Tag color="green">可用</Tag>;
-        if (record.used_by) return <Tag color="default">已使用</Tag>;
-        return <Tag color="red">已停用</Tag>;
+        if (record.revoked_at) return <Tag color="red">已撤销</Tag>;
+        if (record.expires_at && new Date(record.expires_at) < new Date()) return <Tag color="orange">已过期</Tag>;
+        if (record.used_count >= record.max_uses) return <Tag color="default">已用完</Tag>;
+        return <Tag color="green">可用</Tag>;
       },
     },
     { title: '使用者', dataIndex: 'used_by_name', key: 'used_by_name' },
+    {
+      title: '次数', key: 'usage',
+      render: (_: unknown, record: InviteCode) => `${record.used_count}/${record.max_uses}`,
+      width: 70,
+    },
+    {
+      title: '过期', dataIndex: 'expires_at', key: 'expires',
+      render: (v: string | null) => v ? new Date(v).toLocaleDateString('zh-CN') : '—',
+      width: 100,
+    },
   ];
 
   return (
@@ -117,6 +130,32 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
             style={{ width: 130 }}
             disabled={isDeptHead}
           />
+          <InputNumber
+            min={1}
+            max={999}
+            value={genMaxUses}
+            onChange={v => setGenMaxUses(v ?? 1)}
+            size="small"
+            style={{ width: 70 }}
+            disabled={isDeptHead}
+            title="可使用次数"
+          />
+          <Select
+            value={genExpiresDays}
+            onChange={setGenExpiresDays}
+            size="small"
+            style={{ width: 100 }}
+            disabled={isDeptHead}
+            placeholder="永不过期"
+            allowClear
+            options={[
+              { value: 1, label: '1天' },
+              { value: 3, label: '3天' },
+              { value: 7, label: '7天' },
+              { value: 30, label: '30天' },
+              { value: 90, label: '90天' },
+            ]}
+          />
           <Button
             type="primary"
             size="small"
@@ -136,8 +175,10 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
           {
             title: '操作', key: 'actions',
             render: (_: unknown, record: InviteCode) => {
-              const isAvailable = !record.is_used;
-              const isDeactivated = record.is_used && !record.used_by;
+              const isAvailable = !record.revoked_at
+                && record.used_count < record.max_uses
+                && (!record.expires_at || new Date(record.expires_at) > new Date());
+              const isDeactivated = !!record.revoked_at;
               const canDeleteThis = (isAvailable || isDeactivated)
                 && (isGlobalAdmin || (canDelete && record.department === userDept));
 

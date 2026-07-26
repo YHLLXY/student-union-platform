@@ -45,12 +45,29 @@ export async function removeMember(memberId: string): Promise<boolean> {
 }
 
 /** 生成邀请码 */
-export async function generateInviteCode(department: string, role: string): Promise<string | null> {
+export async function generateInviteCode(
+  department: string,
+  role: string,
+  maxUses: number = 1,
+  expiresInDays: number | null = null,
+  createdBy: string | null = null,
+): Promise<string | null> {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expiresAt = expiresInDays
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
   const { error } = await supabase
     .from('invite_codes')
-    .insert({ code, department, role });
+    .insert({
+      code,
+      department,
+      role,
+      max_uses: maxUses,
+      used_count: 0,
+      expires_at: expiresAt,
+      created_by: createdBy,
+    });
 
   if (error) { log.error('generateInviteCode 生成失败', error); return null; }
   return code;
@@ -64,6 +81,11 @@ export interface InviteCode {
   is_used: boolean;
   used_by: string | null;
   used_by_name?: string;
+  max_uses: number;
+  used_count: number;
+  expires_at: string | null;
+  created_by: string | null;
+  revoked_at: string | null;
   created_at: string;
 }
 
@@ -93,9 +115,20 @@ export async function fetchInviteCodes(department?: string): Promise<InviteCode[
   if (error || !data) { log.error('fetchInviteCodes 查询失败', error); return []; }
 
   return data.map((c: Record<string, unknown>) => ({
-    ...c,
+    id: c.id as string,
+    code: c.code as string,
+    department: c.department as string,
+    role: c.role as string,
+    is_used: c.is_used as boolean,
+    used_by: c.used_by as string | null,
     used_by_name: (c.used_user as { name: string } | null)?.name ?? '-',
-  })) as unknown as InviteCode[];
+    max_uses: (c.max_uses as number) ?? 1,
+    used_count: (c.used_count as number) ?? 0,
+    expires_at: c.expires_at as string | null,
+    created_by: c.created_by as string | null,
+    revoked_at: c.revoked_at as string | null,
+    created_at: c.created_at as string,
+  })) as InviteCode[];
 }
 
 /** 删除邀请码（仅限未被使用的） */
@@ -109,14 +142,14 @@ export async function deleteInviteCode(codeId: string): Promise<boolean> {
   return true;
 }
 
-/** 停用邀请码 */
+/** 撤销邀请码（设置 revoked_at，而非标记 is_used） */
 export async function deactivateInviteCode(codeId: string): Promise<boolean> {
   const { error } = await supabase
     .from('invite_codes')
-    .update({ is_used: true })
+    .update({ revoked_at: new Date().toISOString() })
     .eq('id', codeId);
 
-  if (error) { log.error('deactivateInviteCode 停用失败', error); return false; }
+  if (error) { log.error('deactivateInviteCode 撤销失败', error); return false; }
   return true;
 }
 
