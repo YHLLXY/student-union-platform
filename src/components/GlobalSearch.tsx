@@ -15,7 +15,11 @@ const MODULE_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   guides:   { icon: <BookOutlined />,     color: '#8e44ad', label: '指南' },
 };
 
-export default function GlobalSearch() {
+interface GlobalSearchProps {
+  onClose?: () => void;
+}
+
+export default function GlobalSearch({ onClose }: GlobalSearchProps) {
   const user = useAuth();
   const navigate = useNavigate();
   const [value, setValue] = useState('');
@@ -95,6 +99,7 @@ export default function GlobalSearch() {
     setValue('');
     setResults([]);
     navigate(item.link);
+    onClose?.();
   };
 
   // 高亮匹配关键词

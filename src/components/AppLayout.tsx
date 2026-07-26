@@ -15,6 +15,7 @@ import {
   QuestionCircleOutlined,
   MenuOutlined,
   BookOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '../modules/auth';
@@ -59,6 +60,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [badges, setBadges] = useState({ tasks: false, notices: false, forum: false });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { md } = Grid.useBreakpoint();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -168,6 +170,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {!md && <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ color: '#fff', fontSize: 16 }} />}
         <div className={styles.logo}>🏛 学生会</div>
         {md && <GlobalSearch />}
+        {!md && (
+          <Button
+            type="text"
+            icon={<SearchOutlined />}
+            onClick={() => setSearchOpen(true)}
+            className={styles.searchBtn}
+            title="全局搜索"
+          />
+        )}
         <div className={styles.headerRight}>
           {md && (
             <Button
@@ -191,8 +202,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <NotificationBell />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
-              <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
-              {user.name}
+              <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: md ? 8 : 0 }} />
+              <span className={styles.userNameText}>{user.name}</span>
             </div>
           </Dropdown>
         </div>
@@ -264,6 +275,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       <GuideDrawer open={guideOpen} onClose={() => setGuideOpen(false)} />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+
+      {/* 移动端搜索 Drawer */}
+      {!md && (
+        <Drawer
+          title="🔍 全局搜索"
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          placement="top"
+          height="auto"
+          styles={{ body: { padding: '12px 16px' } }}
+        >
+          <GlobalSearch onClose={() => setSearchOpen(false)} />
+        </Drawer>
+      )}
     </Layout>
   );
 }
