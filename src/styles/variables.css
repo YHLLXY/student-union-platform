@@ -1,0 +1,77 @@
+/* === 学生会平台 · 全局 CSS 变量 ===
+   与 src/theme.ts 保持同步，改主题只需改此处 */
+
+:root {
+  /* ---- 品牌色 ---- */
+  --color-primary: #1a3a5c;
+  --color-primary-dark: #0f2027;
+  --color-primary-light: #2c5364;
+  --color-info: #3498db;
+  --color-success: #27ae60;
+  --color-warning: #e67e22;
+  --color-error: #e74c3c;
+
+  /* ---- 文本 ---- */
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --text-tertiary: #95a5a6;
+  --text-disabled: #bdc3c7;
+
+  /* ---- 背景 ---- */
+  --bg-page: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafbfc;
+  --bg-subtle: #f8fafc;
+
+  /* ---- 语义背景 ---- */
+  --bg-info: #f0f7ff;
+  --bg-info-hover: #e6f0ff;
+  --bg-warning: #fff7e6;
+  --bg-warning-hover: #fffbe6;
+  --bg-error: #fff2f0;
+  --bg-selected: #e8f0fe;
+
+  /* ---- 边框 ---- */
+  --border-default: #f0f0f0;
+  --border-light: #f5f5f5;
+  --border-input: #d9d9d9;
+
+  /* ---- 间距 (4px 网格) ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* ---- 圆角 ---- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ---- 阴影 ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+
+  /* ---- 动效 ---- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* ---- 渐变 ---- */
+  --header-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  --login-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+  --accent-gradient: linear-gradient(135deg, #1a3a5c 0%, #3498db 100%);
+
+  /* ---- Header ---- */
+  --header-height: 56px;
+
+  /* ---- 字体 ---- */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}

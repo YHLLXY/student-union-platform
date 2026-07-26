@@ -1,0 +1,78 @@
+/* === 学生会平台 · 全局动画 === */
+
+/* ---- 页面/组件淡入 ---- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---- 卡片入场 (配合 JS stagger 使用) ---- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 通知 Bell 摇晃 ---- */
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  10%, 50%, 90% { transform: rotate(10deg); }
+  30%, 70% { transform: rotate(-10deg); }
+}
+
+/* ---- 骨架屏扫光 ---- */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ---- 数值滚动入场 ---- */
+@keyframes countIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 弹入（通知/Toast） ---- */
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 路由切换：页面进入 ---- */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ---- 骨架屏基础样式 ---- */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ---- 路由动画容器 ---- */
+.page-transition {
+  animation: pageEnter var(--transition-normal) both;
+}
+
+/* ---- 卡片入场 stagger（配合 JS 设置 animation-delay） ---- */
+.card-enter {
+  animation: fadeInUp 0.3s ease both;
+}
+
+/* ---- 统计数字入场 ---- */
+.stat-enter {
+  animation: countIn 0.4s ease both;
+}
+
+/* === 动效降级 === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
