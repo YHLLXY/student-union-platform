@@ -2,8 +2,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 56px;
+  padding: 0 var(--space-2xl);
+  height: var(--header-height);
+  background: var(--header-gradient);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .logo {
@@ -11,27 +15,36 @@
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-lg);
 }
 
 .userInfo {
   color: rgba(255, 255, 255, 0.85);
   font-size: 14px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
 }
 
+.userInfo:hover {
+  color: #ffffff;
+}
+
+/* ---- 侧边栏底部 ---- */
 .siderBottom {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 8px 12px;
-  border-top: 1px solid #f0f0f0;
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--border-default);
   background: #fafafa;
 }
 
@@ -39,40 +52,43 @@
   display: block;
   width: 100%;
   text-align: left;
-  padding: 4px 8px;
+  padding: var(--space-xs) var(--space-sm);
   font-size: 13px;
-  color: #1890ff;
+  color: var(--color-primary);
+  transition: color var(--transition-fast);
 }
 
 .feedbackBtn:hover {
-  color: #40a9ff;
+  color: var(--color-info);
 }
 
 .siderInfo {
-  padding: 4px 8px;
+  padding: var(--space-xs) var(--space-sm);
   font-size: 12px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
 }
 
-.contentArea {
-  padding: 24px;
-  height: calc(100vh - 56px);
-  overflow-y: auto;
-  background: #f0f2f5;
-}
-
+/* ---- 内容区 ---- */
 .innerLayout {
   display: flex;
   flex-direction: row;
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--header-height));
 }
 
+.contentArea {
+  padding: var(--space-2xl);
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  background: var(--bg-page);
+}
+
+/* ---- 移动端 768px ---- */
 @media (max-width: 768px) {
   .header {
-    padding: 0 12px;
+    padding: 0 var(--space-md);
   }
 
   .contentArea {
-    padding: 12px;
+    padding: var(--space-md);
   }
 }
