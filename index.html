@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>学生会线上交流平台</title>
 
     <!-- PWA Manifest -->
@@ -25,7 +25,7 @@
     <div id="root"></div>
 
     <!-- 版本更新 Toast 容器（SW 注册前创建，确保 updatefound 时可用） -->
-    <div id="pwa-update-toast" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;z-index:99999;
+    <div id="pwa-update-toast" style="display:none;position:fixed;bottom:calc(80px + env(safe-area-inset-bottom, 0px));left:16px;right:16px;z-index:99999;
       background:#1a3a5c;color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.25);
       font-family:system-ui,sans-serif;font-size:14px;text-align:center;cursor:pointer;" onclick="this.style.display='none';window.location.reload()">
       🆕 新版本已就绪，点击刷新

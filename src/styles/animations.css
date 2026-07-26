@@ -67,6 +67,40 @@
 }
 
 /* === 动效降级 === */
+/* === 移动端触摸优化 === */
+
+/* 去除移动端点击灰色闪屏（仅对交互元素） */
+a, button, [role="button"], input, select, textarea, [tabindex] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 通用按压反馈 */
+.tap-feedback {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.tap-feedback:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* 移动端输入框触摸目标放大 */
+@media (max-width: 768px) {
+  :where(.ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-btn) {
+    min-height: var(--touch-target);
+  }
+  :where(.ant-input, .ant-input-affix-wrapper) {
+    height: var(--touch-target);
+  }
+}
+
+/* 抑制双击缩放（交互密集区） */
+@media (max-width: 768px) {
+  button, a, [role="button"], .ant-card, .ant-table-row, .ant-list-item {
+    touch-action: manipulation;
+  }
+}
+
+/* === 动效降级 === */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
