@@ -13,7 +13,7 @@
 .briefTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .briefBody {
@@ -30,7 +30,7 @@
 .briefStatLabel {
   display: block;
   font-size: 12px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
   margin-bottom: 4px;
 }
 
@@ -40,31 +40,31 @@
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .briefStatHint {
   font-size: 12px;
   font-weight: 400;
-  color: #95a5a6;
+  color: var(--text-tertiary);
 }
 
 .trendUp {
   font-size: 13px;
-  color: #27ae60;
+  color: var(--color-success);
   font-weight: 500;
 }
 
 .trendDown {
   font-size: 13px;
-  color: #e74c3c;
+  color: var(--color-error);
   font-weight: 500;
 }
 
 .briefFooter {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-default);
   text-align: right;
 }
 
@@ -76,14 +76,14 @@
 .reportSectionTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin: 0 0 10px;
 }
 
 .reportEmpty {
   text-align: center;
   padding: 20px;
-  color: #bdc3c7;
+  color: var(--text-disabled);
   font-size: 13px;
 }
 

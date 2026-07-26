@@ -16,12 +16,12 @@
 }
 
 .pinnedCard {
-  border-left: 4px solid #e67e22;
+  border-left: 4px solid var(--color-warning);
   background: #fffdf5;
 }
 
 .normalCard {
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--color-info);
 }
 
 .cardHeader {
@@ -38,16 +38,16 @@
 
 .cardMeta {
   font-size: 13px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin-top: 8px;
 }
 
 .cardContent {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-default);
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--text-primary);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -58,7 +58,7 @@
 }
 
 .readTitle {
-  color: #95a5a6 !important;
+  color: var(--text-tertiary) !important;
 }
 
 .readCount {
@@ -66,13 +66,13 @@
   align-items: center;
   margin-left: 12px;
   font-size: 12px;
-  color: #3498db;
+  color: var(--color-info);
   cursor: pointer;
   transition: color 0.15s;
 }
 
 .readCount:hover {
-  color: #2980b9;
+  color: var(--color-info);
   text-decoration: underline;
 }
 

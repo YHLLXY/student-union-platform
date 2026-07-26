@@ -34,7 +34,7 @@
 
 .cardCover {
   height: 140px;
-  background: linear-gradient(135deg, #1a3a5c 0%, #3498db 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +54,7 @@
 
 .cardMeta {
   font-size: 13px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -66,17 +66,17 @@
   justify-content: space-between;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-default);
 }
 
 .remaining {
   font-size: 18px;
   font-weight: 600;
-  color: #e67e22;
+  color: var(--color-warning);
 }
 
 .remainingZero {
-  color: #95a5a6;
+  color: var(--text-tertiary);
 }
 
 .myTicketItem {
@@ -84,7 +84,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-default);
 }
 
 /* 表单并排字段 */

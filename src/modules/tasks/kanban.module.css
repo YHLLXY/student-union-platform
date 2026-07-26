@@ -41,12 +41,12 @@
 .columnTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .columnCount {
   font-size: 12px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
   background: #e8e8e8;
   border-radius: 10px;
   padding: 1px 8px;
@@ -67,7 +67,7 @@
   text-align: center;
   padding: 20px 0;
   font-size: 12px;
-  color: #bdc3c7;
+  color: var(--text-disabled);
   border: 1px dashed #ddd;
   border-radius: 6px;
 }
@@ -107,7 +107,7 @@
 .cardTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,7 +124,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
 }
 
 .cardFooterItem {

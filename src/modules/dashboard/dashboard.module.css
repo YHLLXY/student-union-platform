@@ -6,13 +6,13 @@
 .welcome {
   font-size: 22px;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .welcomeSub {
   font-size: 14px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
   margin-bottom: 24px;
 }
 
@@ -48,11 +48,11 @@
 
 .statLabel {
   font-size: 13px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 .statZero {
-  color: #bdc3c7;
+  color: var(--text-disabled);
 }
 
 /* 动态时间轴 */
@@ -64,7 +64,7 @@
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .timeline {
@@ -76,7 +76,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .timelineItem:last-child {
@@ -99,7 +99,7 @@
 .timelineTitle {
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -107,13 +107,13 @@
 
 .timelineDesc {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .timelineTime {
   font-size: 11px;
-  color: #bdc3c7;
+  color: var(--text-disabled);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -121,7 +121,7 @@
 .timelineEmpty {
   text-align: center;
   padding: 32px 0;
-  color: #bdc3c7;
+  color: var(--text-disabled);
   font-size: 13px;
 }
 

@@ -8,13 +8,13 @@
 .pageTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .taskCard {
   margin-bottom: 12px;
   cursor: pointer;
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--color-info);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -24,15 +24,15 @@
 }
 
 .taskCardUrgent {
-  border-left-color: #e74c3c;
+  border-left-color: var(--color-error);
 }
 
 .taskCardImportant {
-  border-left-color: #e67e22;
+  border-left-color: var(--color-warning);
 }
 
 .taskCardNormal {
-  border-left-color: #3498db;
+  border-left-color: var(--color-info);
 }
 
 .cardTitle {
@@ -47,7 +47,7 @@
   gap: 16px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 .cardMetaItem {
@@ -59,7 +59,7 @@
 .emptyState {
   text-align: center;
   padding: 60px 0;
-  color: #95a5a6;
+  color: var(--text-tertiary);
 }
 
 .filterTabs {
@@ -67,7 +67,7 @@
 }
 
 .stepChecklist {
-  background: #f0f7ff;
+  background: var(--bg-info);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
@@ -79,14 +79,14 @@
 
 .handoverHint {
   font-size: 12px;
-  color: #95a5a6;
+  color: var(--text-tertiary);
   margin-bottom: 8px;
 }
 
 .linkedSection {
   margin-bottom: 20px;
   padding: 12px;
-  background: #fff7e6;
+  background: var(--bg-warning);
   border-radius: 8px;
 }
 
@@ -94,7 +94,7 @@
 .milestonePanel {
   margin-bottom: 20px;
   padding: 16px;
-  background: #f0f7ff;
+  background: var(--bg-info);
   border-radius: 8px;
 }
 
@@ -118,13 +118,13 @@
 }
 
 .milestoneDanger {
-  background: #fff2f0;
+  background: var(--bg-error);
   border-radius: 4px;
   padding: 6px 8px;
 }
 
 .milestoneWarning {
-  background: #fffbe6;
+  background: var(--bg-warning-hover);
   border-radius: 4px;
   padding: 6px 8px;
 }
