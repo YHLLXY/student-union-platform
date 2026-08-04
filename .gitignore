@@ -27,3 +27,9 @@ supabase/.temp/
 # 学生资料（隐私数据，不提交）
 学生会资料准备/
 .superpowers/
+
+# vault 知识库笔记（由 vault 仓库跟踪，代码仓库不跟踪）
+/学生会交流平台 - 门户口.md
+/学生会V1 - D盘版本.md
+/2026-07-*.md
+/lessons-learned-phase1-5.md
