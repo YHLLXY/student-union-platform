@@ -198,4 +198,5 @@ const menuItems = visibleMenus.map((item) => {
 
 ---
 
+> 🔗 孪生实施计划：[[docs/superpowers/plans/2026-07-12-sidebar-badge-plan]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]

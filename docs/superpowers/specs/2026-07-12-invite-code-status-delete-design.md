@@ -106,4 +106,5 @@ function getCodeStatus(record: InviteCode): 'available' | 'used' | 'deactivated'
 
 ---
 
+> 🔗 孪生实施计划：[[docs/superpowers/plans/2026-07-12-invite-code-status-delete]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]

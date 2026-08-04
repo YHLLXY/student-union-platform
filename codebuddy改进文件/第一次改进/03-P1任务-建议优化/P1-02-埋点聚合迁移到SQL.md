@@ -293,5 +293,6 @@ get_active_users_7d RPC，AnalyticsDashboard 从前端 GROUP BY
 
 ---
 
+> 🔗 相关计划（埋点系统前身）：[[docs/superpowers/plans/2026-07-20-数据埋点与分析看板-实施计划]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]
 > 🔗 关联：[[2026-07-23-Supabase-PromiseLike-埋点模式]]

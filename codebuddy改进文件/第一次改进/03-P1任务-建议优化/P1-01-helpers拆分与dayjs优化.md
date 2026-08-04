@@ -343,5 +343,6 @@ dateUtils 用原生 Date 替代 dayjs，helpers.ts 改为 barrel export
 
 ---
 
+> 🔗 落地实施计划：[[docs/superpowers/plans/2026-07-26-helpers拆分-dayjs优化]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]
 > 🔗 关联：[[2026-07-26-barrel-export向后兼容拆分]]

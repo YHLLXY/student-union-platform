@@ -260,5 +260,6 @@ feat(pwa): 版本检测改用 updatefound 事件
 
 ---
 
+> 🔗 落地实施计划：[[docs/superpowers/plans/2026-07-26-SW版本检测优化]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]
 > 🔗 关联：[[lessons-learned-phase1-5]]（版本通知教训 #18）

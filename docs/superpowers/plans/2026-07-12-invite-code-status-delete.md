@@ -173,5 +173,6 @@ git commit -m "docs: 记录邀请码状态修正 #8 + README v2.7"
 
 ---
 
+> 🔗 孪生设计文档：[[docs/superpowers/specs/2026-07-12-invite-code-status-delete-design]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]
 > 🔗 关联：[[2026-07-26-邀请码状态判断-多消费者一致性]]

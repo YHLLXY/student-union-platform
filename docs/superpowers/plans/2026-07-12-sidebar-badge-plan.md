@@ -326,4 +326,5 @@ npm run build  # 确认 0 error
 
 ---
 
+> 🔗 孪生设计文档：[[docs/superpowers/specs/2026-07-12-sidebar-badge-design]]
 > 📎 项目归属：[[学生会交流平台 - 门户口]]
