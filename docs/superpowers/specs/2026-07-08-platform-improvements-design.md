@@ -520,3 +520,7 @@ Service：
 - 问题跟踪：`docs/ISSUES.md`
 - 数据库迁移：`supabase-migration.sql`
 - 已实施设计：`docs/superpowers/specs/2026-07-05-platform-guide-design.md`
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

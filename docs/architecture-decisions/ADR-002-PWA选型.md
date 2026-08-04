@@ -48,3 +48,7 @@
 ### 缓解措施
 - `index.html` 中保留 `beforeinstallprompt` 兜底 + 手动安装按钮
 - 使用指南中指导用户用 Safari/Chrome 打开并添加到主屏幕
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

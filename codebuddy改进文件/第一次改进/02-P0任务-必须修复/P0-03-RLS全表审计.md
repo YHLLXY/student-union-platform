@@ -321,3 +321,7 @@ task_templates/notices/school_notices/forum_posts/forum_replies/
 tickets/ticket_records/feedbacks/usage_events 启用 RLS 并创建
 符合权限模型的策略。新增 docs/rls-audit.md 审计报告。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

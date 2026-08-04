@@ -287,3 +287,7 @@ refactor(utils): 新增 safeQuery 包装器统一错误处理
 支持 postgrest-js 的 PromiseLike，统一 service 层错误处理模式。
 ticketService 作为试点改造，复杂业务函数保持原样。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

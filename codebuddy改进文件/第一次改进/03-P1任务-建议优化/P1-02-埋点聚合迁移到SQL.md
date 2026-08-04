@@ -290,3 +290,8 @@ perf(admin): 埋点聚合迁移到 SQL View
 get_active_users_7d RPC，AnalyticsDashboard 从前端 GROUP BY
 改为查询 View，看板不再受 usage_events 数据量影响。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[2026-07-23-Supabase-PromiseLike-埋点模式]]

@@ -46,3 +46,7 @@ Supabase 推荐使用 RLS（Row Level Security）作为数据库安全层。项�
 - 所有 service 函数遵循统一模式（见 `ticketService.ts`）
 - 对敏感操作（如抢票）使用 RPC + `SECURITY DEFINER` 而非直接操作表
 - 如果项目将来用户量增长或向外校开放，应重新评估全面启用 RLS
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

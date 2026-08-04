@@ -308,3 +308,7 @@ npm run dev      # 开发服务器 → http://localhost:5173/student-union-platf
 npm run build    # 生产构建（tsc -b && vite build）
 npm run preview  # 预览生产构建
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

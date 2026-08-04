@@ -126,3 +126,8 @@
 - **现象：** 控制台输出 `[antd: message] Static function can not consume context like dynamic theme. Please use 'App' component instead.`
 - **原因：** `message.success()` / `message.error()` 等静态方法无法访问 React Context
 - **修复方案：** 引入 `<App>` 包裹根组件 + `App.useApp()` 获取 message 实例。改动面大，当前无动态主题需求，暂不处理
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[2026-07-20-双视角全面审视报告]]（问题来源审视）

@@ -195,3 +195,7 @@ const menuItems = visibleMenus.map((item) => {
 2. `AppLayout.tsx` — 添加 badges 状态、两个 useEffect、Badge 渲染
 3. `npm run build` 验证
 4. 测试：以不同角色登录，触发通知，确认小圆点出现/消失行为正确
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

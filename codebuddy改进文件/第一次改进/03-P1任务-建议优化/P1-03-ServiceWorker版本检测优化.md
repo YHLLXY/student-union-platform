@@ -257,3 +257,8 @@ feat(pwa): 版本检测改用 updatefound 事件
 监听，新版本可用时即时弹 Toast 提示，替代轮询 version.json
 的延迟检测。保留 localStorage changelog 公告作为兜底。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[lessons-learned-phase1-5]]（版本通知教训 #18）

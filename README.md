@@ -250,3 +250,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ## 📝 License
 
 MIT
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]（Obsidian 知识库入口）· 经验总结：[[lessons-learned-phase1-5]]

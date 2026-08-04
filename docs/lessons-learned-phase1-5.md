@@ -622,3 +622,8 @@ Supabase 的 `.select()` 语法是**精确匹配**，不会像 GraphQL 那样自
 
 **相关文件：** [dashboardService.ts](../src/modules/dashboard/dashboardService.ts)
 **Commit:** `ddb9d08f`
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[lessons-learned-phase1-5]]（vault 知识库副本）

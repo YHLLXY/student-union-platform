@@ -249,3 +249,8 @@ git commit -m "refactor(utils): helpers.ts 拆分为 dateUtils/roleUtils/fileUti
 □ formatFileSize / getFileIcon 逻辑不变
 □ 仪表盘 / 任务 / 公告 / 票务 / 论坛 / 成员管理 / 通知页面正常
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[2026-07-26-barrel-export向后兼容拆分]]

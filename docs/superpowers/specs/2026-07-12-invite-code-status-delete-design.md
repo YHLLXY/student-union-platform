@@ -103,3 +103,7 @@ function getCodeStatus(record: InviteCode): 'available' | 'used' | 'deactivated'
 - 操作按钮最多 3 个（复制/停用/删除均已 `size="small"`），768px 以下不溢出
 - `@media (max-width: 768px)` 规则已覆盖 header 的 `flex-wrap`
 - 本次改动不引入任何新的固定宽度或 flex 布局
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

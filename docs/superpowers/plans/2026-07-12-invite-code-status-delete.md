@@ -170,3 +170,8 @@ git commit -m "fix: 邀请码状态三态修正 + 新增删除功能"
 git add docs/ISSUES.md README.md
 git commit -m "docs: 记录邀请码状态修正 #8 + README v2.7"
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[2026-07-26-邀请码状态判断-多消费者一致性]]

@@ -156,3 +156,7 @@ git commit -m "docs: 备注 Storage DELETE 策略变更说明"
 □ FileUpload 组件上传/删除功能正常
 □ npm run build 0 error（前端无改动，一定通过）
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

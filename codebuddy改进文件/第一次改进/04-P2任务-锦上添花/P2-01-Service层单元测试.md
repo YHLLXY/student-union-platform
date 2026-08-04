@@ -201,3 +201,7 @@ test: 新增 service 层单元测试
 [P2-01] 引入 Vitest，为 dateUtils/roleUtils/fileUtils/authService
 的纯逻辑函数写单元测试，覆盖正常值和边界情况。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]

@@ -340,3 +340,8 @@ perf(utils): helpers 拆分 + 去除 dayjs 全量依赖
 dateUtils 用原生 Date 替代 dayjs，helpers.ts 改为 barrel export
 保持向后兼容。打包体积从 778KB 降至 < 10KB。
 ```
+
+---
+
+> 📎 项目归属：[[学生会交流平台 - 门户口]]
+> 🔗 关联：[[2026-07-26-barrel-export向后兼容拆分]]
