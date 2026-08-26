@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Menu, Modal, Spin, Empty, Grid } from 'antd';
+import { Card, Tag, Button, Menu, Modal, Empty, Grid } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
+import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
 import { formatDateTime, hasMinRole } from '../../utils/helpers';
 import { FORUM_CATEGORIES } from '../../utils/constants';
 import { fetchPosts } from './forumService';
@@ -63,7 +64,7 @@ export default function PostList() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+          <CardStreamSkeleton />
         ) : posts.length === 0 ? (
           <Empty description="暂无帖子" />
         ) : (

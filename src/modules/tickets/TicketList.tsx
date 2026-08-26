@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Button, Tabs, Modal, Spin, Empty, message, Grid } from 'antd';
+import { Card, Tag, Button, Tabs, Modal, Empty, message, Grid } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
+import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
 import { trackEvent } from '../../utils/analytics';
 import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from './ticketService';
@@ -59,7 +60,7 @@ export default function TicketList() {
       key: 'available',
       label: '可抢票务',
       children: loading ? (
-        <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+        <CardStreamSkeleton />
       ) : tickets.length === 0 ? (
         <Empty description="暂无票务" />
       ) : (

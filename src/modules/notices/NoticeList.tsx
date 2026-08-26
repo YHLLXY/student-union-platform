@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
+import { Card, Tag, Button, Modal, Empty, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
 import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
+import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
 import supabase from '../../supabaseClient';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
 import { trackEvent } from '../../utils/analytics';
@@ -132,7 +133,7 @@ export default function NoticeList() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+        <CardStreamSkeleton />
       ) : notices.length === 0 ? (
         <Empty description="暂无公告" />
       ) : (

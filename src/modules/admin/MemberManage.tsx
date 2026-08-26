@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Table, Select, Button, Popconfirm, message, Spin, Tabs } from 'antd';
+﻿import { useState, useEffect, useCallback } from 'react';
+import { Table, Select, Button, Popconfirm, message, Tabs } from 'antd';
 import { useAuth } from '../../components/AuthContext';
+import { RouteSkeleton } from '../../components/SkeletonBlocks';
 import { getDepartmentLabel, getRoleLabel, isAdmin } from '../../utils/helpers';
 import { ROLES, DEPARTMENTS } from '../../utils/constants';
 import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetMemberPassword } from './adminService';
@@ -132,7 +133,7 @@ export default function MemberManage() {
       : []),
   ];
 
-  if (loading) return <Spin />;
+  if (loading) return <RouteSkeleton />;
 
   const memberContent = (
     <div>

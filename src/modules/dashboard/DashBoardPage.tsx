@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Spin, Modal, List, Tag, Grid, Button, Result, message, theme } from 'antd';
+import { Card, Modal, List, Tag, Grid, Button, Result, message, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircleOutlined,
@@ -10,6 +10,7 @@ import {
   MessageOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
+import { DashboardSkeleton } from '../../components/SkeletonBlocks';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_STATUSES } from '../../utils/constants';
 import { fetchDashboardStats, fetchRecentActivity, fetchDashboardReviewTasks } from './dashboardService';
@@ -71,7 +72,7 @@ export default function DashBoardPage() {
   const canCreateNotice = hasMinRole(user.role, 'dept_head');
 
   if (loading) {
-    return <div style={{ textAlign: 'center', paddingTop: 120 }}><Spin size="large" /></div>;
+    return <DashboardSkeleton />;
   }
 
   if (error) {

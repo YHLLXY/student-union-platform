@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Input, Tag, Avatar, Empty, Spin, Tooltip, theme } from 'antd';
+import { Card, Input, Tag, Avatar, Empty, Tooltip, theme } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
 import type { MemberInfo } from './profileService';
 import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
+import { ListSkeleton } from '../../components/SkeletonBlocks';
 import { DEPARTMENTS } from '../../utils/constants';
 import { logger } from '../../diagnostics';
 import styles from './profile.module.css';
@@ -38,7 +39,7 @@ export default function MemberDirectory() {
   if (loading) {
     return (
       <Card title="📇 通讯录" style={{ marginBottom: 16 }}>
-        <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        <ListSkeleton />
       </Card>
     );
   }

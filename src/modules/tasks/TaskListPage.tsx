@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid, Input, Select, Row, Col, theme } from 'antd';
+import { Card, Tag, Tabs, Button, Modal, Empty, Segmented, message, Grid, Input, Select, Row, Col, theme } from 'antd';
 import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
+import { ListSkeleton } from '../../components/SkeletonBlocks';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_PRIORITIES, TASK_STATUSES, DEPARTMENTS } from '../../utils/constants';
 import { fetchTasks, subscribeToTasks, fetchTaskOverdueMilestones, updateTaskStatus } from './taskService';
@@ -185,7 +186,7 @@ export default function TaskListPage() {
           />
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+            <ListSkeleton />
           ) : filteredTasks.length === 0 ? (
             <Empty description={memberFilter ? '该成员暂无任务' : '暂无任务'} className={styles.emptyState} />
           ) : (
@@ -234,7 +235,7 @@ export default function TaskListPage() {
       ) : (
         <div style={{ minHeight: 400 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+            <ListSkeleton />
           ) : tasks.length === 0 ? (
             <Empty description="暂无任务" />
           ) : (

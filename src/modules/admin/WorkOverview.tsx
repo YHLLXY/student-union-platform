@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Card, Select, Spin, Empty, Tag, Avatar, Progress, theme } from 'antd';
+import { Card, Select, Empty, Tag, Avatar, Progress, theme } from 'antd';
 import { UserOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
+import { ListSkeleton } from '../../components/SkeletonBlocks';
 import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
 import { fetchMemberWorkSummaries } from './adminService';
 import type { MemberWorkSummary } from './adminService';
@@ -33,7 +34,7 @@ export default function WorkOverview() {
     navigate(`/tasks?member=${memberId}`);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
+  if (loading) return <ListSkeleton />;
   if (data.length === 0) return <Empty description="暂无成员数据" />;
 
   return (

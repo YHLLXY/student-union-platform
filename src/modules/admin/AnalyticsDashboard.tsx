@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Card, Statistic, Table, Spin, message, Row, Col, Empty } from 'antd';
+import { Card, Statistic, Table, message, Row, Col, Empty } from 'antd';
 import {
   EyeOutlined, UserOutlined, ThunderboltOutlined, TrophyOutlined,
 } from '@ant-design/icons';
 import { fetchAnalyticsSummary } from './adminService';
 import type { AnalyticsSummary } from './adminService';
+import { ListSkeleton } from '../../components/SkeletonBlocks';
 const EVENT_LABELS: Record<string, string> = {
   page_view: '📄 页面访问',
   login: '👤 登录',
@@ -25,7 +26,7 @@ export default function AnalyticsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>;
+  if (loading) return <ListSkeleton />;
   if (!data) return <Empty description="暂无数据" />;
 
   const pageColumns = [

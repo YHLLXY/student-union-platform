@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Tag, Empty, Spin, Button, Popconfirm, message, theme } from 'antd';
+import { Tag, Empty, Button, Popconfirm, message, theme } from 'antd';
 import { useAuth } from '../../components/AuthContext';
+import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
 import { formatDateTime } from '../../utils/helpers';
 import { trackEvent } from '../../utils/analytics';
 import { fetchMyTickets, refundTicket } from './ticketService';
@@ -49,7 +50,7 @@ export default function MyTickets() {
     return event.getTime() - now.getTime() > fiveHours;
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>;
+  if (loading) return <CardStreamSkeleton />;
 
   if (tickets.length === 0) {
     return <Empty description="你还没有抢到票" />;

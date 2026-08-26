@@ -1,12 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Spin } from 'antd';
 import { LoginPage, getCurrentUser } from './modules/auth';
 import type { UserProfile } from './modules/auth';
 import { AuthContext } from './components/AuthContext';
 import AppLayout from './components/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import ModuleErrorBoundary from './components/ModuleErrorBoundary';
+import { RouteSkeleton } from './components/SkeletonBlocks';
 import { useVersionNotification } from './hooks/useVersionNotification';
 
 // 各模块页面（懒加载）
@@ -19,14 +19,6 @@ const ProfilePage = lazy(() => import('./modules/profile/ProfilePage'));
 const MemberManage = lazy(() => import('./modules/admin/MemberManage'));
 const TicketList = lazy(() => import('./modules/tickets/TicketList'));
 
-function PageLoader() {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 120 }}>
-      <Spin size="large" />
-    </div>
-  );
-}
-
 /** PWA 版本通知组件 — 检测新版本并弹出更新公告 */
 function VersionNotifier() {
   useVersionNotification();
@@ -38,16 +30,19 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getCurrentUser().then((u) => {
-      setUser(u);
-      setLoading(false);
-    });
+    getCurrentUser()
+      .then((u) => setUser(u))
+      .catch((e) => {
+        console.error('获取登录态失败:', e);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" />
+        <RouteSkeleton />
       </div>
     );
   }
@@ -61,7 +56,7 @@ export default function App() {
       <AuthContext.Provider value={user}>
         <VersionNotifier />
         <AppLayout>
-          <Suspense fallback={<PageLoader />}>
+          <Suspense fallback={<RouteSkeleton />}>
             <Routes>
               <Route path="/dashboard" element={<ModuleErrorBoundary moduleName="首页工作台"><DashBoardPage /></ModuleErrorBoundary>} />
               <Route path="/tasks" element={<ModuleErrorBoundary moduleName="任务管理"><TaskListPage /></ModuleErrorBoundary>} />

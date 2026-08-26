@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions, Grid, theme } from 'antd';
+﻿import { useState, useEffect } from 'react';
+import { Button, Input, Tag, message, Select, Popconfirm, Descriptions, Grid, theme } from 'antd';
 import { SendOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../components/AuthContext';
+import { RouteSkeleton } from '../../components/SkeletonBlocks';
 import { formatDateTime, hasMinRole, getDepartmentLabel } from '../../utils/helpers';
 import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
 import { fetchPostDetail, fetchReplies, createReply, deletePost, updateCollaboratingDepts } from './forumService';
@@ -96,7 +97,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
   const canDelete = isAuthor || (isDeptHead && post?.department === user.department) || isPlatformAdmin;
   const canManageDept = hasMinRole(user.role, 'presidium');
 
-  if (!post) return <Spin />;
+  if (!post) return <RouteSkeleton />;
 
   return (
     <div>
