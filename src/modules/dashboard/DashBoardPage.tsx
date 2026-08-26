@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Card, Spin, Modal, List, Tag, Grid } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Spin, Modal, List, Tag, Grid, Button, Result, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircleOutlined,
@@ -31,24 +31,39 @@ export default function DashBoardPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [error, setError] = useState(false);
   const [reviewTasks, setReviewTasks] = useState<{ id: string; title: string; deadline: string | null }[]>([]);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    Promise.all([
-      fetchDashboardStats(user.id, user.department, user.role),
-      fetchRecentActivity(user.id, user.department),
-    ]).then(([s, a]) => {
+    setError(false);
+    try {
+      const [s, a] = await Promise.all([
+        fetchDashboardStats(user.id, user.department, user.role),
+        fetchRecentActivity(user.id, user.department),
+      ]);
       setStats(s);
       setActivities(a);
+    } catch (e) {
+      console.error('仪表盘数据加载失败:', e);
+      setError(true);
+    } finally {
       setLoading(false);
-    });
+    }
   }, [user.id, user.department, user.role]);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const handleReviewClick = async () => {
-    const tasks = await fetchDashboardReviewTasks(user.department, user.role);
-    setReviewTasks(tasks);
-    setReviewModalOpen(true);
+    try {
+      const tasks = await fetchDashboardReviewTasks(user.department, user.role);
+      setReviewTasks(tasks);
+      setReviewModalOpen(true);
+    } catch {
+      message.error('获取待审核任务失败，请稍后重试');
+    }
   };
 
   const canCreateTask = hasMinRole(user.role, 'dept_head');
@@ -56,6 +71,23 @@ export default function DashBoardPage() {
 
   if (loading) {
     return <div style={{ textAlign: 'center', paddingTop: 120 }}><Spin size="large" /></div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ paddingTop: 80 }}>
+        <Result
+          status="warning"
+          title="数据加载失败"
+          subTitle="网络异常或服务暂时不可用，请稍后重试"
+          extra={
+            <Button type="primary" onClick={loadData}>
+              重新加载
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
   return (
