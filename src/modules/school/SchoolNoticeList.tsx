@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty, Grid } from 'antd';
+import { Card, Tag, Button, Modal, Spin, Empty, Grid, theme } from 'antd';
 import { PlusOutlined, PushpinFilled } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { hasMinRole, formatDateTime } from '../../utils/helpers';
@@ -9,6 +9,7 @@ import SchoolNoticeForm from './SchoolNoticeForm';
 import styles from './school.module.css';
 
 export default function SchoolNoticeList() {
+  const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [notices, setNotices] = useState<SchoolNotice[]>([]);
@@ -53,7 +54,7 @@ export default function SchoolNoticeList() {
             onClick={() => setExpandedId(expandedId === notice.id ? null : notice.id)}
           >
             <div className={styles.cardHeader}>
-              {notice.is_pinned && <PushpinFilled style={{ color: '#e74c3c' }} />}
+              {notice.is_pinned && <PushpinFilled style={{ color: token.colorError }} />}
               <Tag color="red">校级</Tag>
               <span className={styles.cardTitle}>{notice.title}</span>
             </div>
@@ -72,7 +73,7 @@ export default function SchoolNoticeList() {
         onCancel={() => setShowForm(false)}
         footer={null}
         width={md ? 600 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <SchoolNoticeForm
           onSuccess={() => { setShowForm(false); loadNotices(); }}

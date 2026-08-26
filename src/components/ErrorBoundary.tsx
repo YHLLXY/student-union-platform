@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+﻿import { Component, type ReactNode } from 'react';
 import { Alert, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { logger } from '../diagnostics';
@@ -55,7 +55,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             message={this.props.message ?? '页面发生错误'}
             description={
               <div style={{ marginTop: 8 }}>
-                <p style={{ color: '#7f8c8d', fontSize: 13 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
                   {this.state.error?.message ?? '未知错误'}
                 </p>
                 <Button

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions, Grid } from 'antd';
+import { Button, Input, Tag, Spin, message, Select, Popconfirm, Descriptions, Grid, theme } from 'antd';
 import { SendOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../components/AuthContext';
@@ -37,6 +37,7 @@ interface PostDetailProps {
 }
 
 export default function PostDetail({ postId, onClose, onDeleted }: PostDetailProps) {
+  const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [post, setPost] = useState<ForumPost | null>(null);
@@ -100,7 +101,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
   return (
     <div>
       <h2 style={{ marginBottom: 8 }}>{post.title}</h2>
-      <div style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 16 }}>
+      <div style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 16 }}>
         <Tag>{FORUM_CATEGORIES[post.category] ?? '讨论'}</Tag>
         <Tag color="blue">{getDepartmentLabel(post.department)}</Tag>
         {post.collaborating_departments?.length > 0 && (
@@ -112,7 +113,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
         {post.updated_at !== post.created_at && ` (已编辑)`}
       </div>
 
-      <div style={{ padding: '16px 0', borderTop: '1px solid #f0f0f0', lineHeight: 1.8 }}>
+      <div style={{ padding: '16px 0', borderTop: `1px solid ${token.colorBorderSecondary}`, lineHeight: 1.8 }}>
         {post.template_type && post.template_data ? (
           <Descriptions bordered size="small" column={1}>
             {Object.entries(post.template_data).map(([key, val]) => {
@@ -139,8 +140,8 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
 
       {/* 追加协同部门（presidium+） */}
       {canManageDept && (
-        <div style={{ padding: '12px 0', borderTop: '1px solid #f0f0f0', marginTop: 12 }}>
-          <span style={{ fontSize: 13, color: '#666', marginRight: 8 }}>协同部门：</span>
+        <div style={{ padding: '12px 0', borderTop: `1px solid ${token.colorBorderSecondary}`, marginTop: 12 }}>
+          <span style={{ fontSize: 13, color: token.colorTextSecondary, marginRight: 8 }}>协同部门：</span>
           <Select
             mode="multiple"
             size="small"
@@ -166,7 +167,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
       <div className={styles.replyList}>
         <h4>回复 ({replies.length})</h4>
         {replies.length === 0 ? (
-          <p style={{ color: '#95a5a6' }}>暂无回复，来说点什么吧</p>
+          <p style={{ color: token.colorTextTertiary }}>暂无回复，来说点什么吧</p>
         ) : (
           replies.map((reply) => (
             <div key={reply.id} className={styles.replyItem}>

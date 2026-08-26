@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Form, Input, Button, message, Grid } from 'antd';
+import { Modal, Form, Input, Button, message, Grid, theme } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { updateDeptGuide } from './profileService';
@@ -14,6 +14,7 @@ interface DeptGuideFormProps {
 }
 
 export default function DeptGuideForm({ open, department, currentGuide, onClose, onSaved }: DeptGuideFormProps) {
+  const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const user = useAuth();
   const [form] = Form.useForm();
@@ -52,7 +53,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
       width={md ? 600 : undefined}
       onOk={handleSubmit}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -66,7 +67,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
           faqs: currentGuide?.faqs ?? [],
         }}
       >
-        <fieldset style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
+        <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
           <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>📌 基本信息</legend>
           <Form.Item name="leader" label="部门负责人" style={{ marginBottom: 8 }}>
             <Input placeholder="例如：张三" />
@@ -82,7 +83,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
           </Form.Item>
         </fieldset>
 
-        <fieldset style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
+        <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
           <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>📋 常用模板</legend>
           <Form.List name="templates">
             {(fields, { add, remove }) => (
@@ -106,7 +107,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
           </Form.List>
         </fieldset>
 
-        <fieldset style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '0 12px 12px', marginBottom: 0 }}>
+        <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 0 }}>
           <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>❓ 常见问题</legend>
           <Form.List name="faqs">
             {(fields, { add, remove }) => (

@@ -7,9 +7,11 @@
   --color-primary-dark: #0f2027;
   --color-primary-light: #2c5364;
   --color-info: #3498db;
+  --color-info-light: #69c0ff;
   --color-success: #27ae60;
   --color-warning: #e67e22;
   --color-error: #e74c3c;
+  --color-purple: #8e44ad;
 
   /* ---- 文本 ---- */
   --text-primary: #2c3e50;
@@ -30,6 +32,8 @@
   --bg-warning-hover: #fffbe6;
   --bg-error: #fff2f0;
   --bg-selected: #e8f0fe;
+  --bg-highlight: #fff3b0;
+  --bg-active: #eef1f5;
 
   /* ---- 边框 ---- */
   --border-default: #f0f0f0;
@@ -63,6 +67,15 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
   --transition-slow: 0.3s ease;
+
+  /* ---- 动效基座（时长与缓动，微交互统一取值处，参数依据 docs/research/03） ---- */
+  --dur-fast: 100ms;
+  --dur-base: 180ms;
+  --dur-slow: 250ms;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ---- 渐变 ---- */
   --header-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);

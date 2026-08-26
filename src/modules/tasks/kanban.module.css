@@ -1,4 +1,4 @@
-/* 看板容器 */
+﻿/* 看板容器 */
 .board {
   display: flex;
   gap: 16px;
@@ -12,7 +12,7 @@
   flex: 1;
   min-width: 240px;
   max-width: 320px;
-  background: #f5f6f8;
+  background: var(--bg-subtle);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -20,7 +20,7 @@
 }
 
 .columnOver {
-  background: #eef1f5;
+  background: var(--bg-active);
 }
 
 .columnHeader {
@@ -47,7 +47,7 @@
 .columnCount {
   font-size: 12px;
   color: var(--text-tertiary);
-  background: #e8e8e8;
+  background: var(--border-default);
   border-radius: 10px;
   padding: 1px 8px;
   margin-left: auto;
@@ -68,15 +68,15 @@
   padding: 20px 0;
   font-size: 12px;
   color: var(--text-disabled);
-  border: 1px dashed #ddd;
+  border: 1px dashed var(--border-input);
   border-radius: 6px;
 }
 
 /* 卡片 */
 .card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   cursor: grab;
   transition: box-shadow 0.15s, transform 0.15s;
@@ -88,11 +88,11 @@
 }
 
 .card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .cardDragging {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   transform: rotate(2deg);
 }
 

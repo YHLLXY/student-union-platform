@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Spin, Empty, Popover } from 'antd';
+import { Spin, Empty, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { fetchYearHeatmapData } from './profileService';
 import type { YearHeatmapDay } from './profileService';
+import { HEATMAP_LEVEL_COLORS } from '../../utils/themeColors';
 import styles from './profile.module.css';
 
-const LEVEL_COLORS = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
 const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -19,6 +19,7 @@ function fmt(d: Date): string {
 }
 
 export default function TaskCalendar() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -162,8 +163,8 @@ export default function TaskCalendar() {
                           className={styles.yearCell}
                           style={{
                             background: day && day.count > 0
-                              ? LEVEL_COLORS[day.level]
-                              : '#ebedf0',
+                              ? HEATMAP_LEVEL_COLORS[day.level]
+                              : HEATMAP_LEVEL_COLORS[0],
                           }}
                           title={day ? `${day.date} · ${day.count} 次提交` : ''}
                         />
@@ -177,7 +178,7 @@ export default function TaskCalendar() {
                             {day.tasks.map((t) => (
                               <div
                                 key={t.id}
-                                style={{ fontSize: 12, padding: '3px 0', borderBottom: '1px solid #f0f0f0' }}
+                                style={{ fontSize: 12, padding: '3px 0', borderBottom: `1px solid ${token.colorSplit}` }}
                               >
                                 {t.title}
                               </div>
@@ -201,7 +202,7 @@ export default function TaskCalendar() {
           {/* 图例 */}
           <div className={styles.yearLegend}>
             <span className={styles.yearLegendLabel}>少</span>
-            {LEVEL_COLORS.map((c) => (
+            {HEATMAP_LEVEL_COLORS.map((c) => (
               <div key={c} className={styles.yearLegendCell} style={{ background: c }} />
             ))}
             <span className={styles.yearLegendLabel}>多</span>

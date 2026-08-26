@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Input, InputNumber, message } from 'antd';
+import { Modal, Input, InputNumber, message, theme } from 'antd';
 import { createGuide, updateGuide } from './guideService';
 import type { GuideEntry } from './guideService';
 
@@ -15,6 +15,7 @@ interface GuideFormProps {
 }
 
 export default function GuideForm({ open, moduleKey, entry, userId, onClose, onSuccess }: GuideFormProps) {
+  const { token } = theme.useToken();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [sortOrder, setSortOrder] = useState(0);
@@ -81,7 +82,7 @@ export default function GuideForm({ open, moduleKey, entry, userId, onClose, onS
       confirmLoading={saving}
       okText="保存"
       cancelText="取消"
-      destroyOnClose
+      destroyOnHidden
       width={520}
     >
       <div style={{ marginBottom: 16 }}>
@@ -111,7 +112,7 @@ export default function GuideForm({ open, moduleKey, entry, userId, onClose, onS
           max={999}
           style={{ width: 120 }}
         />
-        <span style={{ marginLeft: 8, fontSize: 12, color: '#95a5a6' }}>数字越小越靠前</span>
+        <span style={{ marginLeft: 8, fontSize: 12, color: token.colorTextTertiary }}>数字越小越靠前</span>
       </div>
     </Modal>
   );

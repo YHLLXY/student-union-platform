@@ -1,4 +1,4 @@
-.statsRow {
+﻿.statsRow {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
@@ -105,7 +105,7 @@
 }
 
 .yearNavDisabled {
-  color: #ccc;
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
@@ -281,12 +281,12 @@
 }
 
 .rankItemMe {
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
+  background: var(--bg-info);
+  border: 1px solid var(--color-info-light);
 }
 
 .rankItemMe:hover {
-  background: #d6efff;
+  background: var(--bg-info-hover);
 }
 
 .rankNumber {
@@ -316,10 +316,10 @@
 .rankMeTag {
   font-size: 10px;
   color: var(--color-info);
-  background: #e6f7ff;
+  background: var(--bg-info);
   padding: 0 5px;
   border-radius: 8px;
-  border: 1px solid #91d5ff;
+  border: 1px solid var(--color-info-light);
 }
 
 .rankBar {
@@ -331,7 +331,7 @@
 
 .rankBarFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-info), #69c0ff);
+  background: linear-gradient(90deg, var(--color-info), var(--color-info-light));
   border-radius: 2px;
   transition: width 0.4s ease;
 }

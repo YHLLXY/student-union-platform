@@ -141,7 +141,7 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
         onClose={onClose}
         width={460}
         title="📖 功能指南"
-        destroyOnClose
+        destroyOnHidden
       >
         <Tabs
           activeKey={activeTab}

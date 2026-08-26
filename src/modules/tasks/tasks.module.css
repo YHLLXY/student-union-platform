@@ -1,4 +1,4 @@
-.pageHeader {
+﻿.pageHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -110,7 +110,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px solid #e8f4fd;
+  border-bottom: 1px solid var(--bg-info-hover);
 }
 
 .milestoneItem:last-child {

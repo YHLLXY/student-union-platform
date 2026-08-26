@@ -134,7 +134,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
         onCancel={() => setShowForm(false)}
         footer={null}
         width={md ? 600 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <TicketForm
           onSuccess={() => { setShowForm(false); loadTickets(); }}

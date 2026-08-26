@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Spin, Tag, Button } from 'antd';
+import { Card, Spin, Tag, Button, theme } from 'antd';
 import { BarChartOutlined, RiseOutlined, FallOutlined, TrophyOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { fetchWeeklyBrief, fetchMonthlyReport } from './dashboardService';
@@ -8,6 +8,7 @@ import ReportModal from './ReportModal';
 import styles from './brief.module.css';
 
 export default function WeeklyBriefCard() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [brief, setBrief] = useState<WeeklyBrief | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,7 @@ export default function WeeklyBriefCard() {
           {brief.topDepartment && (
             <div className={styles.briefStat}>
               <span className={styles.briefStatLabel}>
-                <TrophyOutlined style={{ marginRight: 4, color: '#f39c12' }} />
+                <TrophyOutlined style={{ marginRight: 4, color: token.colorWarning }} />
                 最活跃部门
               </span>
               <span className={styles.briefStatValue}>
@@ -95,7 +96,7 @@ export default function WeeklyBriefCard() {
           <div className={styles.briefStat}>
             <span className={styles.briefStatLabel}>当前逾期率</span>
             <span className={styles.briefStatValue}>
-              <span style={{ color: overdueRate > 30 ? '#e74c3c' : overdueRate > 10 ? '#e67e22' : '#27ae60' }}>
+              <span style={{ color: overdueRate > 30 ? token.colorError : overdueRate > 10 ? token.colorWarning : token.colorSuccess }}>
                 {overdueRate}%
               </span>
               <span className={styles.briefStatHint}>

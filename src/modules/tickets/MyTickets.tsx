@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Tag, Empty, Spin, Button, Popconfirm, message } from 'antd';
+import { Tag, Empty, Spin, Button, Popconfirm, message, theme } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { formatDateTime } from '../../utils/helpers';
 import { trackEvent } from '../../utils/analytics';
@@ -8,6 +8,7 @@ import type { MyTicket } from './ticketService';
 import styles from './tickets.module.css';
 
 export default function MyTickets() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +63,7 @@ export default function MyTickets() {
           <div key={t.id} className={styles.myTicketItem}>
             <div>
               <div style={{ fontWeight: 500 }}>{t.ticket_title}</div>
-              <div style={{ fontSize: 12, color: '#95a5a6' }}>
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
                 {t.event_time && `活动时间：${formatDateTime(t.event_time)} · `}
                 抢票时间：{formatDateTime(t.grabbed_at)}
               </div>

@@ -1,7 +1,8 @@
-import { Modal, Table, Tag, Descriptions, Empty, Spin, Grid } from 'antd';
+import { Modal, Table, Tag, Descriptions, Empty, Spin, Grid, theme } from 'antd';
 import { TrophyOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MonthlyReport, WeeklyBrief } from './dashboardService';
+import { PODIUM_COLORS } from '../../utils/themeColors';
 import styles from './brief.module.css';
 
 interface ReportModalProps {
@@ -49,9 +50,9 @@ const personColumns: ColumnsType<PersonRow> = [
   {
     title: '排名', dataIndex: 'rank', key: 'rank', width: 60,
     render: (_: unknown, row: PersonRow) => {
-      if (row.rank === 1) return <TrophyOutlined style={{ color: '#f39c12', fontSize: 16 }} />;
-      if (row.rank === 2) return <span style={{ color: '#95a5a6', fontWeight: 600 }}>🥈</span>;
-      if (row.rank === 3) return <span style={{ color: '#cd7f32', fontWeight: 600 }}>🥉</span>;
+      if (row.rank === 1) return <TrophyOutlined style={{ color: PODIUM_COLORS[0], fontSize: 16 }} />;
+      if (row.rank === 2) return <span style={{ color: PODIUM_COLORS[1], fontWeight: 600 }}>🥈</span>;
+      if (row.rank === 3) return <span style={{ color: PODIUM_COLORS[2], fontWeight: 600 }}>🥉</span>;
       return row.rank;
     },
   },
@@ -60,6 +61,7 @@ const personColumns: ColumnsType<PersonRow> = [
 ];
 
 export default function ReportModal({ open, loading, data, onClose, weekBrief }: ReportModalProps) {
+  const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const weekChange = weekBrief && weekBrief.completedLastWeek > 0
     ? Math.round(((weekBrief.completedThisWeek - weekBrief.completedLastWeek) / weekBrief.completedLastWeek) * 100)
@@ -92,7 +94,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
       footer={null}
       width={md ? 720 : undefined}
       title="📊 月度工作简报"
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
@@ -106,20 +108,20 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
               <Tag color="blue">{data.monthLabel}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label={<><CheckCircleOutlined /> 已完成</>}>
-              <span style={{ color: '#27ae60', fontWeight: 600 }}>{data.totalCompleted}</span>
+              <span style={{ color: token.colorSuccess, fontWeight: 600 }}>{data.totalCompleted}</span>
             </Descriptions.Item>
             <Descriptions.Item label={<><WarningOutlined /> 逾期</>}>
-              <span style={{ color: '#e74c3c', fontWeight: 600 }}>{data.totalOverdue}</span>
+              <span style={{ color: token.colorError, fontWeight: 600 }}>{data.totalOverdue}</span>
             </Descriptions.Item>
             <Descriptions.Item label="总任务数">{data.totalTasks}</Descriptions.Item>
             <Descriptions.Item label="逾期率">
-              <span style={{ color: overdueRate > 30 ? '#e74c3c' : '#27ae60' }}>
+              <span style={{ color: overdueRate > 30 ? token.colorError : token.colorSuccess }}>
                 {overdueRate}%
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="环比上周">
               {weekChange !== null ? (
-                <span style={{ color: weekChange >= 0 ? '#27ae60' : '#e74c3c' }}>
+                <span style={{ color: weekChange >= 0 ? token.colorSuccess : token.colorError }}>
                   {weekChange >= 0 ? '↑' : '↓'} {Math.abs(weekChange)}%
                 </span>
               ) : '-'}

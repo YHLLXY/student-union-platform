@@ -4,6 +4,7 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import type { Task } from './taskService';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
+import { TASK_STATUSES } from '../../utils/constants';
 import styles from './kanban.module.css';
 
 interface KanbanBoardProps {
@@ -13,10 +14,10 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS = [
-  { status: 'pending', title: '待开始', color: '#95a5a6' },
-  { status: 'in_progress', title: '进行中', color: '#3498db' },
-  { status: 'review', title: '待审核', color: '#e67e22' },
-  { status: 'completed', title: '已完成', color: '#27ae60' },
+  { status: 'pending', title: TASK_STATUSES.pending.label, color: TASK_STATUSES.pending.color },
+  { status: 'in_progress', title: TASK_STATUSES.in_progress.label, color: TASK_STATUSES.in_progress.color },
+  { status: 'review', title: TASK_STATUSES.review.label, color: TASK_STATUSES.review.color },
+  { status: 'completed', title: TASK_STATUSES.completed.label, color: TASK_STATUSES.completed.color },
 ];
 
 export default function KanbanBoard({ tasks, onTaskClick, onTaskMove }: KanbanBoardProps) {

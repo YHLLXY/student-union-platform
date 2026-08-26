@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid, Modal, Form, Select, DatePicker } from 'antd';
+import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid, Modal, Form, Select, DatePicker, theme } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { UserProfile } from '../auth';
@@ -26,6 +26,7 @@ interface TaskDetailProps {
 }
 
 export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetailProps) {
+  const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [note, setNote] = useState('');
@@ -193,7 +194,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
         </Descriptions.Item>
         {task.handover_note && (
           <Descriptions.Item label="📝 交接备注" span={2}>
-            <div style={{ whiteSpace: 'pre-wrap', background: '#fffbe6', padding: 8, borderRadius: 4 }}>
+            <div style={{ whiteSpace: 'pre-wrap', background: token.colorWarningBg, padding: 8, borderRadius: 4 }}>
               {task.handover_note}
             </div>
           </Descriptions.Item>
@@ -207,7 +208,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
           {steps.map((step, i) => (
             <div key={i} className={styles.stepItem}>
               <Checkbox checked={step.checked} style={{ pointerEvents: 'none' }}>
-                <span style={step.checked ? { textDecoration: 'line-through', color: '#95a5a6' } : {}}>
+                <span style={step.checked ? { textDecoration: 'line-through', color: token.colorTextTertiary } : {}}>
                   {step.text}
                 </span>
               </Checkbox>
@@ -247,7 +248,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
 
       {/* 提交完成区 */}
       {canSubmit && (
-        <div style={{ marginBottom: 20, padding: '16px', background: '#fafafa', borderRadius: 8 }}>
+        <div style={{ marginBottom: 20, padding: '16px', background: token.colorFillQuaternary, borderRadius: 8 }}>
           <p style={{ fontWeight: 500, marginBottom: 8 }}>📤 提交完成</p>
           <TextArea
             rows={3}
@@ -276,7 +277,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
 
       {/* 已完成任务可追加交接备注 */}
       {task.status === 'completed' && user.id === (task.assigned_to || task.created_by) && (
-        <div style={{ marginBottom: 20, padding: '16px', background: '#f6ffed', borderRadius: 8 }}>
+        <div style={{ marginBottom: 20, padding: '16px', background: token.colorSuccessBg, borderRadius: 8 }}>
           <p style={{ fontWeight: 500, marginBottom: 8 }}>📝 交接备注</p>
           <TextArea
             rows={3}
@@ -293,7 +294,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 审核记录 */}
       <p style={{ fontWeight: 500, marginBottom: 8 }}>📋 提交记录</p>
       {submissions.length === 0 ? (
-        <p style={{ color: '#95a5a6' }}>暂无提交记录</p>
+        <p style={{ color: token.colorTextTertiary }}>暂无提交记录</p>
       ) : (
         <List
           size="small"
@@ -310,7 +311,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
                         okText="通过"
                         cancelText="取消"
                       >
-                        <Button type="link" size="small" style={{ color: '#27ae60' }}>通过</Button>
+                        <Button type="link" size="small" style={{ color: token.colorSuccess }}>通过</Button>
                       </Popconfirm>,
                       <Popconfirm
                         key="reject"
@@ -340,8 +341,8 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
                 description={
                   <>
                     <div>{sub.note || '无提交说明'}</div>
-                    {sub.review_note && <div style={{ color: '#e67e22' }}>审核意见：{sub.review_note}</div>}
-                    <div style={{ fontSize: 12, color: '#95a5a6' }}>{formatDateTime(sub.submitted_at)}</div>
+                    {sub.review_note && <div style={{ color: token.colorWarning }}>审核意见：{sub.review_note}</div>}
+                    <div style={{ fontSize: 12, color: token.colorTextTertiary }}>{formatDateTime(sub.submitted_at)}</div>
                   </>
                 }
               />
@@ -364,7 +365,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
         okText="保存"
         cancelText="取消"
         width={md ? 600 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={editForm}

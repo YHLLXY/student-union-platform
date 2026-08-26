@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Modal, Form, Input, Popconfirm, message, Empty, Spin } from 'antd';
+import { Card, Button, Modal, Form, Input, Popconfirm, message, Empty, Spin, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { logger } from '../../diagnostics';
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export default function TaskTemplateManage({ open, onClose }: Props) {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,7 +105,7 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
       footer={null}
       width={800}
       title="📋 任务模板管理"
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 16, textAlign: 'right' }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
@@ -132,19 +133,19 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
                   okText="确认"
                   cancelText="取消"
                 >
-                  <DeleteOutlined style={{ color: '#e74c3c' }} />
+                  <DeleteOutlined style={{ color: token.colorError }} />
                 </Popconfirm>,
               ]}
             >
               {tmpl.description && (
-                <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 8 }}>{tmpl.description}</p>
+                <p style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 8 }}>{tmpl.description}</p>
               )}
               {tmpl.steps.length > 0 && (
                 <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
                   {tmpl.steps.map((s) => (
                     <li key={s.order} style={{ marginBottom: 4 }}>
                       <strong>{s.title}</strong>
-                      {s.description && <span style={{ color: '#7f8c8d' }}> — {s.description}</span>}
+                      {s.description && <span style={{ color: token.colorTextSecondary }}> — {s.description}</span>}
                     </li>
                   ))}
                 </ol>
@@ -160,7 +161,7 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
         onOk={() => form.submit()}
         confirmLoading={saving}
         title={editing ? '编辑模板' : '新建模板'}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Form.Item name="title" label="模板名称" rules={[{ required: true, message: '请输入' }]}>
@@ -176,7 +177,7 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
               onChange={(e) => setStepsText(e.target.value)}
               placeholder={'每行一个步骤，格式：步骤标题：步骤描述\n例如：\n确定节目单：收集各班级节目申报表\n审核节目：组织一审二审\n场地布置：联系体育馆管理方'}
             />
-            <div style={{ fontSize: 12, color: '#95a5a6', marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }}>
               每行一个步骤，"："前面是标题，后面是描述（可选）
             </div>
           </Form.Item>

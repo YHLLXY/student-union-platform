@@ -80,7 +80,7 @@ export default function TaskListModal({ open, initialTab, userId, onClose }: Tas
       footer={null}
       width={md ? 640 : undefined}
       title="📋 我的任务"
-      destroyOnClose
+      destroyOnHidden
     >
       <Tabs
         activeKey={activeTab}

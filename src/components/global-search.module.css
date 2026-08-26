@@ -1,4 +1,4 @@
-.container {
+﻿.container {
   position: relative;
   width: 280px;
   margin: 0 auto;
@@ -65,7 +65,7 @@
 
 .item:hover,
 .itemSelected {
-  background: #f0f4ff;
+  background: var(--bg-info);
 }
 
 .itemIcon {
@@ -99,7 +99,7 @@
 }
 
 .highlight {
-  background: #fff3b0;
+  background: var(--bg-highlight);
   color: var(--text-primary);
   padding: 0 2px;
   border-radius: 2px;

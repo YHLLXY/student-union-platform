@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Dropdown, Avatar, Button, Badge, Drawer, Grid } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Button, Badge, Drawer, Grid, theme } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -53,6 +53,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
+  const { token } = theme.useToken();
   const user = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -146,7 +147,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       key: 'info',
       label: `${getDepartmentLabel(user.department)} · ${getRoleLabel(user.role)}`,
       disabled: true,
-      style: { fontSize: 12, color: '#95a5a6' },
+      style: { fontSize: 12, color: token.colorTextTertiary },
     },
     { type: 'divider' },
     {
@@ -216,7 +217,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             collapsible
             collapsed={collapsed}
             onCollapse={setCollapsed}
-            style={{ background: '#ffffff', height: '100%', overflowY: 'auto' }}
+            style={{ background: token.colorBgContainer, height: '100%', overflowY: 'auto' }}
           >
             <Menu
               mode="inline"
@@ -244,7 +245,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               padding: '12px 16px',
               fontWeight: 700,
               fontSize: 16,
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: `1px solid ${token.colorSplit}`,
             }}>
               🏛 学生会
             </div>

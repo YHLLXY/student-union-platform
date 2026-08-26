@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Progress, Tag, Checkbox, Button, message, Popconfirm } from 'antd';
+import { Progress, Tag, Checkbox, Button, message, Popconfirm, theme } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { hasMinRole } from '../../utils/helpers';
@@ -26,6 +26,7 @@ function getMilestoneStatus(m: TaskMilestone): 'done' | 'warning' | 'danger' | '
 }
 
 export default function MilestonePanel({ taskId, userId, userRole, readonly }: MilestonePanelProps) {
+  const { token } = theme.useToken();
   const [milestones, setMilestones] = useState<TaskMilestone[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,14 +64,14 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
   const canEdit = hasMinRole(userRole, 'dept_head') && !readonly;
 
   if (loading) {
-    return <div style={{ padding: 16, textAlign: 'center', color: '#95a5a6' }}>加载里程碑...</div>;
+    return <div style={{ padding: 16, textAlign: 'center', color: token.colorTextTertiary }}>加载里程碑...</div>;
   }
 
   if (milestones.length === 0) {
     return (
       <div className={styles.milestonePanel}>
         <p style={{ fontWeight: 500, marginBottom: 8 }}>✅ 里程碑进度</p>
-        <p style={{ color: '#95a5a6', fontSize: 13 }}>暂无里程碑</p>
+        <p style={{ color: token.colorTextTertiary, fontSize: 13 }}>暂无里程碑</p>
       </div>
     );
   }
@@ -79,17 +80,17 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
   const progressPercent = Math.round((completed / milestones.length) * 100);
 
   const statusConfig: Record<string, { color: string; label: string }> = {
-    done: { color: '#27ae60', label: '已完成' },
-    warning: { color: '#e67e22', label: '临近截止' },
-    danger: { color: '#e74c3c', label: '已逾期' },
-    normal: { color: '#95a5a6', label: '待完成' },
+    done: { color: token.colorSuccess, label: '已完成' },
+    warning: { color: token.colorWarning, label: '临近截止' },
+    danger: { color: token.colorError, label: '已逾期' },
+    normal: { color: token.colorTextTertiary, label: '待完成' },
   };
 
   return (
     <div className={styles.milestonePanel}>
       <div className={styles.milestoneHeader}>
         <p style={{ fontWeight: 500, margin: 0 }}>✅ 里程碑进度</p>
-        <span style={{ fontSize: 13, color: '#95a5a6' }}>{completed}/{milestones.length} 完成</span>
+        <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{completed}/{milestones.length} 完成</span>
       </div>
       <Progress percent={progressPercent} size="small" style={{ marginBottom: 12 }} />
       {milestones.map((m) => {
@@ -104,7 +105,7 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
               checked={m.status === 'completed'}
               onChange={() => handleToggle(m)}
             >
-              <span style={m.status === 'completed' ? { textDecoration: 'line-through', color: '#95a5a6' } : {}}>
+              <span style={m.status === 'completed' ? { textDecoration: 'line-through', color: token.colorTextTertiary } : {}}>
                 {m.title}
               </span>
             </Checkbox>
@@ -112,7 +113,7 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
               {m.deadline && (
                 <Tag color={cfg.color} style={{ fontSize: 11 }}>{cfg.label} · {dayjs(m.deadline).format('MM/DD HH:mm')}</Tag>
               )}
-              {m.completer_name && <span style={{ fontSize: 11, color: '#95a5a6' }}>完成人: {m.completer_name}</span>}
+              {m.completer_name && <span style={{ fontSize: 11, color: token.colorTextTertiary }}>完成人: {m.completer_name}</span>}
             </div>
             {canEdit && (
               <Popconfirm title="删除该里程碑？" onConfirm={() => handleDelete(m.id)}>

@@ -100,7 +100,7 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       onCancel={onClose}
       width={560}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <p style={{ color: '#666', fontSize: 13, marginBottom: 16 }}>
         你的反馈将直接发送到 <strong>{DEV_EMAIL}</strong>，开发者会尽快回复。

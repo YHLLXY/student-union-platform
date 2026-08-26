@@ -1,0 +1,40 @@
+/* === 学生会平台 · 全局基础样式 ===
+   依赖 variables.css 提供的变量，须在其后引入 */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 键盘可达性：仅键盘 Tab 聚焦时显示焦点环（鼠标点击不触发 focus-visible）。
+   antd 组件自带 focus ring，此处主要兜底自定义可点元素与链接 */
+:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+/* PWA 新版本提示 Toast：容器在 index.html 中创建（display:none 内联兜底），
+   显示逻辑见 index.html 内联脚本 showUpdateToast() */
+#pwa-update-toast {
+  position: fixed;
+  bottom: calc(80px + var(--safe-area-bottom));
+  left: 16px;
+  right: 16px;
+  z-index: 99999;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-family);
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}

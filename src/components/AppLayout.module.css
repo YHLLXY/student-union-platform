@@ -1,4 +1,4 @@
-.header {
+﻿.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -61,7 +61,7 @@
   right: 0;
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--border-default);
-  background: #fafafa;
+  background: var(--bg-card-hover);
 }
 
 .feedbackBtn {

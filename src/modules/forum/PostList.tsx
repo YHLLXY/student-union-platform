@@ -86,7 +86,7 @@ export default function PostList() {
         onCancel={() => setDetailId(null)}
         footer={null}
         width={md ? 720 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         {detailId && <PostDetail postId={detailId} onClose={() => setDetailId(null)} onDeleted={loadPosts} />}
       </Modal>
@@ -96,7 +96,7 @@ export default function PostList() {
         onCancel={() => setShowForm(false)}
         footer={null}
         width={md ? 600 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <PostForm
           onSuccess={() => { setShowForm(false); loadPosts(); }}

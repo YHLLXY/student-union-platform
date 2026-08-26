@@ -7,6 +7,7 @@ import App from './App';
 import theme from './theme';
 import { initErrorReporter } from './diagnostics';
 import './styles/variables.css';
+import './styles/base.css';
 import './styles/animations.css';
 
 // 初始化诊断系统错误收集器

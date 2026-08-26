@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Spin, Modal, List, Tag, Grid, Button, Result, message } from 'antd';
+import { Card, Spin, Modal, List, Tag, Grid, Button, Result, message, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircleOutlined,
@@ -24,6 +24,7 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export default function DashBoardPage() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
   const navigate = useNavigate();
@@ -137,10 +138,10 @@ export default function DashBoardPage() {
           onClick={handleReviewClick}
           styles={{ body: { padding: 20 } }}
         >
-          <div className={styles.statIcon} style={{ color: '#e67e22' }}>
+          <div className={styles.statIcon} style={{ color: token.colorWarning }}>
             <ClockCircleOutlined />
           </div>
-          <div className={`${styles.statValue} ${stats.reviewTasks === 0 ? styles.statZero : ''}`} style={{ color: '#e67e22' }}>
+          <div className={`${styles.statValue} ${stats.reviewTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorWarning }}>
             {stats.reviewTasks}
           </div>
           <div className={styles.statLabel}>待审核任务</div>
@@ -151,10 +152,10 @@ export default function DashBoardPage() {
           onClick={() => navigate('/tasks')}
           styles={{ body: { padding: 20 } }}
         >
-          <div className={styles.statIcon} style={{ color: '#e74c3c' }}>
+          <div className={styles.statIcon} style={{ color: token.colorError }}>
             <ExclamationCircleOutlined />
           </div>
-          <div className={`${styles.statValue} ${stats.overdueTasks === 0 ? styles.statZero : ''}`} style={{ color: '#e74c3c' }}>
+          <div className={`${styles.statValue} ${stats.overdueTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorError }}>
             {stats.overdueTasks}
           </div>
           <div className={styles.statLabel}>已逾期任务</div>
@@ -165,10 +166,10 @@ export default function DashBoardPage() {
           onClick={() => navigate('/tasks')}
           styles={{ body: { padding: 20 } }}
         >
-          <div className={styles.statIcon} style={{ color: '#3498db' }}>
+          <div className={styles.statIcon} style={{ color: token.colorInfo }}>
             <CheckCircleOutlined />
           </div>
-          <div className={`${styles.statValue} ${stats.todayDeadline === 0 ? styles.statZero : ''}`} style={{ color: '#3498db' }}>
+          <div className={`${styles.statValue} ${stats.todayDeadline === 0 ? styles.statZero : ''}`} style={{ color: token.colorInfo }}>
             {stats.todayDeadline}
           </div>
           <div className={styles.statLabel}>今日截止</div>
@@ -210,10 +211,10 @@ export default function DashBoardPage() {
         footer={null}
         title="🔍 待审核任务"
         width={md ? 500 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         {reviewTasks.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 24, color: '#bdc3c7' }}>暂无待审核任务</div>
+          <div style={{ textAlign: 'center', padding: 24, color: token.colorTextQuaternary }}>暂无待审核任务</div>
         ) : (
           <List
             dataSource={reviewTasks}

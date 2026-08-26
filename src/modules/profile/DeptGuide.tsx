@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, List, Collapse, Empty, Spin, Typography, Button } from 'antd';
+import { Descriptions, List, Collapse, Empty, Spin, Typography, Button, theme } from 'antd';
 import { LinkOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { fetchDeptGuide } from './profileService';
@@ -10,6 +10,7 @@ import styles from './profile.module.css';
 const { Text, Paragraph } = Typography;
 
 export default function DeptGuidePanel() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [guide, setGuide] = useState<DeptGuide | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ export default function DeptGuidePanel() {
                 <List.Item>
                   <div>
                     <Text strong>
-                      <QuestionCircleOutlined style={{ marginRight: 6, color: '#3498db' }} />
+                      <QuestionCircleOutlined style={{ marginRight: 6, color: token.colorInfo }} />
                       {faq.question}
                     </Text>
                     <Paragraph

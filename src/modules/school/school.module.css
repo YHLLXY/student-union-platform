@@ -1,4 +1,4 @@
-.pageHeader {
+﻿.pageHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -17,7 +17,7 @@
 
 .pinnedCard {
   border-left: 4px solid var(--color-error);
-  background: #fff5f5;
+  background: var(--bg-error);
 }
 
 .normalCard {

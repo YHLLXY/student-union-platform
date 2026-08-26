@@ -5,10 +5,9 @@ import { useAuth } from '../../components/AuthContext';
 import { hasMinRole } from '../../utils/helpers';
 import { fetchLeaderboard } from './profileService';
 import type { LeaderboardEntry } from './profileService';
+import { PODIUM_COLORS, PODIUM_BG } from '../../utils/themeColors';
 import styles from './profile.module.css';
 
-const PODIUM_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
-const PODIUM_BG = ['#fffbe6', '#f5f5f5', '#fdf2e9'];
 const PODIUM_LABELS = ['🥇', '🥈', '🥉'];
 
 export default function Leaderboard() {

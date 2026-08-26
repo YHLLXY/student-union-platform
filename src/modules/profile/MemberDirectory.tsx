@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Input, Tag, Avatar, Empty, Spin, Tooltip } from 'antd';
+import { Card, Input, Tag, Avatar, Empty, Spin, Tooltip, theme } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
 import type { MemberInfo } from './profileService';
@@ -11,6 +11,7 @@ import styles from './profile.module.css';
 const log = logger.for('profile/MemberDirectory');
 
 export default function MemberDirectory() {
+  const { token } = theme.useToken();
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -87,7 +88,7 @@ export default function MemberDirectory() {
                 <Avatar size={40} icon={<UserOutlined />} src={m.avatar_url} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className={styles.memberName}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: '#7f8c8d' }}>
+                  <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
                     {getDepartmentLabel(m.department)} · {getRoleLabel(m.role)}
                   </div>
                 </div>
@@ -99,7 +100,7 @@ export default function MemberDirectory() {
                   </span>
                 </Tooltip>
                 <Tooltip title="逾期任务">
-                  <span className={styles.memberStatItem} style={m.overdue > 0 ? { color: '#e74c3c', fontWeight: 600 } : {}}>
+                  <span className={styles.memberStatItem} style={m.overdue > 0 ? { color: token.colorError, fontWeight: 600 } : {}}>
                     {m.overdue > 0 ? '🔴' : '⭕'} {m.overdue}
                   </span>
                 </Tooltip>

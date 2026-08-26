@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Spin, Empty, Popover } from 'antd';
+import { Spin, Empty, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { fetchHeatmapData } from './profileService';
 import type { HeatmapDay } from './profileService';
+import { HEATMAP_LEVEL_COLORS } from '../../utils/themeColors';
 import styles from './profile.module.css';
 
-const LEVEL_COLORS = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
-
 export default function Heatmap() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -67,7 +67,7 @@ export default function Heatmap() {
                       key={di}
                       className={styles.heatmapCell}
                       style={{
-                        background: day ? LEVEL_COLORS[day.level] : 'transparent',
+                        background: day ? HEATMAP_LEVEL_COLORS[day.level] : 'transparent',
                         cursor: day && day.count > 0 ? 'pointer' : 'default',
                       }}
                     />
@@ -79,7 +79,7 @@ export default function Heatmap() {
                           {day.date} — {day.count} 次提交
                         </div>
                         {day.tasks.map((t) => (
-                          <div key={t.id} style={{ fontSize: 12, padding: '2px 0', borderBottom: '1px solid #f5f5f5' }}>
+                          <div key={t.id} style={{ fontSize: 12, padding: '2px 0', borderBottom: `1px solid ${token.colorSplit}` }}>
                             {t.title}
                           </div>
                         ))}
@@ -98,7 +98,7 @@ export default function Heatmap() {
           </div>
           <div className={styles.heatmapLegend}>
             <span>少</span>
-            {LEVEL_COLORS.map((c) => (
+            {HEATMAP_LEVEL_COLORS.map((c) => (
               <div key={c} className={styles.heatmapLegendCell} style={{ background: c }} />
             ))}
             <span>多</span>

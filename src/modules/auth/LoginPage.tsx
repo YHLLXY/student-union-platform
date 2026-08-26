@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, Button, Alert, message, Tabs, Modal } from 'antd';
+import { Form, Input, Button, Alert, message, Tabs, Modal, theme } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
 import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser, validatePasswordStrength } from './authService';
 import type { UserProfile } from './authService';
@@ -13,6 +13,7 @@ interface LoginPageProps {
 type Step = 'input' | 'setPassword' | 'login' | 'forgot';
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
+  const { token } = theme.useToken();
   const [tab, setTab] = useState<'student' | 'teacher'>('student');
   const [step, setStep] = useState<Step>('input');
   const [loading, setLoading] = useState(false);
@@ -537,7 +538,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <Button
             type="link"
             size="small"
-            style={{ color: '#7f8c8d', fontSize: 12 }}
+            style={{ color: token.colorTextSecondary, fontSize: 12 }}
             onClick={() => setDevModalOpen(true)}
           >
             🔧 开发者
@@ -553,7 +554,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         title="🔧 开发者入口"
       >
         <div style={{ padding: '8px 0' }}>
-          <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 12 }}>
+          <p style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 12 }}>
             输入开发者密钥以直接使用管理员账号登录
           </p>
           <Input.Password

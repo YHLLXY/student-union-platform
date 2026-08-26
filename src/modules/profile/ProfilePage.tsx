@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Statistic, Descriptions, Button, Modal, message } from 'antd';
+import { Card, Statistic, Descriptions, Button, Modal, message, theme } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
@@ -15,6 +15,7 @@ import TaskListModal from './TaskListModal';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [stats, setStats] = useState<UserStats>({ completed: 0, pending: 0, overdue: 0 });
   const [milestoneSummary, setMilestoneSummary] = useState({ milestoneOverdue: 0, milestoneUpcoming: 0 });
@@ -37,24 +38,24 @@ export default function ProfilePage() {
           <Statistic
             title="已完成"
             value={stats.completed}
-            prefix={<CheckCircleOutlined style={{ color: '#27ae60' }} />}
-            valueStyle={{ color: '#27ae60' }}
+            prefix={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
+            styles={{ content: { color: token.colorSuccess } }}
           />
         </Card>
         <Card className={styles.statCard} onClick={() => { setTaskModalTab('pending'); setTaskModalOpen(true); }}>
           <Statistic
             title="待完成"
             value={stats.pending}
-            prefix={<ClockCircleOutlined style={{ color: '#3498db' }} />}
-            valueStyle={{ color: '#3498db' }}
+            prefix={<ClockCircleOutlined style={{ color: token.colorInfo }} />}
+            styles={{ content: { color: token.colorInfo } }}
           />
         </Card>
         <Card className={styles.statCard} onClick={() => { setTaskModalTab('overdue'); setTaskModalOpen(true); }}>
           <Statistic
             title="已逾期"
             value={stats.overdue}
-            prefix={<ExclamationCircleOutlined style={{ color: '#e74c3c' }} />}
-            valueStyle={{ color: '#e74c3c' }}
+            prefix={<ExclamationCircleOutlined style={{ color: token.colorError }} />}
+            styles={{ content: { color: token.colorError } }}
           />
         </Card>
       </div>
@@ -66,7 +67,7 @@ export default function ProfilePage() {
               <Statistic
                 title="⚠️ 里程碑逾期"
                 value={milestoneSummary.milestoneOverdue}
-                valueStyle={{ color: '#e74c3c' }}
+                styles={{ content: { color: token.colorError } }}
               />
             </Card>
           )}
@@ -75,7 +76,7 @@ export default function ProfilePage() {
               <Statistic
                 title="⏰ 近日截止"
                 value={milestoneSummary.milestoneUpcoming}
-                valueStyle={{ color: '#e67e22' }}
+                styles={{ content: { color: token.colorWarning } }}
               />
             </Card>
           )}
@@ -131,7 +132,7 @@ export default function ProfilePage() {
         onCancel={() => setShowPassword(false)}
         footer={null}
         width={400}
-        destroyOnClose
+        destroyOnHidden
       >
         <ChangePassword onClose={() => { setShowPassword(false); message.success('密码修改成功'); }} />
       </Modal>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid, Input, Select, Row, Col } from 'antd';
+import { Card, Tag, Tabs, Button, Spin, Modal, Empty, Segmented, message, Grid, Input, Select, Row, Col, theme } from 'antd';
 import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
@@ -20,6 +20,7 @@ const priorityBorderClass: Record<string, string> = {
 };
 
 export default function TaskListPage() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
   const [searchParams] = useSearchParams();
@@ -102,7 +103,7 @@ export default function TaskListPage() {
       <div className={styles.pageHeader}>
         <h2 className={styles.pageTitle}>
           📋 任务管理
-          {memberFilter && <span style={{ fontSize: 14, fontWeight: 400, color: '#7f8c8d', marginLeft: 8 }}>（已筛选成员）</span>}
+          {memberFilter && <span style={{ fontSize: 14, fontWeight: 400, color: token.colorTextSecondary, marginLeft: 8 }}>（已筛选成员）</span>}
         </h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Segmented
@@ -246,13 +247,13 @@ export default function TaskListPage() {
         </div>
       )}
 
-      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={md ? 700 : undefined} destroyOnClose>
+      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={md ? 700 : undefined} destroyOnHidden>
         {detailTask && (
           <TaskDetail task={detailTask} user={user} onUpdate={loadTasks} onClose={() => setDetailTask(null)} />
         )}
       </Modal>
 
-      <Modal open={showForm} onCancel={() => setShowForm(false)} footer={null} width={md ? 600 : undefined} destroyOnClose>
+      <Modal open={showForm} onCancel={() => setShowForm(false)} footer={null} width={md ? 600 : undefined} destroyOnHidden>
         <TaskForm
           onSuccess={() => { setShowForm(false); loadTasks(); }}
           onClose={() => setShowForm(false)}

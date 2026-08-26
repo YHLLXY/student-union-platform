@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, Select, Button, message } from 'antd';
+import { Form, Input, Select, Button, message, theme } from 'antd';
 import { useAuth } from '../../components/AuthContext';
 import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
 import { hasMinRole } from '../../utils/helpers';
@@ -57,6 +57,7 @@ const KNOWLEDGE_TEMPLATES: Record<string, { label: string; fields: { name: strin
 };
 
 export default function PostForm({ onSuccess, onClose }: PostFormProps) {
+  const { token } = theme.useToken();
   const user = useAuth();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -129,7 +130,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
         {isKnowledge && (
           <>
             {!canPostKnowledge && (
-              <div style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4, marginBottom: 16, fontSize: 13, color: '#e67e22' }}>
+              <div style={{ padding: '8px 12px', background: token.colorWarningBg, borderRadius: 4, marginBottom: 16, fontSize: 13, color: token.colorWarning }}>
                 ⚠️ 知识库仅部门负责人及以上可发布，你当前为只读权限
               </div>
             )}

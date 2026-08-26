@@ -6,13 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { globalSearch } from './globalSearchService';
 import type { SearchResult } from './globalSearchService';
+import { MODULE_ACCENT } from '../utils/themeColors';
 import styles from './global-search.module.css';
 
 const MODULE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  tasks:    { icon: <FileTextOutlined />, color: '#3498db', label: '任务' },
-  notices:  { icon: <PushpinOutlined />,  color: '#e67e22', label: '公告' },
-  forum:    { icon: <MessageOutlined />,  color: '#27ae60', label: '论坛' },
-  guides:   { icon: <BookOutlined />,     color: '#8e44ad', label: '指南' },
+  tasks:    { icon: <FileTextOutlined />, color: MODULE_ACCENT.tasks, label: '任务' },
+  notices:  { icon: <PushpinOutlined />,  color: MODULE_ACCENT.notices, label: '公告' },
+  forum:    { icon: <MessageOutlined />,  color: MODULE_ACCENT.forum, label: '论坛' },
+  guides:   { icon: <BookOutlined />,     color: MODULE_ACCENT.guides, label: '指南' },
 };
 
 interface GlobalSearchProps {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Select, Spin, Empty, Tag, Avatar, Progress } from 'antd';
+import { Card, Select, Spin, Empty, Tag, Avatar, Progress, theme } from 'antd';
 import { UserOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
@@ -11,6 +11,7 @@ import styles from './admin.module.css';
 type SortKey = 'overdue' | 'completed' | 'department';
 
 export default function WorkOverview() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState<MemberWorkSummary[]>([]);
@@ -40,7 +41,7 @@ export default function WorkOverview() {
       <div className={styles.overviewHeader}>
         <span className={styles.overviewTitle}>
           📊 成员工作看板
-          <span style={{ fontSize: 13, fontWeight: 400, color: '#7f8c8d', marginLeft: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 400, color: token.colorTextSecondary, marginLeft: 8 }}>
             ({data.length} 人)
           </span>
         </span>
@@ -70,12 +71,12 @@ export default function WorkOverview() {
               size="small"
             >
               <div className={styles.memberCardHeader}>
-                <Avatar size={36} icon={<UserOutlined />} style={{ background: '#1a3a5c' }} />
+                <Avatar size={36} icon={<UserOutlined />} style={{ background: token.colorPrimary }} />
                 <div className={styles.memberCardInfo}>
                   <div className={styles.memberCardName}>
                     {m.user.name}
                     {m.overdue > 0 && (
-                      <ExclamationCircleOutlined style={{ color: '#e74c3c', marginLeft: 6, fontSize: 14 }} />
+                      <ExclamationCircleOutlined style={{ color: token.colorError, marginLeft: 6, fontSize: 14 }} />
                     )}
                   </div>
                   <div className={styles.memberCardDept}>
@@ -116,7 +117,7 @@ export default function WorkOverview() {
                     percent={completionRate}
                     size="small"
                     style={{ width: 80, margin: 0 }}
-                    strokeColor={completionRate >= 80 ? '#27ae60' : completionRate >= 50 ? '#e67e22' : '#e74c3c'}
+                    strokeColor={completionRate >= 80 ? token.colorSuccess : completionRate >= 50 ? token.colorWarning : token.colorError}
                   />
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message, Grid } from 'antd';
+import { Card, Tag, Button, Modal, Spin, Empty, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
 import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import supabase from '../../supabaseClient';
@@ -13,6 +13,7 @@ import FileList from '../../components/FileList';
 import styles from './notices.module.css';
 
 export default function NoticeList() {
+  const { token } = theme.useToken();
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -142,7 +143,7 @@ export default function NoticeList() {
             onClick={() => handleExpand(notice.id)}
           >
             <div className={styles.cardHeader}>
-              {notice.is_pinned && <PushpinFilled style={{ color: '#e67e22' }} />}
+              {notice.is_pinned && <PushpinFilled style={{ color: token.colorWarning }} />}
               <Tag>{NOTICE_TYPES[notice.type] ?? '通知'}</Tag>
               {notice.linked_tasks && notice.linked_tasks.length > 0 && (
                 <Tag color="orange" style={{ fontSize: 11 }}>🔗 {notice.linked_tasks.length} 个关联任务</Tag>
@@ -168,7 +169,7 @@ export default function NoticeList() {
                 {notice.content || '暂无详细内容'}
                 <FileList attachments={notice.attachments} />
                 {linkedTasks[notice.id] && linkedTasks[notice.id].length > 0 && (
-                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${token.colorBorderSecondary}` }}>
                     <p style={{ fontWeight: 500, marginBottom: 8, fontSize: 14 }}>🔗 关联任务</p>
                     {linkedTasks[notice.id].map((t) => {
                       const st = TASK_STATUSES[t.status] ?? TASK_STATUSES.pending;
@@ -177,7 +178,7 @@ export default function NoticeList() {
                           <Tag color={st.color} style={{ fontSize: 11 }}>{st.label}</Tag>
                           <span style={{ fontSize: 14 }}>{t.title}</span>
                           {t.assignee_name && (
-                            <span style={{ fontSize: 12, color: '#7f8c8d' }}>— {t.assignee_name}</span>
+                            <span style={{ fontSize: 12, color: token.colorTextSecondary }}>— {t.assignee_name}</span>
                           )}
                         </div>
                       );
@@ -185,7 +186,7 @@ export default function NoticeList() {
                   </div>
                 )}
                 {canCreate && (
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0', textAlign: 'right' }}>
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${token.colorBorderSecondary}`, textAlign: 'right' }}>
                     <Button
                       icon={<FileTextOutlined />}
                       size="small"
@@ -214,7 +215,7 @@ export default function NoticeList() {
         onCancel={() => setShowForm(false)}
         footer={null}
         width={md ? 600 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <NoticeForm
           onSuccess={() => { setShowForm(false); loadNotices(); }}
@@ -227,13 +228,13 @@ export default function NoticeList() {
         onCancel={() => setConvertTarget(null)}
         footer={null}
         width={md ? 500 : undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         <div>
           <h3 style={{ marginBottom: 16 }}>📋 从公告创建任务</h3>
           {convertTarget && (
             <>
-              <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 16 }}>
                 来源公告：{convertTarget.title}
               </p>
               <Form
@@ -297,17 +298,17 @@ export default function NoticeList() {
         footer={null}
         width={md ? 420 : undefined}
         title="📊 已读确认详情"
-        destroyOnClose
+        destroyOnHidden
       >
         {readersModal && (
           <div>
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontWeight: 500, color: '#27ae60', marginBottom: 4 }}>
+              <p style={{ fontWeight: 500, color: token.colorSuccess, marginBottom: 4 }}>
                 ✅ 已读 ({readersModal.readers.read.length} 人)
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {readersModal.readers.read.length === 0 ? (
-                  <span style={{ color: '#bdc3c7', fontSize: 13 }}>暂无</span>
+                  <span style={{ color: token.colorTextQuaternary, fontSize: 13 }}>暂无</span>
                 ) : (
                   readersModal.readers.read.map((u) => (
                     <Tag key={u.id} color="green">{u.name}</Tag>
@@ -316,12 +317,12 @@ export default function NoticeList() {
               </div>
             </div>
             <div>
-              <p style={{ fontWeight: 500, color: '#e67e22', marginBottom: 4 }}>
+              <p style={{ fontWeight: 500, color: token.colorWarning, marginBottom: 4 }}>
                 ⏳ 未读 ({readersModal.readers.unread.length} 人)
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {readersModal.readers.unread.length === 0 ? (
-                  <span style={{ color: '#bdc3c7', fontSize: 13 }}>全部已读</span>
+                  <span style={{ color: token.colorTextQuaternary, fontSize: 13 }}>全部已读</span>
                 ) : (
                   readersModal.readers.unread.map((u) => (
                     <Tag key={u.id} color="orange">{u.name}</Tag>

@@ -1,4 +1,4 @@
-/* ---- FileUpload 容器 ---- */
+﻿/* ---- FileUpload 容器 ---- */
 .uploadContainer {
   margin-bottom: 16px;
 }
@@ -70,7 +70,7 @@
 }
 
 .fileListItem:hover {
-  background: #eef5ff;
+  background: var(--bg-info);
   color: inherit;
 }
 
