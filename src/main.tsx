@@ -1,3 +1,4 @@
+import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigProvider } from 'antd';
@@ -15,10 +16,16 @@ initErrorReporter();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider theme={theme} locale={zhCN}>
-      <HashRouter>
-        <App />
-      </HashRouter>
-    </ConfigProvider>
+    {/* 动效基建：strict 模式强制全项目用 m 组件（体积优化，见 docs/research/01）；
+        reducedMotion="user" 自动尊重系统「减弱动态效果」设置 */}
+    <LazyMotion features={domAnimation} strict>
+      <ConfigProvider theme={theme} locale={zhCN}>
+        <HashRouter>
+          <MotionConfig reducedMotion="user">
+            <App />
+          </MotionConfig>
+        </HashRouter>
+      </ConfigProvider>
+    </LazyMotion>
   </StrictMode>,
 );

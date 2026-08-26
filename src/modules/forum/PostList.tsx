@@ -68,8 +68,13 @@ export default function PostList() {
         ) : posts.length === 0 ? (
           <Empty description="暂无帖子" />
         ) : (
-          posts.map((post) => (
-            <Card key={post.id} className={styles.postCard} onClick={() => setDetailId(post.id)}>
+          posts.map((post, i) => (
+            <Card
+              key={post.id}
+              style={{ animation: `fadeInUp var(--dur-slow) var(--ease-enter) ${Math.min(i * 0.06, 0.42)}s backwards` }}
+              className={styles.postCard}
+              onClick={() => setDetailId(post.id)}
+            >
               <div className={styles.postTitle}>{post.title}</div>
               <div className={styles.postMeta}>
                 <Tag>{FORUM_CATEGORIES[post.category] ?? '讨论'}</Tag>

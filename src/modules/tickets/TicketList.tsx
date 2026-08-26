@@ -65,14 +65,18 @@ export default function TicketList() {
         <Empty description="暂无票务" />
       ) : (
         <div className={styles.ticketGrid}>
-          {tickets.map((ticket) => {
+          {tickets.map((ticket, i) => {
             const isOpen = new Date(ticket.open_time) <= new Date();
             const soldOut = (ticket.remaining_count ?? 0) <= 0;
             const alreadyGrabbed = grabbedIds.has(ticket.id);
 const canGrab = isOpen && !soldOut && !alreadyGrabbed;
 
             return (
-              <Card key={ticket.id} className={styles.ticketCard}>
+              <Card
+                key={ticket.id}
+                style={{ animation: `fadeInUp var(--dur-slow) var(--ease-enter) ${Math.min(i * 0.06, 0.42)}s backwards` }}
+                className={styles.ticketCard}
+              >
                 <div className={styles.cardCover}>🎫</div>
                 <div className={styles.cardBody}>
                   <div className={styles.cardTitle}>{ticket.title}</div>

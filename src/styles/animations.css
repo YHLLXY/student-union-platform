@@ -1,4 +1,4 @@
-/* === 学生会平台 · 全局动画 === */
+﻿/* === 学生会平台 · 全局动画 === */
 
 /* ---- 页面/组件淡入 ---- */
 @keyframes fadeIn {
@@ -43,27 +43,9 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* ---- 骨架屏基础样式 ---- */
-.skeleton-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
-
 /* ---- 路由动画容器 ---- */
 .page-transition {
   animation: pageEnter var(--transition-normal) both;
-}
-
-/* ---- 卡片入场 stagger（配合 JS 设置 animation-delay） ---- */
-.card-enter {
-  animation: fadeInUp 0.3s ease both;
-}
-
-/* ---- 统计数字入场 ---- */
-.stat-enter {
-  animation: countIn 0.4s ease both;
 }
 
 /* === 动效降级 === */
@@ -72,15 +54,6 @@
 /* 去除移动端点击灰色闪屏（仅对交互元素） */
 a, button, [role="button"], input, select, textarea, [tabindex] {
   -webkit-tap-highlight-color: transparent;
-}
-
-/* 通用按压反馈 */
-.tap-feedback {
-  transition: transform 0.1s ease, opacity 0.1s ease;
-}
-.tap-feedback:active {
-  transform: scale(0.98);
-  opacity: 0.9;
 }
 
 /* 移动端输入框触摸目标放大 */

@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../components/AuthContext';
 import { DashboardSkeleton } from '../../components/SkeletonBlocks';
+import { StaggerGroup, StaggerItem, CountUpNumber } from '../../components/motion';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
 import { TASK_STATUSES } from '../../utils/constants';
 import { fetchDashboardStats, fetchRecentActivity, fetchDashboardReviewTasks } from './dashboardService';
@@ -101,81 +102,93 @@ export default function DashBoardPage() {
       </p>
 
       {/* 快捷入口 */}
-      <div className={styles.quickActions}>
+      <StaggerGroup className={styles.quickActions} stagger={0.05}>
         {canCreateTask && (
-          <Card
-            className={`${styles.statCard} ${styles.quickBtn}`}
-            onClick={() => navigate('/tasks')}
-            styles={{ body: { padding: '14px 16px' } }}
-          >
-            <PlusOutlined style={{ marginRight: 6 }} />
-            发布任务
-          </Card>
+          <StaggerItem>
+            <Card
+              className={`${styles.statCard} ${styles.quickBtn}`}
+              onClick={() => navigate('/tasks')}
+              styles={{ body: { padding: '14px 16px' } }}
+            >
+              <PlusOutlined style={{ marginRight: 6 }} />
+              发布任务
+            </Card>
+          </StaggerItem>
         )}
         {canCreateNotice && (
+          <StaggerItem>
+            <Card
+              className={`${styles.statCard} ${styles.quickBtn}`}
+              onClick={() => navigate('/notices')}
+              styles={{ body: { padding: '14px 16px' } }}
+            >
+              <PushpinOutlined style={{ marginRight: 6 }} />
+              发布公告
+            </Card>
+          </StaggerItem>
+        )}
+        <StaggerItem>
           <Card
             className={`${styles.statCard} ${styles.quickBtn}`}
-            onClick={() => navigate('/notices')}
+            onClick={() => navigate('/forum')}
             styles={{ body: { padding: '14px 16px' } }}
           >
-            <PushpinOutlined style={{ marginRight: 6 }} />
-            发布公告
+            <MessageOutlined style={{ marginRight: 6 }} />
+            部门论坛
           </Card>
-        )}
-        <Card
-          className={`${styles.statCard} ${styles.quickBtn}`}
-          onClick={() => navigate('/forum')}
-          styles={{ body: { padding: '14px 16px' } }}
-        >
-          <MessageOutlined style={{ marginRight: 6 }} />
-          部门论坛
-        </Card>
-      </div>
+        </StaggerItem>
+      </StaggerGroup>
 
       {/* 3 张统计卡片 */}
-      <div className={styles.statsRow}>
-        <Card
-          className={styles.statCard}
-          onClick={handleReviewClick}
-          styles={{ body: { padding: 20 } }}
-        >
-          <div className={styles.statIcon} style={{ color: token.colorWarning }}>
-            <ClockCircleOutlined />
-          </div>
-          <div className={`${styles.statValue} ${stats.reviewTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorWarning }}>
-            {stats.reviewTasks}
-          </div>
-          <div className={styles.statLabel}>待审核任务</div>
-        </Card>
+      <StaggerGroup className={styles.statsRow} stagger={0.06}>
+        <StaggerItem>
+          <Card
+            className={styles.statCard}
+            onClick={handleReviewClick}
+            styles={{ body: { padding: 20 } }}
+          >
+            <div className={styles.statIcon} style={{ color: token.colorWarning }}>
+              <ClockCircleOutlined />
+            </div>
+            <div className={`${styles.statValue} ${stats.reviewTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorWarning }}>
+              <CountUpNumber value={stats.reviewTasks} />
+            </div>
+            <div className={styles.statLabel}>待审核任务</div>
+          </Card>
+        </StaggerItem>
 
-        <Card
-          className={styles.statCard}
-          onClick={() => navigate('/tasks')}
-          styles={{ body: { padding: 20 } }}
-        >
-          <div className={styles.statIcon} style={{ color: token.colorError }}>
-            <ExclamationCircleOutlined />
-          </div>
-          <div className={`${styles.statValue} ${stats.overdueTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorError }}>
-            {stats.overdueTasks}
-          </div>
-          <div className={styles.statLabel}>已逾期任务</div>
-        </Card>
+        <StaggerItem>
+          <Card
+            className={styles.statCard}
+            onClick={() => navigate('/tasks')}
+            styles={{ body: { padding: 20 } }}
+          >
+            <div className={styles.statIcon} style={{ color: token.colorError }}>
+              <ExclamationCircleOutlined />
+            </div>
+            <div className={`${styles.statValue} ${stats.overdueTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorError }}>
+              <CountUpNumber value={stats.overdueTasks} />
+            </div>
+            <div className={styles.statLabel}>已逾期任务</div>
+          </Card>
+        </StaggerItem>
 
-        <Card
-          className={styles.statCard}
-          onClick={() => navigate('/tasks')}
-          styles={{ body: { padding: 20 } }}
-        >
-          <div className={styles.statIcon} style={{ color: token.colorInfo }}>
-            <CheckCircleOutlined />
-          </div>
-          <div className={`${styles.statValue} ${stats.todayDeadline === 0 ? styles.statZero : ''}`} style={{ color: token.colorInfo }}>
-            {stats.todayDeadline}
-          </div>
-          <div className={styles.statLabel}>今日截止</div>
-        </Card>
-      </div>
+        <StaggerItem>
+          <Card
+            className={styles.statCard}
+            onClick={() => navigate('/tasks')}
+            styles={{ body: { padding: 20 } }}
+          >
+            <div className={styles.statIcon} style={{ color: token.colorInfo }}>
+              <CheckCircleOutlined />
+            </div>
+            <div className={`${styles.statValue} ${stats.todayDeadline === 0 ? styles.statZero : ''}`} style={{ color: token.colorInfo }}>
+              <CountUpNumber value={stats.todayDeadline} />
+            </div>
+            <div className={styles.statLabel}>今日截止</div>
+          </Card>
+        </StaggerItem>
+      </StaggerGroup>
 
       {/* 最近动态 */}
       <Card className={styles.activityCard}>

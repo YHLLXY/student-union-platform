@@ -137,9 +137,10 @@ export default function NoticeList() {
       ) : notices.length === 0 ? (
         <Empty description="暂无公告" />
       ) : (
-        notices.map((notice) => (
+        notices.map((notice, i) => (
           <Card
             key={notice.id}
+            style={{ animation: `fadeInUp var(--dur-slow) var(--ease-enter) ${Math.min(i * 0.06, 0.42)}s backwards` }}
             className={`${styles.noticeCard} ${notice.is_pinned ? styles.pinnedCard : styles.normalCard} ${myReadIds.has(notice.id) ? styles.readCard : ''}`}
             onClick={() => handleExpand(notice.id)}
           >
