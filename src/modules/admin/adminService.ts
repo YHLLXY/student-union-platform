@@ -114,21 +114,21 @@ export async function fetchInviteCodes(department?: string): Promise<InviteCode[
   const { data, error } = await query;
   if (error || !data) { log.error('fetchInviteCodes 查询失败', error); return []; }
 
-  return data.map((c: Record<string, unknown>) => ({
-    id: c.id as string,
-    code: c.code as string,
-    department: c.department as string,
-    role: c.role as string,
-    is_used: c.is_used as boolean,
-    used_by: c.used_by as string | null,
-    used_by_name: (c.used_user as { name: string } | null)?.name ?? '-',
-    max_uses: (c.max_uses as number) ?? 1,
-    used_count: (c.used_count as number) ?? 0,
-    expires_at: c.expires_at as string | null,
-    created_by: c.created_by as string | null,
-    revoked_at: c.revoked_at as string | null,
-    created_at: c.created_at as string,
-  })) as InviteCode[];
+  return data.map((c) => ({
+    id: c.id,
+    code: c.code,
+    department: c.department,
+    role: c.role,
+    is_used: c.is_used ?? false,
+    used_by: c.used_by,
+    used_by_name: c.used_user?.name ?? '-',
+    max_uses: c.max_uses ?? 1,
+    used_count: c.used_count ?? 0,
+    expires_at: c.expires_at,
+    created_by: c.created_by,
+    revoked_at: c.revoked_at,
+    created_at: c.created_at,
+  }));
 }
 
 /** 删除邀请码（仅限未被使用的） */
@@ -202,6 +202,7 @@ export async function fetchMemberWorkSummaries(userRole: string, userDept: strin
 
   // 单次遍历聚合
   for (const t of allTasks || []) {
+    if (!t.assigned_to) continue;
     const c = map.get(t.assigned_to);
     if (!c) continue;
     switch (t.status) {
@@ -278,7 +279,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   // 页面访问排名（客户端 GROUP BY）
   const moduleCount: Record<string, number> = {};
   for (const r of (pageRankRes.data || [])) {
-    const m = (r as { module: string }).module || 'unknown';
+    const m = r.module || 'unknown';
     moduleCount[m] = (moduleCount[m] || 0) + 1;
   }
   const pageRanking = Object.entries(moduleCount)
@@ -291,7 +292,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   // 事件类型统计
   const typeCount: Record<string, number> = {};
   for (const r of (eventStatsRes.data || [])) {
-    const t = (r as { event_type: string }).event_type;
+    const t = r.event_type;
     typeCount[t] = (typeCount[t] || 0) + 1;
   }
   const eventStats = Object.entries(typeCount)
@@ -300,9 +301,9 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
 
   // 近7天活跃用户：客户端 COUNT(DISTINCT user_id)
   const activeUsers7d = new Set(
-    ((activeRes.data || []) as { user_id: string }[])
+    (activeRes.data || [])
       .map(r => r.user_id)
-      .filter(Boolean),
+      .filter((id): id is string => !!id),
   ).size;
 
   return {

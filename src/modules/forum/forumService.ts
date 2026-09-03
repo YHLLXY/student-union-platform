@@ -2,6 +2,7 @@ import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
 import { createNotification } from '../notification/notificationService';
 import type { Attachment } from '../../components/FileUpload';
+import type { Json, TableRow } from '../../types/database';
 
 const log = logger.for('forum/forumService');
 
@@ -18,7 +19,7 @@ export interface ForumPost {
   created_at: string;
   updated_at: string;
   template_type?: string | null;
-  template_data?: Record<string, unknown> | null;
+  template_data?: Json | null;
   attachments?: Attachment[] | null;
 }
 
@@ -29,6 +30,14 @@ export interface ForumReply {
   created_by: string;
   author_name?: string;
   created_at: string;
+}
+
+type PostRowWithAuthor = TableRow<'forum_posts'> & { author: { name: string } | null };
+type ReplyRowWithAuthor = TableRow<'forum_replies'> & { author: { name: string } | null };
+
+/** 展开作者昵称（author 为 created_by 外键嵌入结果） */
+function withAuthorName<T extends PostRowWithAuthor | ReplyRowWithAuthor>(row: T) {
+  return { ...row, author_name: row.author?.name ?? '未知' };
 }
 
 /** 获取帖子列表（本部门 + 协同部门可见） */
@@ -47,22 +56,20 @@ export async function fetchPosts(userDepartment: string, category?: string): Pro
   if (error || !data) { log.error('fetchPosts 查询失败', error); return []; }
   // 并行查每个帖子的回复数
   const posts = await Promise.all(
-    data.map(async (p: Record<string, unknown>) => {
+    data.map(async (p: PostRowWithAuthor) => {
       const { count } = await supabase
         .from('forum_replies')
         .select('id', { count: 'exact', head: true })
         .eq('post_id', p.id);
 
       return {
-        ...p,
-        author_name: (p.author as { name: string } | null)?.name ?? '未知',
+        ...withAuthorName(p),
         reply_count: count ?? 0,
-        collaborating_departments: p.collaborating_departments as string[] ?? [],
       };
     }),
   );
 
-  return posts as unknown as ForumPost[];
+  return posts as ForumPost[];
 }
 
 /** 获取帖子详情 */
@@ -81,13 +88,10 @@ export async function fetchPostDetail(postId: string): Promise<ForumPost | null>
 
   if (error || !data) { log.error('fetchPostDetail 查询失败', error); return null; }
 
-  const p = data as Record<string, unknown>;
   return {
-    ...p,
-    author_name: (p.author as { name: string } | null)?.name ?? '未知',
+    ...withAuthorName(data as PostRowWithAuthor),
     reply_count: count ?? 0,
-    collaborating_departments: p.collaborating_departments as string[] ?? [],
-  } as unknown as ForumPost;
+  } as ForumPost;
 }
 
 /** 获取回复列表 */
@@ -100,10 +104,7 @@ export async function fetchReplies(postId: string): Promise<ForumReply[]> {
 
   if (error || !data) { log.error('fetchReplies 查询失败', error); return []; }
 
-  return data.map((r: Record<string, unknown>) => ({
-    ...r,
-    author_name: (r.author as { name: string } | null)?.name ?? '未知',
-  })) as unknown as ForumReply[];
+  return data.map((r: ReplyRowWithAuthor) => withAuthorName(r)) as ForumReply[];
 }
 
 /** 发帖 */
@@ -115,7 +116,7 @@ export async function createPost(post: {
   created_by: string;
   collaborating_departments?: string[];
   template_type?: string | null;
-  template_data?: Record<string, unknown> | null;
+  template_data?: Json | null;
   attachments?: Attachment[];
 }): Promise<ForumPost | null> {
   const { data, error } = await supabase
@@ -173,13 +174,12 @@ export async function createReply(postId: string, userId: string, content: strin
   if (error) { log.error('createReply 回复失败', error); return false; }
 
   // 通知帖主（fire-and-forget）
-
-  if (postData && (postData as Record<string, unknown>).created_by !== userId) {
+  if (postData?.created_by && postData.created_by !== userId) {
     createNotification({
-      userId: (postData as Record<string, unknown>).created_by as string,
+      userId: postData.created_by,
       type: 'forum_reply',
       title: '💬 论坛新回复',
-      content: `你的帖子「${(postData as Record<string, unknown>).title}」有新回复`,
+      content: `你的帖子「${postData.title}」有新回复`,
       relatedLink: '/forum',
     }).catch(() => {});
   }

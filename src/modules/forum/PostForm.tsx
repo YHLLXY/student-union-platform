@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Select, Button, message, theme } from 'antd';
 import { useAuth } from '../../components/AuthContext';
+import type { Json } from '../../types/database';
 import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
 import { hasMinRole } from '../../utils/helpers';
 import { createPost } from './forumService';
@@ -73,15 +74,16 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
     setLoading(true);
 
     let content = '';
-    let templateData: Record<string, unknown> | null = null;
+    let templateData: Json | null = null;
 
     if (isKnowledge && templateType && KNOWLEDGE_TEMPLATES[templateType]) {
       const tmpl = KNOWLEDGE_TEMPLATES[templateType];
       const parts: string[] = [`# ${tmpl.label}`];
-      templateData = {};
+      const data: Record<string, Json> = {};
       for (const field of tmpl.fields) {
         const val = values[field.name];
-        templateData[field.name] = val ?? '';
+        data[field.name] = (val ?? '') as string;
+        templateData = data;
         if (val) {
           parts.push(`**${field.label}**：${Array.isArray(val) ? val.join('、') : val}`);
         }

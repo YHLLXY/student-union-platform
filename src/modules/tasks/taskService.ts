@@ -3,8 +3,11 @@ import { logger } from '../../diagnostics';
 import { hasMinRole } from '../../utils/helpers';
 import { createNotification } from '../notification/notificationService';
 import type { Attachment } from '../../components/FileUpload';
+import type { Database } from '../../types/database';
 
 const log = logger.for('tasks/taskService');
+
+type MilestoneUpdate = Database['public']['Tables']['task_milestones']['Update'];
 
 export interface Task {
   id: string;
@@ -492,7 +495,7 @@ export async function updateMilestoneStatus(
   status: 'pending' | 'completed',
   userId: string,
 ): Promise<boolean> {
-  const update: Record<string, unknown> = { status };
+  const update: MilestoneUpdate = { status };
   if (status === 'completed') {
     update.completed_at = new Date().toISOString();
     update.completed_by = userId;

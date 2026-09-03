@@ -1,5 +1,8 @@
 import supabase from '../../supabaseClient';
 import { logger } from '../../diagnostics';
+import type { TableRow } from '../../types/database';
+
+type TicketRowWithCreator = TableRow<'tickets'> & { creator: { name: string } | null };
 
 const log = logger.for('tickets/ticketService');
 
@@ -39,7 +42,7 @@ export async function fetchTickets(): Promise<Ticket[]> {
 
   // 并行查询每个票务的已抢数量
   const tickets = await Promise.all(
-    data.map(async (t: Record<string, unknown>) => {
+    data.map(async (t: TicketRowWithCreator) => {
       const { count } = await supabase
         .from('ticket_records')
         .select('id', { count: 'exact', head: true })
@@ -47,8 +50,8 @@ export async function fetchTickets(): Promise<Ticket[]> {
 
       return {
         ...t,
-        creator_name: (t.creator as { name: string } | null)?.name ?? '未知',
-        remaining_count: (t.total_count as number) - (count ?? 0),
+        creator_name: t.creator?.name ?? '未知',
+        remaining_count: t.total_count - (count ?? 0),
       };
     }),
   );

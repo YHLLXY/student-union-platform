@@ -1,4 +1,5 @@
 import supabase from '../supabaseClient';
+import type { Json } from '../types/database';
 
 export type EventType = 'page_view' | 'task_complete' | 'notice_read'
   | 'ticket_action' | 'error' | 'login';
@@ -27,7 +28,7 @@ export function trackEvent(payload: TrackPayload): void {
           user_id: payload.userId,
           module: payload.module ?? null,
           action: payload.action ?? null,
-          metadata: payload.metadata ?? {},
+          metadata: payload.metadata as Record<string, Json> | undefined ?? {},
         });
       if (error) console.warn('[analytics]', error.message);
     } catch {

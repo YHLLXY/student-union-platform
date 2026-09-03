@@ -297,7 +297,7 @@ export async function verifyUser(name: string, studentId: string): Promise<{ aut
     .eq('name', name)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data || !data.auth_id) return null;
   return { authId: data.auth_id, name: data.name };
 }
 
