@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Form, Input, Switch, Button, message } from 'antd';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { createSchoolNotice } from './schoolService';
 
 const { TextArea } = Input;

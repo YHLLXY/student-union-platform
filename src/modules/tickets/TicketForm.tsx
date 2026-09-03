@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Form, Input, InputNumber, DatePicker, Button, message } from 'antd';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { createTicket } from './ticketService';
 import styles from './tickets.module.css';
 

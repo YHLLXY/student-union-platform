@@ -3,7 +3,7 @@ import { Form, Input, Button, Alert, message, Tabs, Modal, theme } from 'antd';
 import { UserOutlined, IdcardOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
 import { signUp, signIn, checkInviteCode, checkStudentId, signUpTeacher, checkTeacherCode, verifyUser, selfResetPassword, fetchDeveloperUser, validatePasswordStrength } from './authService';
 import type { UserProfile } from './authService';
-import { trackEvent } from '../../utils/analytics';
+import { trackEvent } from '@/utils/analytics';
 import styles from './auth.module.css';
 
 interface LoginPageProps {

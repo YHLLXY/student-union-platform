@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Modal, Form, Input, Popconfirm, message, Empty, Spin, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { logger } from '../../diagnostics';
+import { useAuth } from '@/components/AuthContext';
+import { logger } from '@/diagnostics';
 import { fetchTemplates, createTemplate, updateTemplate, deleteTemplate } from './taskService';
 import type { TaskTemplate, TemplateStep } from './taskService';
 

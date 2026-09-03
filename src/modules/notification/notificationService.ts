@@ -1,5 +1,5 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
 
 const log = logger.for('notification/notificationService');
 

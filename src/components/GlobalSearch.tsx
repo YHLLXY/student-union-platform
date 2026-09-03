@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { globalSearch } from './globalSearchService';
 import type { SearchResult } from './globalSearchService';
-import { MODULE_ACCENT } from '../utils/themeColors';
+import { MODULE_ACCENT } from '@/utils/themeColors';
 import styles from './global-search.module.css';
 
 const MODULE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {

@@ -1,7 +1,7 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
-import { createBatchNotifications, fetchDeptMemberIds } from '../notification/notificationService';
-import type { Attachment } from '../../components/FileUpload';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
+import { createBatchNotifications, fetchDeptMemberIds } from '@/modules/notification/notificationService';
+import type { Attachment } from '@/components/FileUpload';
 
 const log = logger.for('notices/noticeService');
 

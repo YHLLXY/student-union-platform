@@ -1,11 +1,11 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { Table, Select, Button, Popconfirm, message, Tabs } from 'antd';
-import { useAuth } from '../../components/AuthContext';
-import { RouteSkeleton } from '../../components/SkeletonBlocks';
-import { getDepartmentLabel, getRoleLabel, isAdmin } from '../../utils/helpers';
-import { ROLES, DEPARTMENTS } from '../../utils/constants';
+import { useAuth } from '@/components/AuthContext';
+import { RouteSkeleton } from '@/components/SkeletonBlocks';
+import { getDepartmentLabel, getRoleLabel, isAdmin } from '@/utils/helpers';
+import { ROLES, DEPARTMENTS } from '@/utils/constants';
 import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetMemberPassword } from './adminService';
-import type { UserProfile } from '../auth';
+import type { UserProfile } from '@/modules/auth';
 import InviteCodeManage from './InviteCodeManage';
 import WorkOverview from './WorkOverview';
 import AnalyticsDashboard from './AnalyticsDashboard';

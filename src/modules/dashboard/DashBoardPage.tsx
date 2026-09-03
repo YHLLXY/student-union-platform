@@ -9,11 +9,11 @@ import {
   PushpinOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { DashboardSkeleton } from '../../components/SkeletonBlocks';
-import { StaggerGroup, StaggerItem, CountUpNumber } from '../../components/motion';
-import { hasMinRole, formatDateTime, getDepartmentLabel } from '../../utils/helpers';
-import { TASK_STATUSES } from '../../utils/constants';
+import { useAuth } from '@/components/AuthContext';
+import { DashboardSkeleton } from '@/components/SkeletonBlocks';
+import { StaggerGroup, StaggerItem, CountUpNumber } from '@/components/motion';
+import { hasMinRole, formatDateTime, getDepartmentLabel } from '@/utils/helpers';
+import { TASK_STATUSES } from '@/utils/constants';
 import { fetchDashboardStats, fetchRecentActivity, fetchDashboardReviewTasks } from './dashboardService';
 import type { DashboardStats, ActivityItem } from './dashboardService';
 import WeeklyBriefCard from './WeeklyBriefCard';

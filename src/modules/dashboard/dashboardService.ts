@@ -1,6 +1,6 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
-import { hasMinRole, getDepartmentLabel } from '../../utils/helpers';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
+import { hasMinRole, getDepartmentLabel } from '@/utils/helpers';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 

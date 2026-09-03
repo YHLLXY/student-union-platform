@@ -1,23 +1,23 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage, getCurrentUser } from './modules/auth';
-import type { UserProfile } from './modules/auth';
-import { AuthContext } from './components/AuthContext';
-import AppLayout from './components/AppLayout';
-import ErrorBoundary from './components/ErrorBoundary';
-import ModuleErrorBoundary from './components/ModuleErrorBoundary';
-import { RouteSkeleton } from './components/SkeletonBlocks';
-import { useVersionNotification } from './hooks/useVersionNotification';
+import { LoginPage, getCurrentUser } from '@/modules/auth';
+import type { UserProfile } from '@/modules/auth';
+import { AuthContext } from '@/components/AuthContext';
+import AppLayout from '@/components/AppLayout';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import ModuleErrorBoundary from '@/components/ModuleErrorBoundary';
+import { RouteSkeleton } from '@/components/SkeletonBlocks';
+import { useVersionNotification } from '@/hooks/useVersionNotification';
 
 // 各模块页面（懒加载）
-const DashBoardPage = lazy(() => import('./modules/dashboard/DashBoardPage'));
-const TaskListPage = lazy(() => import('./modules/tasks/TaskListPage'));
-const NoticeList = lazy(() => import('./modules/notices/NoticeList'));
-const SchoolNoticeList = lazy(() => import('./modules/school/SchoolNoticeList'));
-const PostList = lazy(() => import('./modules/forum/PostList'));
-const ProfilePage = lazy(() => import('./modules/profile/ProfilePage'));
-const MemberManage = lazy(() => import('./modules/admin/MemberManage'));
-const TicketList = lazy(() => import('./modules/tickets/TicketList'));
+const DashBoardPage = lazy(() => import('@/modules/dashboard/DashBoardPage'));
+const TaskListPage = lazy(() => import('@/modules/tasks/TaskListPage'));
+const NoticeList = lazy(() => import('@/modules/notices/NoticeList'));
+const SchoolNoticeList = lazy(() => import('@/modules/school/SchoolNoticeList'));
+const PostList = lazy(() => import('@/modules/forum/PostList'));
+const ProfilePage = lazy(() => import('@/modules/profile/ProfilePage'));
+const MemberManage = lazy(() => import('@/modules/admin/MemberManage'));
+const TicketList = lazy(() => import('@/modules/tickets/TicketList'));
 
 /** PWA 版本通知组件 — 检测新版本并弹出更新公告 */
 function VersionNotifier() {

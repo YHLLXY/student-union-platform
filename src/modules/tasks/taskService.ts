@@ -1,9 +1,9 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
-import { hasMinRole } from '../../utils/helpers';
-import { createNotification } from '../notification/notificationService';
-import type { Attachment } from '../../components/FileUpload';
-import type { Database } from '../../types/database';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
+import { hasMinRole } from '@/utils/helpers';
+import { createNotification } from '@/modules/notification/notificationService';
+import type { Attachment } from '@/components/FileUpload';
+import type { Database } from '@/types/database';
 
 const log = logger.for('tasks/taskService');
 

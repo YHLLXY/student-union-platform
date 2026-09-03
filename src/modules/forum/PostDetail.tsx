@@ -2,13 +2,13 @@
 import { Button, Input, Tag, message, Select, Popconfirm, Descriptions, Grid, theme } from 'antd';
 import { SendOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
-import { useAuth } from '../../components/AuthContext';
-import { RouteSkeleton } from '../../components/SkeletonBlocks';
-import { formatDateTime, hasMinRole, getDepartmentLabel } from '../../utils/helpers';
-import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
+import { useAuth } from '@/components/AuthContext';
+import { RouteSkeleton } from '@/components/SkeletonBlocks';
+import { formatDateTime, hasMinRole, getDepartmentLabel } from '@/utils/helpers';
+import { FORUM_CATEGORIES, DEPARTMENTS } from '@/utils/constants';
 import { fetchPostDetail, fetchReplies, createReply, deletePost, updateCollaboratingDepts } from './forumService';
 import type { ForumPost, ForumReply } from './forumService';
-import FileList from '../../components/FileList';
+import FileList from '@/components/FileList';
 import styles from './forum.module.css';
 
 const { TextArea } = Input;

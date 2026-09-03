@@ -5,7 +5,7 @@ import {
 } from '@ant-design/icons';
 import { fetchAnalyticsSummary } from './adminService';
 import type { AnalyticsSummary } from './adminService';
-import { ListSkeleton } from '../../components/SkeletonBlocks';
+import { ListSkeleton } from '@/components/SkeletonBlocks';
 const EVENT_LABELS: Record<string, string> = {
   page_view: '📄 页面访问',
   login: '👤 登录',

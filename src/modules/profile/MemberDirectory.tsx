@@ -3,10 +3,10 @@ import { Card, Input, Tag, Avatar, Empty, Tooltip, theme } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
 import type { MemberInfo } from './profileService';
-import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
-import { ListSkeleton } from '../../components/SkeletonBlocks';
-import { DEPARTMENTS } from '../../utils/constants';
-import { logger } from '../../diagnostics';
+import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
+import { ListSkeleton } from '@/components/SkeletonBlocks';
+import { DEPARTMENTS } from '@/utils/constants';
+import { logger } from '@/diagnostics';
 import styles from './profile.module.css';
 
 const log = logger.for('profile/MemberDirectory');

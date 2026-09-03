@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { UserProfile } from '../modules/auth';
+import type { UserProfile } from '@/modules/auth';
 
 export const AuthContext = createContext<UserProfile | null>(null);
 

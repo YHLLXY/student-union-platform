@@ -1,7 +1,7 @@
 ﻿import { Component, type ReactNode } from 'react';
 import { Alert, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { logger } from '../diagnostics';
+import { logger } from '@/diagnostics';
 
 interface Props {
   children: ReactNode;

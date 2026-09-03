@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Descriptions, List, Collapse, Empty, Spin, Typography, Button, theme } from 'antd';
 import { LinkOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { fetchDeptGuide } from './profileService';
 import type { DeptGuide } from './profileService';
-import { getDepartmentLabel } from '../../utils/helpers';
+import { getDepartmentLabel } from '@/utils/helpers';
 import styles from './profile.module.css';
 
 const { Text, Paragraph } = Typography;

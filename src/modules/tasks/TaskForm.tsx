@@ -1,12 +1,12 @@
 import type { Dayjs } from 'dayjs';
 import { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Button, Checkbox, message } from 'antd';
-import { useAuth } from '../../components/AuthContext';
-import { DEPARTMENTS } from '../../utils/constants';
-import { isAdmin } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { DEPARTMENTS } from '@/utils/constants';
+import { isAdmin } from '@/utils/helpers';
 import { createTask, fetchTemplates } from './taskService';
 import type { TaskTemplate } from './taskService';
-import FileUpload, { type Attachment } from '../../components/FileUpload';
+import FileUpload, { type Attachment } from '@/components/FileUpload';
 
 const { TextArea } = Input;
 

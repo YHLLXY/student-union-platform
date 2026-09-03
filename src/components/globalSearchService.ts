@@ -1,5 +1,5 @@
-import supabase from '../supabaseClient';
-import { hasMinRole } from '../utils/helpers';
+import supabase from '@/supabaseClient';
+import { hasMinRole } from '@/utils/helpers';
 
 export interface SearchResult {
   id: string;

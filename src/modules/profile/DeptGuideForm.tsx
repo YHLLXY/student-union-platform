@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal, Form, Input, Button, message, Grid, theme } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { updateDeptGuide } from './profileService';
 import type { DeptGuide } from './profileService';
 

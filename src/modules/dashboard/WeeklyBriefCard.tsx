@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Spin, Tag, Button, theme } from 'antd';
 import { BarChartOutlined, RiseOutlined, FallOutlined, TrophyOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { fetchWeeklyBrief, fetchMonthlyReport } from './dashboardService';
 import type { WeeklyBrief, MonthlyReport } from './dashboardService';
 import ReportModal from './ReportModal';

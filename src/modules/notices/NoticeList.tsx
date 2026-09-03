@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Button, Modal, Empty, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
 import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
-import supabase from '../../supabaseClient';
-import { hasMinRole, formatDateTime } from '../../utils/helpers';
-import { trackEvent } from '../../utils/analytics';
-import { NOTICE_TYPES, TASK_STATUSES } from '../../utils/constants';
+import { useAuth } from '@/components/AuthContext';
+import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import supabase from '@/supabaseClient';
+import { hasMinRole, formatDateTime } from '@/utils/helpers';
+import { trackEvent } from '@/utils/analytics';
+import { NOTICE_TYPES, TASK_STATUSES } from '@/utils/constants';
 import { fetchNotices, subscribeToNotices, fetchLinkedTaskInfos, createTaskFromNotice, markNoticeRead, fetchNoticeReaders } from './noticeService';
 import type { Notice } from './noticeService';
 import NoticeForm from './NoticeForm';
-import FileList from '../../components/FileList';
+import FileList from '@/components/FileList';
 import styles from './notices.module.css';
 
 export default function NoticeList() {

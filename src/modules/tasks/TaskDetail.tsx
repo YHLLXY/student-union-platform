@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Descriptions, Tag, Button, Input, List, message, Popconfirm, Checkbox, Grid, Modal, Form, Select, DatePicker, theme } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { UserProfile } from '../auth';
-import { hasMinRole, formatDateTime, getDepartmentLabel, isAdmin } from '../../utils/helpers';
-import { trackEvent } from '../../utils/analytics';
-import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '../../utils/constants';
+import type { UserProfile } from '@/modules/auth';
+import { hasMinRole, formatDateTime, getDepartmentLabel, isAdmin } from '@/utils/helpers';
+import { trackEvent } from '@/utils/analytics';
+import { TASK_PRIORITIES, TASK_STATUSES, NOTICE_TYPES } from '@/utils/constants';
 import {
   submitTask, fetchTaskSubmissions, reviewSubmission,
   updateHandoverNote, fetchLinkedNotices, updateTask,
@@ -13,8 +13,8 @@ import {
 import type { Task, TaskSubmission, LinkedNotice } from './taskService';
 import styles from './tasks.module.css';
 import MilestonePanel from './MilestonePanel';
-import FileList from '../../components/FileList';
-import FileUpload, { type Attachment } from '../../components/FileUpload';
+import FileList from '@/components/FileList';
+import FileUpload, { type Attachment } from '@/components/FileUpload';
 
 const { TextArea } = Input;
 

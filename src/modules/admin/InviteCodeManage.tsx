@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Select, message, Tag, Popconfirm, InputNumber } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
-import { DEPARTMENTS, ROLES } from '../../utils/constants';
-import { getDepartmentLabel, getRoleLabel, hasMinRole } from '../../utils/helpers';
+import { DEPARTMENTS, ROLES } from '@/utils/constants';
+import { getDepartmentLabel, getRoleLabel, hasMinRole } from '@/utils/helpers';
 import { fetchInviteCodes, generateInviteCode, deactivateInviteCode, deleteInviteCode } from './adminService';
 import type { InviteCode } from './adminService';
 

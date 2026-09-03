@@ -1,8 +1,8 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
-import { createNotification } from '../notification/notificationService';
-import type { Attachment } from '../../components/FileUpload';
-import type { Json, TableRow } from '../../types/database';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
+import { createNotification } from '@/modules/notification/notificationService';
+import type { Attachment } from '@/components/FileUpload';
+import type { Json, TableRow } from '@/types/database';
 
 const log = logger.for('forum/forumService');
 

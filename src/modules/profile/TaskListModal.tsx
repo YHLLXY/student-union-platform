@@ -3,8 +3,8 @@ import { Modal, Tabs, Tag, Empty, Spin, Grid } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { fetchAllUserTasks } from './profileService';
 import type { TaskBrief } from './profileService';
-import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
-import { getDepartmentLabel, formatDateTime } from '../../utils/helpers';
+import { TASK_PRIORITIES, TASK_STATUSES } from '@/utils/constants';
+import { getDepartmentLabel, formatDateTime } from '@/utils/helpers';
 import styles from './profile.module.css';
 
 interface TaskListModalProps {

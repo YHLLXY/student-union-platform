@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Button, Modal, Empty, Grid, theme } from 'antd';
 import { PlusOutlined, PushpinFilled } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
-import { hasMinRole, formatDateTime } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { hasMinRole, formatDateTime } from '@/utils/helpers';
 import { fetchSchoolNotices, subscribeToSchoolNotices } from './schoolService';
 import type { SchoolNotice } from './schoolService';
 import SchoolNoticeForm from './SchoolNoticeForm';

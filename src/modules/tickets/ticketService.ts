@@ -1,6 +1,6 @@
-import supabase from '../../supabaseClient';
-import { logger } from '../../diagnostics';
-import type { TableRow } from '../../types/database';
+import supabase from '@/supabaseClient';
+import { logger } from '@/diagnostics';
+import type { TableRow } from '@/types/database';
 
 type TicketRowWithCreator = TableRow<'tickets'> & { creator: { name: string } | null };
 

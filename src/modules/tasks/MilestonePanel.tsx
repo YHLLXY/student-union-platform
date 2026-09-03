@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Progress, Tag, Checkbox, Button, message, Popconfirm, theme } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { hasMinRole } from '../../utils/helpers';
+import { hasMinRole } from '@/utils/helpers';
 import { fetchMilestones, updateMilestoneStatus, deleteMilestone } from './taskService';
 import type { TaskMilestone } from './taskService';
 import styles from './tasks.module.css';

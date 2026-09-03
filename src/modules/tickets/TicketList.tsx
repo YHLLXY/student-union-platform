@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Tag, Button, Tabs, Modal, Empty, message, Grid } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
-import { hasMinRole, formatDateTime } from '../../utils/helpers';
-import { trackEvent } from '../../utils/analytics';
+import { useAuth } from '@/components/AuthContext';
+import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { hasMinRole, formatDateTime } from '@/utils/helpers';
+import { trackEvent } from '@/utils/analytics';
 import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from './ticketService';
 import type { Ticket } from './ticketService';
 import TicketForm from './TicketForm';

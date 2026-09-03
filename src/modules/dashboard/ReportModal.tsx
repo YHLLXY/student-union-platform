@@ -2,7 +2,7 @@ import { Modal, Table, Tag, Descriptions, Empty, Spin, Grid, theme } from 'antd'
 import { TrophyOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MonthlyReport, WeeklyBrief } from './dashboardService';
-import { PODIUM_COLORS } from '../../utils/themeColors';
+import { PODIUM_COLORS } from '@/utils/themeColors';
 import styles from './brief.module.css';
 
 interface ReportModalProps {

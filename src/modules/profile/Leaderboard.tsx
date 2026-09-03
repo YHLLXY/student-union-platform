@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Spin, Empty, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { hasMinRole } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { hasMinRole } from '@/utils/helpers';
 import { fetchLeaderboard } from './profileService';
 import type { LeaderboardEntry } from './profileService';
-import { PODIUM_COLORS, PODIUM_BG } from '../../utils/themeColors';
+import { PODIUM_COLORS, PODIUM_BG } from '@/utils/themeColors';
 import styles from './profile.module.css';
 
 const PODIUM_LABELS = ['🥇', '🥈', '🥉'];

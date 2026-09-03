@@ -18,20 +18,20 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { signOut } from '../modules/auth';
+import { signOut } from '@/modules/auth';
 import { useAuth } from './AuthContext';
-import { MENU_ITEMS } from '../utils/constants';
-import { hasMinRole, getDepartmentLabel, getRoleLabel } from '../utils/helpers';
+import { MENU_ITEMS } from '@/utils/constants';
+import { hasMinRole, getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import PwaInstallButton from './PwaInstallButton';
-import { trackEvent } from '../utils/analytics';
-import { GuideDrawer } from '../modules/guide';
-import { NotificationBell } from '../modules/notification';
+import { trackEvent } from '@/utils/analytics';
+import { GuideDrawer } from '@/modules/guide';
+import { NotificationBell } from '@/modules/notification';
 import {
   fetchUnreadByModule,
   markAsReadByTypes,
   subscribeToNotifications,
-} from '../modules/notification/notificationService';
+} from '@/modules/notification/notificationService';
 import GlobalSearch from './GlobalSearch';
 import styles from './AppLayout.module.css';
 

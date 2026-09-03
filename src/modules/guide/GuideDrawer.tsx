@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Drawer, Tabs, Button, Spin, Empty, Popconfirm, message, Input, Collapse } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { hasMinRole } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { hasMinRole } from '@/utils/helpers';
 import { fetchGuides, deleteGuide, seedDefaultGuides } from './guideService';
 import type { GuideEntry } from './guideService';
 import GuideForm from './GuideForm';

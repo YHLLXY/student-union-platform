@@ -4,7 +4,7 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import type { Task } from './taskService';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
-import { TASK_STATUSES } from '../../utils/constants';
+import { TASK_STATUSES } from '@/utils/constants';
 import styles from './kanban.module.css';
 
 interface KanbanBoardProps {

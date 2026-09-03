@@ -1,5 +1,5 @@
-import supabase from '../supabaseClient';
-import type { Json } from '../types/database';
+import supabase from '@/supabaseClient';
+import type { Json } from '@/types/database';
 
 export type EventType = 'page_view' | 'task_complete' | 'notice_read'
   | 'ticket_action' | 'error' | 'login';

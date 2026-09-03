@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Upload, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
-import supabase from '../supabaseClient';
-import { formatFileSize as formatSize, getFileIcon } from '../utils/helpers';
+import supabase from '@/supabaseClient';
+import { formatFileSize as formatSize, getFileIcon } from '@/utils/helpers';
 import styles from './file-upload.module.css';
 
 const { Dragger } = Upload;

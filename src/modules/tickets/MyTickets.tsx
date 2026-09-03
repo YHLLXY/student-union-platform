@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tag, Empty, Button, Popconfirm, message, theme } from 'antd';
-import { useAuth } from '../../components/AuthContext';
-import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
-import { formatDateTime } from '../../utils/helpers';
-import { trackEvent } from '../../utils/analytics';
+import { useAuth } from '@/components/AuthContext';
+import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { formatDateTime } from '@/utils/helpers';
+import { trackEvent } from '@/utils/analytics';
 import { fetchMyTickets, refundTicket } from './ticketService';
 import type { MyTicket } from './ticketService';
 import styles from './tickets.module.css';

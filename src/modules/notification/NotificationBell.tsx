@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Popover, Spin, Drawer, Grid } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../components/AuthContext';
-import { formatDateTime } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { formatDateTime } from '@/utils/helpers';
 import {
   fetchNotifications,
   fetchUnreadCount,

@@ -2,8 +2,8 @@ import { memo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Tag } from 'antd';
 import { ClockCircleOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
-import { formatDateTime, getDepartmentLabel } from '../../utils/helpers';
-import { TASK_PRIORITIES, TASK_STATUSES } from '../../utils/constants';
+import { formatDateTime, getDepartmentLabel } from '@/utils/helpers';
+import { TASK_PRIORITIES, TASK_STATUSES } from '@/utils/constants';
 import type { Task } from './taskService';
 import styles from './kanban.module.css';
 

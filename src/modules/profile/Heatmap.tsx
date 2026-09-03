@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Spin, Empty, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { fetchHeatmapData } from './profileService';
 import type { HeatmapDay } from './profileService';
-import { HEATMAP_LEVEL_COLORS } from '../../utils/themeColors';
+import { HEATMAP_LEVEL_COLORS } from '@/utils/themeColors';
 import styles from './profile.module.css';
 
 export default function Heatmap() {

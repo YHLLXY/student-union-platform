@@ -1,5 +1,5 @@
 import { DownloadOutlined } from '@ant-design/icons';
-import { formatFileSize as formatSize, getFileIcon } from '../utils/helpers';
+import { formatFileSize as formatSize, getFileIcon } from '@/utils/helpers';
 import type { Attachment } from './FileUpload';
 import styles from './file-upload.module.css';
 

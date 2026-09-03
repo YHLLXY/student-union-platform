@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, Button, Menu, Modal, Empty, Grid } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { CardStreamSkeleton } from '../../components/SkeletonBlocks';
-import { formatDateTime, hasMinRole } from '../../utils/helpers';
-import { FORUM_CATEGORIES } from '../../utils/constants';
+import { useAuth } from '@/components/AuthContext';
+import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { formatDateTime, hasMinRole } from '@/utils/helpers';
+import { FORUM_CATEGORIES } from '@/utils/constants';
 import { fetchPosts } from './forumService';
 import type { ForumPost } from './forumService';
 import PostDetail from './PostDetail';

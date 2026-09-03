@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Form, Input, Select, Button, message, theme } from 'antd';
-import { useAuth } from '../../components/AuthContext';
-import type { Json } from '../../types/database';
-import { FORUM_CATEGORIES, DEPARTMENTS } from '../../utils/constants';
-import { hasMinRole } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import type { Json } from '@/types/database';
+import { FORUM_CATEGORIES, DEPARTMENTS } from '@/utils/constants';
+import { hasMinRole } from '@/utils/helpers';
 import { createPost } from './forumService';
-import FileUpload, { type Attachment } from '../../components/FileUpload';
+import FileUpload, { type Attachment } from '@/components/FileUpload';
 
 const { TextArea } = Input;
 

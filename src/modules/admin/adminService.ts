@@ -1,7 +1,7 @@
-import supabase from '../../supabaseClient';
-import type { UserProfile } from '../auth';
-import { logger } from '../../diagnostics';
-import { hasMinRole } from '../../utils/helpers';
+import supabase from '@/supabaseClient';
+import type { UserProfile } from '@/modules/auth';
+import { logger } from '@/diagnostics';
+import { hasMinRole } from '@/utils/helpers';
 
 const log = logger.for('admin/adminService');
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Form, Input, Select, Switch, Button, message } from 'antd';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { createNotice, fetchActiveTasksForLinking } from './noticeService';
-import FileUpload, { type Attachment } from '../../components/FileUpload';
+import FileUpload, { type Attachment } from '@/components/FileUpload';
 
 const { TextArea } = Input;
 

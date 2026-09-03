@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, Statistic, Descriptions, Button, Modal, message, theme } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
-import { useAuth } from '../../components/AuthContext';
-import { getDepartmentLabel, getRoleLabel } from '../../utils/helpers';
+import { useAuth } from '@/components/AuthContext';
+import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import { fetchUserStats, fetchMilestoneSummary } from './profileService';
 import type { UserStats } from './profileService';
 import TaskCalendar from './TaskCalendar';
