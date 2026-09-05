@@ -1,6 +1,7 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
 import { createBatchNotifications, fetchDeptMemberIds } from '@/modules/notification/notificationService';
+import { unwrap } from '@/lib/sb';
 import type { Attachment } from '@/components/FileUpload';
 
 const log = logger.for('notices/noticeService');
@@ -21,21 +22,16 @@ export interface Notice {
 
 /** 获取部门公告（置顶优先+时间倒序） */
 export async function fetchNotices(department: string): Promise<Notice[]> {
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchNotices', supabase
     .from('notices')
     .select('*, creator:created_by(name)')
     .eq('department', department)
     .order('is_pinned', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }));
 
-  if (error) {
-    log.error('fetchNotices 查询失败', error);
-    return [];
-  }
-
-  return (data || []).map((n: Record<string, unknown>) => ({
+  return rows.map((n) => ({
     ...n,
-    creator_name: (n.creator as { name: string } | null)?.name ?? '未知',
+    creator_name: n.creator?.name ?? '未知',
   })) as unknown as Notice[];
 }
 
@@ -93,34 +89,27 @@ export function subscribeToNotices(department: string, callback: () => void): ()
 
 /** 获取本部门进行中的任务（供公告关联选择） */
 export async function fetchActiveTasksForLinking(department: string): Promise<{ id: string; title: string; status: string }[]> {
-  const { data, error } = await supabase
+  return unwrap('fetchActiveTasksForLinking', supabase
     .from('tasks')
     .select('id, title, status')
     .eq('assigned_department', department)
     .in('status', ['pending', 'in_progress', 'review'])
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    log.error('fetchActiveTasksForLinking 查询失败', error);
-    return [];
-  }
-  return (data || []) as { id: string; title: string; status: string }[];
+    .order('created_at', { ascending: false })) as Promise<{ id: string; title: string; status: string }[]>;
 }
 
 /** 获取关联任务的简要信息 */
 export async function fetchLinkedTaskInfos(taskIds: string[]): Promise<{ id: string; title: string; status: string; assignee_name?: string }[]> {
   if (!taskIds || taskIds.length === 0) return [];
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchLinkedTaskInfos', supabase
     .from('tasks')
-    .select('id, title, status, assignee:assigned_to(name)')
-    .in('id', taskIds);
+    .select('id, title, status, assignee:users!assigned_to(name)')
+    .in('id', taskIds));
 
-  if (error) return [];
-  return (data || []).map((t: Record<string, unknown>) => ({
-    id: t.id as string,
-    title: t.title as string,
-    status: t.status as string,
-    assignee_name: (t.assignee as { name: string } | null)?.name ?? undefined,
+  return rows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    assignee_name: t.assignee?.name ?? undefined,
   }));
 }
 
@@ -143,23 +132,23 @@ export async function fetchNoticeReaders(
   department: string,
 ): Promise<{ read: { id: string; name: string }[]; unread: { id: string; name: string }[] }> {
   // 并行获取本部门所有用户 + 已读用户
-  const [{ data: allUsers }, { data: reads }] = await Promise.all([
-    supabase
+  const [allUsers, reads] = await Promise.all([
+    unwrap('noticeReadersUsers', supabase
       .from('users')
       .select('id, name')
       .eq('department', department)
-      .neq('role', 'removed'),
-    supabase
+      .neq('role', 'removed')),
+    unwrap('noticeReadersReads', supabase
       .from('notice_reads')
       .select('user_id')
-      .eq('notice_id', noticeId),
+      .eq('notice_id', noticeId)),
   ]);
 
   const readIds = new Set((reads || []).map((r) => r.user_id));
   const read: { id: string; name: string }[] = [];
   const unread: { id: string; name: string }[] = [];
 
-  for (const u of allUsers || []) {
+  for (const u of allUsers) {
     if (readIds.has(u.id)) {
       read.push({ id: u.id, name: u.name });
     } else {

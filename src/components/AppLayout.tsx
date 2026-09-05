@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Dropdown, Avatar, Button, Badge, Drawer, Grid, theme } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -55,32 +56,37 @@ const iconMap: Record<string, React.ReactNode> = {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { token } = theme.useToken();
   const user = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [badges, setBadges] = useState({ tasks: false, notices: false, forum: false });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { md } = Grid.useBreakpoint();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // 加载侧边栏徽标状态 + Realtime 订阅
-  useEffect(() => {
-    const loadBadges = async () => {
-      const result = await fetchUnreadByModule(user.id);
-      setBadges({
-        tasks: result.tasks > 0,
-        notices: result.notices > 0,
-        forum: result.forum > 0,
-      });
-    };
-    loadBadges();
+  // 侧边栏徽标：未读聚合 + Realtime 自动刷新
+  const unreadQuery = useQuery({
+    queryKey: ['unreadByModule', user.id],
+    queryFn: () => fetchUnreadByModule(user.id),
+    // 徽标是环境提示，后台静默失败即可（保持上次值）
+    throwOnError: false,
+  });
+  const unread = unreadQuery.data ?? { tasks: 0, notices: 0, forum: 0 };
+  const badges = {
+    tasks: unread.tasks > 0,
+    notices: unread.notices > 0,
+    forum: unread.forum > 0,
+  };
 
-    // 复用 Realtime 订阅：新通知到达时刷新三个模块的徽标
-    const unsubscribe = subscribeToNotifications(user.id, () => loadBadges(), 'sidebar');
+  useEffect(() => {
+    // 新通知到达时刷新徽标
+    const unsubscribe = subscribeToNotifications(user.id, () => {
+      queryClient.invalidateQueries({ queryKey: ['unreadByModule'] });
+    }, 'sidebar');
     return unsubscribe;
-  }, [user.id]);
+  }, [user.id, queryClient]);
 
   // 进入模块页面时自动清除该模块的徽标
   useEffect(() => {
@@ -97,8 +103,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     // 乐观更新：前端立即清除圆点
     const key = location.pathname.slice(1) as 'tasks' | 'notices' | 'forum';
-    setBadges(prev => ({ ...prev, [key]: false }));
-  }, [location.pathname, user.id]);
+    queryClient.setQueryData<{ tasks: number; notices: number; forum: number }>(
+      ['unreadByModule', user.id],
+      (old) => (old ? { ...old, [key]: 0 } : old),
+    );
+  }, [location.pathname, user.id, queryClient]);
 
   // 页面访问埋点（fire-and-forget，独立 effect 避免干扰其他逻辑）
   useEffect(() => {
@@ -169,7 +178,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <Layout style={{ minHeight: '100vh' }}>
       <Header className={styles.header}>
         {!md && <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ color: '#fff', fontSize: 16 }} />}
-        <div className={styles.logo}>🏛 学生会</div>
+        <div className={styles.logo}>学生会</div>
         {md && <GlobalSearch />}
         {!md && (
           <Button
@@ -247,7 +256,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               fontSize: 16,
               borderBottom: `1px solid ${token.colorSplit}`,
             }}>
-              🏛 学生会
+              学生会
             </div>
             <Menu
               mode="inline"
@@ -280,7 +289,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* 移动端搜索 Drawer */}
       {!md && (
         <Drawer
-          title="🔍 全局搜索"
+          title="全局搜索"
           open={searchOpen}
           onClose={() => setSearchOpen(false)}
           placement="top"

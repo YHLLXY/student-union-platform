@@ -1,30 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Spin, Tag, Button, theme } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import { BarChartOutlined, RiseOutlined, FallOutlined, TrophyOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { fetchWeeklyBrief, fetchMonthlyReport } from './dashboardService';
-import type { WeeklyBrief, MonthlyReport } from './dashboardService';
+import type { MonthlyReport } from './dashboardService';
 import ReportModal from './ReportModal';
 import styles from './brief.module.css';
 
 export default function WeeklyBriefCard() {
   const { token } = theme.useToken();
   const user = useAuth();
-  const [brief, setBrief] = useState<WeeklyBrief | null>(null);
-  const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportData, setReportData] = useState<MonthlyReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
 
-  useEffect(() => {
-    fetchWeeklyBrief(user.department, user.role).then((data) => {
-      setBrief(data);
-      setLoading(false);
-    });
-  }, [user.department, user.role]);
+  // 无权限时 service 返回 null → 不渲染
+  const briefQuery = useQuery({
+    queryKey: ['dashboard', 'weeklyBrief', user.department, user.role],
+    queryFn: () => fetchWeeklyBrief(user.department, user.role),
+  });
 
-  // 没有权限或数据加载中
-  if (loading) {
+  if (briefQuery.isPending) {
     return (
       <Card className={styles.briefCard}>
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
@@ -32,8 +29,9 @@ export default function WeeklyBriefCard() {
     );
   }
 
-  if (!brief) return null; // 无权限，不渲染
+  if (briefQuery.isError || !briefQuery.data) return null; // 无权限或加载失败，不渲染
 
+  const brief = briefQuery.data;
   const weekChange = brief.completedLastWeek > 0
     ? Math.round(((brief.completedThisWeek - brief.completedLastWeek) / brief.completedLastWeek) * 100)
     : brief.completedThisWeek > 0

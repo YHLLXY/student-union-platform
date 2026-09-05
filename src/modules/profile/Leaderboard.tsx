@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Spin, Empty, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
@@ -12,15 +12,17 @@ const PODIUM_LABELS = ['🥇', '🥈', '🥉'];
 
 export default function Leaderboard() {
   const user = useAuth();
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(false);
   const canView = hasMinRole(user.role, 'dept_head');
 
-  useEffect(() => {
-    if (!canView) return;
-    setLoading(true);
-    fetchLeaderboard(user.department).then((d) => { setEntries(d); setLoading(false); });
-  }, [user.department, canView]);
+  // enabled 守卫：无权限不发起请求
+  const leaderboardQuery = useQuery({
+    queryKey: ['leaderboard', user.department],
+    queryFn: () => fetchLeaderboard(user.department),
+    enabled: canView,
+  });
+
+  const entries: LeaderboardEntry[] = leaderboardQuery.data ?? [];
+  const loading = leaderboardQuery.isFetching;
 
   if (!canView) return null;
 

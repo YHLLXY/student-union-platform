@@ -3,9 +3,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigProvider } from 'antd';
 import { HashRouter } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import zhCN from 'antd/locale/zh_CN';
 import App from './App';
 import theme from './theme';
+import { queryClient } from './lib/queryClient';
 import { initErrorReporter } from './diagnostics';
 import '@/styles/variables.css';
 import '@/styles/base.css';
@@ -20,11 +22,13 @@ createRoot(document.getElementById('root')!).render(
         reducedMotion="user" 自动尊重系统「减弱动态效果」设置 */}
     <LazyMotion features={domAnimation} strict>
       <ConfigProvider theme={theme} locale={zhCN}>
-        <HashRouter>
-          <MotionConfig reducedMotion="user">
-            <App />
-          </MotionConfig>
-        </HashRouter>
+        <QueryClientProvider client={queryClient}>
+          <HashRouter>
+            <MotionConfig reducedMotion="user">
+              <App />
+            </MotionConfig>
+          </HashRouter>
+        </QueryClientProvider>
       </ConfigProvider>
     </LazyMotion>
   </StrictMode>,

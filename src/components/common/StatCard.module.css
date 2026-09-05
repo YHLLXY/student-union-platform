@@ -1,0 +1,60 @@
+.card {
+  transition:
+    transform var(--dur-base) var(--ease-enter),
+    box-shadow var(--dur-base) var(--ease-enter);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.iconBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  font-size: 19px;
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.valueRow {
+  margin-top: var(--space-md);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.suffix {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card:hover {
+    transition: none;
+    transform: none;
+  }
+}

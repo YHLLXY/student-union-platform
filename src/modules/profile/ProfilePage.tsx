@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Statistic, Descriptions, Button, Modal, message, theme } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
@@ -17,16 +18,21 @@ import styles from './profile.module.css';
 export default function ProfilePage() {
   const { token } = theme.useToken();
   const user = useAuth();
-  const [stats, setStats] = useState<UserStats>({ completed: 0, pending: 0, overdue: 0 });
-  const [milestoneSummary, setMilestoneSummary] = useState({ milestoneOverdue: 0, milestoneUpcoming: 0 });
   const [showPassword, setShowPassword] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalTab, setTaskModalTab] = useState('completed');
 
-  useEffect(() => {
-    fetchUserStats(user.id).then(setStats);
-    fetchMilestoneSummary(user.id).then(setMilestoneSummary);
-  }, [user.id]);
+  const statsQuery = useQuery({
+    queryKey: ['profileStats', user.id],
+    queryFn: () => fetchUserStats(user.id),
+  });
+  const summaryQuery = useQuery({
+    queryKey: ['milestoneSummary', user.id],
+    queryFn: () => fetchMilestoneSummary(user.id),
+  });
+
+  const stats: UserStats = statsQuery.data ?? { completed: 0, pending: 0, overdue: 0 };
+  const milestoneSummary = summaryQuery.data ?? { milestoneOverdue: 0, milestoneUpcoming: 0 };
 
   return (
     <div>

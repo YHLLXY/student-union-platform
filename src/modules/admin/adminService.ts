@@ -1,6 +1,7 @@
 import supabase from '@/supabaseClient';
 import type { UserProfile } from '@/modules/auth';
 import { logger } from '@/diagnostics';
+import { unwrap } from '@/lib/sb';
 import { hasMinRole } from '@/utils/helpers';
 
 const log = logger.for('admin/adminService');
@@ -17,9 +18,7 @@ export async function fetchAllMembers(userRole: string, userDept: string): Promi
     query = query.eq('department', userDept);
   }
 
-  const { data, error } = await query;
-  if (error) { log.error('fetchAllMembers 查询失败', error); return []; }
-  return data as UserProfile[];
+  return (await unwrap('fetchAllMembers', query)) as UserProfile[];
 }
 
 /** 修改成员角色 */
@@ -111,8 +110,7 @@ export async function fetchInviteCodes(department?: string): Promise<InviteCode[
     query = query.eq('department', department);
   }
 
-  const { data, error } = await query;
-  if (error || !data) { log.error('fetchInviteCodes 查询失败', error); return []; }
+  const data = await unwrap('fetchInviteCodes', query);
 
   return data.map((c) => ({
     id: c.id,
@@ -182,8 +180,8 @@ export async function fetchMemberWorkSummaries(userRole: string, userDept: strin
   if (hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium')) {
     memberQuery = memberQuery.eq('department', userDept);
   }
-  const { data: members } = await memberQuery;
-  if (!members || members.length === 0) return [];
+  const members = await unwrap('workSummariesMembers', memberQuery);
+  if (members.length === 0) return [];
 
   const memberIds = members.map(m => m.id);
   const now = new Date().toISOString();
@@ -278,7 +276,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
 
   // 页面访问排名（客户端 GROUP BY）
   const moduleCount: Record<string, number> = {};
-  for (const r of (pageRankRes.data || [])) {
+  for (const r of pageRankRes.data ?? []) {
     const m = r.module || 'unknown';
     moduleCount[m] = (moduleCount[m] || 0) + 1;
   }
@@ -291,7 +289,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
 
   // 事件类型统计
   const typeCount: Record<string, number> = {};
-  for (const r of (eventStatsRes.data || [])) {
+  for (const r of eventStatsRes.data ?? []) {
     const t = r.event_type;
     typeCount[t] = (typeCount[t] || 0) + 1;
   }
@@ -301,7 +299,7 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
 
   // 近7天活跃用户：客户端 COUNT(DISTINCT user_id)
   const activeUsers7d = new Set(
-    (activeRes.data || [])
+    (activeRes.data ?? [])
       .map(r => r.user_id)
       .filter((id): id is string => !!id),
   ).size;
@@ -313,6 +311,6 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
     topModule,
     pageRanking,
     eventStats,
-    recentErrors: (errorRes.data || []) as AnalyticsSummary['recentErrors'],
+    recentErrors: (errorRes.data ?? []) as AnalyticsSummary['recentErrors'],
   };
 }

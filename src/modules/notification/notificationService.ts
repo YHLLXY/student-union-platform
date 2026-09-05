@@ -1,5 +1,6 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
+import { unwrap, unwrapCount } from '@/lib/sb';
 
 const log = logger.for('notification/notificationService');
 
@@ -28,33 +29,21 @@ export interface Notification {
 
 /** 获取用户最近通知（最多 20 条） */
 export async function fetchNotifications(userId: string): Promise<Notification[]> {
-  const { data, error } = await supabase
+  return (await unwrap('fetchNotifications', supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(20);
-
-  if (error) {
-    log.error('fetchNotifications 查询失败', error);
-    return [];
-  }
-  return (data || []) as Notification[];
+    .limit(20))) as Notification[];
 }
 
 /** 获取未读通知数量 */
 export async function fetchUnreadCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+  return unwrapCount('fetchUnreadCount', supabase
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('is_read', false);
-
-  if (error) {
-    log.error('fetchUnreadCount 查询失败', error);
-    return 0;
-  }
-  return count ?? 0;
+    .eq('is_read', false));
 }
 
 // ========== 标记已读 ==========
@@ -194,7 +183,7 @@ export function subscribeToNotifications(
 export async function fetchUnreadByModule(userId: string): Promise<{
   tasks: number; notices: number; forum: number;
 }> {
-  const { data, error } = await supabase
+  const data = await unwrap('fetchUnreadByModule', supabase
     .from('notifications')
     .select('type')
     .eq('user_id', userId)
@@ -206,16 +195,11 @@ export async function fetchUnreadByModule(userId: string): Promise<{
       'milestone_overdue',
       'new_notice',
       'forum_reply',
-    ]);
-
-  if (error) {
-    log.error('fetchUnreadByModule 查询失败', error);
-    return { tasks: 0, notices: 0, forum: 0 };
-  }
+    ]));
 
   // 客户端聚合（未读量 <50，单次遍历 O(N) 开销可忽略）
   const result = { tasks: 0, notices: 0, forum: 0 };
-  for (const row of data || []) {
+  for (const row of data) {
     switch (row.type) {
       case 'new_notice':
         result.notices++;

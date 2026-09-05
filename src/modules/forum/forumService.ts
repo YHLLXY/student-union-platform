@@ -1,6 +1,7 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
 import { createNotification } from '@/modules/notification/notificationService';
+import { unwrap } from '@/lib/sb';
 import type { Attachment } from '@/components/FileUpload';
 import type { Json, TableRow } from '@/types/database';
 
@@ -52,8 +53,7 @@ export async function fetchPosts(userDepartment: string, category?: string): Pro
     query = query.eq('category', category);
   }
 
-  const { data, error } = await query;
-  if (error || !data) { log.error('fetchPosts 查询失败', error); return []; }
+  const data = await unwrap('fetchPosts', query);
   // 并行查每个帖子的回复数
   const posts = await Promise.all(
     data.map(async (p: PostRowWithAuthor) => {
@@ -96,13 +96,11 @@ export async function fetchPostDetail(postId: string): Promise<ForumPost | null>
 
 /** 获取回复列表 */
 export async function fetchReplies(postId: string): Promise<ForumReply[]> {
-  const { data, error } = await supabase
+  const data = await unwrap('fetchReplies', supabase
     .from('forum_replies')
     .select('*, author:created_by(name)')
     .eq('post_id', postId)
-    .order('created_at', { ascending: true });
-
-  if (error || !data) { log.error('fetchReplies 查询失败', error); return []; }
+    .order('created_at', { ascending: true }));
 
   return data.map((r: ReplyRowWithAuthor) => withAuthorName(r)) as ForumReply[];
 }

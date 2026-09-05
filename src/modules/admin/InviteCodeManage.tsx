@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, Button, Select, message, Tag, Popconfirm, InputNumber } from 'antd';
 import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
 import { DEPARTMENTS, ROLES } from '@/utils/constants';
@@ -15,8 +16,7 @@ interface InviteCodeManageProps {
 }
 
 export default function InviteCodeManage({ userRole, userDept }: InviteCodeManageProps) {
-  const [codes, setCodes] = useState<InviteCode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [genDept, setGenDept] = useState(userDept);
   const [genRole, setGenRole] = useState('volunteer');
   const [genLoading, setGenLoading] = useState(false);
@@ -28,13 +28,16 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
   const canDelete = hasMinRole(userRole, 'presidium');
   const isGlobalAdmin = hasMinRole(userRole, 'president');
 
-  const loadCodes = useCallback(async () => {
-    const data = await fetchInviteCodes(isDeptHead ? userDept : undefined);
-    setCodes(data);
-    setLoading(false);
-  }, [userRole, userDept]);
+  const codesQuery = useQuery({
+    queryKey: ['inviteCodes', userRole, isDeptHead ? userDept : 'all'],
+    queryFn: () => fetchInviteCodes(isDeptHead ? userDept : undefined),
+  });
 
-  useEffect(() => { loadCodes(); }, [loadCodes]);
+  const codes: InviteCode[] = codesQuery.data ?? [];
+  const loading = codesQuery.isPending;
+  const loadCodes = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['inviteCodes'] });
+  }, [queryClient]);
 
   const handleGenerate = async () => {
     setGenLoading(true);

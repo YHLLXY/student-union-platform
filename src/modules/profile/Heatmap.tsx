@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Spin, Empty, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
@@ -13,13 +14,14 @@ export default function Heatmap() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [data, setData] = useState<HeatmapDay[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 年/月切换按 key 缓存，回看历史月份秒开
+  const heatmapQuery = useQuery({
+    queryKey: ['heatmap', user.id, year, month],
+    queryFn: () => fetchHeatmapData(user.id, year, month),
+  });
 
-  useEffect(() => {
-    setLoading(true);
-    fetchHeatmapData(user.id, year, month).then((d) => { setData(d); setLoading(false); });
-  }, [user.id, year, month]);
+  const data: HeatmapDay[] = heatmapQuery.data ?? [];
+  const loading = heatmapQuery.isFetching;
 
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(year - 1); }

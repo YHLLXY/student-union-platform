@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, Modal, List, Tag, Grid, Button, Result, message, theme } from 'antd';
+import { useState } from 'react';
+import { Card, Modal, List, Tag, Grid, Button, Result, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -8,69 +9,68 @@ import {
   PlusOutlined,
   PushpinOutlined,
   MessageOutlined,
+  NotificationOutlined,
+  FireOutlined,
+  ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { DashboardSkeleton } from '@/components/SkeletonBlocks';
-import { StaggerGroup, StaggerItem, CountUpNumber } from '@/components/motion';
+import { StatCard, EmptyState } from '@/components/common';
+import { StaggerGroup, StaggerItem, FadeIn } from '@/components/motion';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '@/utils/helpers';
 import { TASK_STATUSES } from '@/utils/constants';
-import { fetchDashboardStats, fetchRecentActivity, fetchDashboardReviewTasks } from './dashboardService';
-import type { DashboardStats, ActivityItem } from './dashboardService';
+import {
+  fetchDashboardStats,
+  fetchRecentActivity,
+  fetchDashboardReviewTasks,
+  fetchTodoTasks,
+} from './dashboardService';
 import WeeklyBriefCard from './WeeklyBriefCard';
 import styles from './dashboard.module.css';
 
-const TYPE_ICON: Record<string, string> = {
-  notice: '📢',
-  forum: '💬',
-  submission: '📤',
-};
+const TYPE_ICON = {
+  notice: <NotificationOutlined />,
+  forum: <MessageOutlined />,
+  submission: <FireOutlined />,
+} as const;
 
 export default function DashBoardPage() {
   const { token } = theme.useToken();
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>({ reviewTasks: 0, overdueTasks: 0, todayDeadline: 0 });
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [error, setError] = useState(false);
-  const [reviewTasks, setReviewTasks] = useState<{ id: string; title: string; deadline: string | null }[]>([]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const [s, a] = await Promise.all([
-        fetchDashboardStats(user.id, user.department, user.role),
-        fetchRecentActivity(user.id, user.department),
-      ]);
-      setStats(s);
-      setActivities(a);
-    } catch (e) {
-      console.error('仪表盘数据加载失败:', e);
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user.id, user.department, user.role]);
+  const statsQuery = useQuery({
+    queryKey: ['dashboard', 'stats', user.id, user.department, user.role],
+    queryFn: () => fetchDashboardStats(user.id, user.department, user.role),
+  });
+  const todosQuery = useQuery({
+    queryKey: ['dashboard', 'todos', user.department, user.role],
+    queryFn: () => fetchTodoTasks(user.department, user.role),
+  });
+  const activityQuery = useQuery({
+    queryKey: ['dashboard', 'activity', user.id, user.department],
+    queryFn: () => fetchRecentActivity(user.id, user.department),
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // 待审核弹窗数据：仅在弹窗打开时拉取
+  const reviewListQuery = useQuery({
+    queryKey: ['dashboard', 'reviewList', user.department, user.role],
+    queryFn: () => fetchDashboardReviewTasks(user.department, user.role),
+    enabled: reviewModalOpen,
+  });
 
-  const handleReviewClick = async () => {
-    try {
-      const tasks = await fetchDashboardReviewTasks(user.department, user.role);
-      setReviewTasks(tasks);
-      setReviewModalOpen(true);
-    } catch {
-      message.error('获取待审核任务失败，请稍后重试');
-    }
+  const loading = statsQuery.isPending || activityQuery.isPending || todosQuery.isPending;
+  const error = statsQuery.isError || activityQuery.isError || todosQuery.isError;
+
+  const reloadAll = () => {
+    statsQuery.refetch();
+    todosQuery.refetch();
+    activityQuery.refetch();
   };
 
   const canCreateTask = hasMinRole(user.role, 'dept_head');
-  const canCreateNotice = hasMinRole(user.role, 'dept_head');
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -84,7 +84,7 @@ export default function DashBoardPage() {
           title="数据加载失败"
           subTitle="网络异常或服务暂时不可用，请稍后重试"
           extra={
-            <Button type="primary" onClick={loadData}>
+            <Button type="primary" onClick={reloadAll}>
               重新加载
             </Button>
           }
@@ -93,10 +93,14 @@ export default function DashBoardPage() {
     );
   }
 
+  const stats = statsQuery.data ?? { reviewTasks: 0, overdueTasks: 0, todayDeadline: 0 };
+  const todos = todosQuery.data ?? [];
+  const activities = activityQuery.data ?? [];
+
   return (
     <div className={styles.page}>
       {/* 欢迎语 */}
-      <h1 className={styles.welcome}>👋 你好，{user.name}</h1>
+      <h1 className={styles.welcome}>你好，{user.name}</h1>
       <p className={styles.welcomeSub}>
         {getDepartmentLabel(user.department)} · {new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       </p>
@@ -115,7 +119,7 @@ export default function DashBoardPage() {
             </Card>
           </StaggerItem>
         )}
-        {canCreateNotice && (
+        {canCreateTask && (
           <StaggerItem>
             <Card
               className={`${styles.statCard} ${styles.quickBtn}`}
@@ -142,96 +146,147 @@ export default function DashBoardPage() {
       {/* 3 张统计卡片 */}
       <StaggerGroup className={styles.statsRow} stagger={0.06}>
         <StaggerItem>
-          <Card
-            className={styles.statCard}
-            onClick={handleReviewClick}
-            styles={{ body: { padding: 20 } }}
-          >
-            <div className={styles.statIcon} style={{ color: token.colorWarning }}>
-              <ClockCircleOutlined />
-            </div>
-            <div className={`${styles.statValue} ${stats.reviewTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorWarning }}>
-              <CountUpNumber value={stats.reviewTasks} />
-            </div>
-            <div className={styles.statLabel}>待审核任务</div>
-          </Card>
+          <StatCard
+            icon={<ClockCircleOutlined />}
+            label="待审核任务"
+            value={stats.reviewTasks}
+            color={token.colorWarning}
+            onClick={canCreateTask ? () => setReviewModalOpen(true) : undefined}
+          />
         </StaggerItem>
-
         <StaggerItem>
-          <Card
-            className={styles.statCard}
+          <StatCard
+            icon={<ExclamationCircleOutlined />}
+            label="已逾期任务"
+            value={stats.overdueTasks}
+            color={token.colorError}
             onClick={() => navigate('/tasks')}
-            styles={{ body: { padding: 20 } }}
-          >
-            <div className={styles.statIcon} style={{ color: token.colorError }}>
-              <ExclamationCircleOutlined />
-            </div>
-            <div className={`${styles.statValue} ${stats.overdueTasks === 0 ? styles.statZero : ''}`} style={{ color: token.colorError }}>
-              <CountUpNumber value={stats.overdueTasks} />
-            </div>
-            <div className={styles.statLabel}>已逾期任务</div>
-          </Card>
+          />
         </StaggerItem>
-
         <StaggerItem>
-          <Card
-            className={styles.statCard}
+          <StatCard
+            icon={<CheckCircleOutlined />}
+            label="今日截止"
+            value={stats.todayDeadline}
+            color={token.colorInfo}
             onClick={() => navigate('/tasks')}
-            styles={{ body: { padding: 20 } }}
-          >
-            <div className={styles.statIcon} style={{ color: token.colorInfo }}>
-              <CheckCircleOutlined />
-            </div>
-            <div className={`${styles.statValue} ${stats.todayDeadline === 0 ? styles.statZero : ''}`} style={{ color: token.colorInfo }}>
-              <CountUpNumber value={stats.todayDeadline} />
-            </div>
-            <div className={styles.statLabel}>今日截止</div>
-          </Card>
+          />
         </StaggerItem>
       </StaggerGroup>
 
-      {/* 最近动态 */}
-      <Card className={styles.activityCard}>
-        <div className={styles.activityTitle}>📌 最近动态</div>
-        {activities.length === 0 ? (
-          <div className={styles.timelineEmpty}>暂无最近动态</div>
-        ) : (
-          <div className={styles.timeline}>
-            {activities.map((item, i) => (
-              <div
-                key={`${item.type}-${i}`}
-                className={styles.timelineItem}
-                onClick={() => navigate(item.link)}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className={styles.timelineIcon}>{TYPE_ICON[item.type] ?? '📌'}</span>
-                <div className={styles.timelineBody}>
-                  <div className={styles.timelineTitle}>{item.title}</div>
-                  <div className={styles.timelineDesc}>{item.description}</div>
+      {/* 主体两栏：待办+动态 / 周简报 */}
+      <div className={styles.mainGrid}>
+        <div className={styles.mainCol}>
+          {/* 待办聚合 */}
+          <FadeIn>
+            <Card
+              className={styles.activityCard}
+              title="待办事项"
+              extra={
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<ArrowRightOutlined />}
+                  onClick={() => navigate('/tasks')}
+                >
+                  全部任务
+                </Button>
+              }
+            >
+              {todos.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={<CheckCircleOutlined />}
+                  title="暂无待办"
+                  description="任务尽在掌控，去看看最近的动态吧"
+                />
+              ) : (
+                <div className={styles.todoList}>
+                  {todos.map((t) => (
+                    <div
+                      key={t.id}
+                      className={styles.todoItem}
+                      onClick={() => navigate('/tasks')}
+                    >
+                      <Tag
+                        color={t.kind === 'overdue' ? 'red' : 'orange'}
+                        className={styles.todoTag}
+                      >
+                        {t.kind === 'overdue' ? '已逾期' : '待审核'}
+                      </Tag>
+                      <div className={styles.todoBody}>
+                        <div className={styles.todoTitle}>{t.title}</div>
+                        <div className={styles.todoMeta}>
+                          {t.assignee_name ? `${t.assignee_name} · ` : ''}
+                          {t.deadline ? `截止 ${formatDateTime(t.deadline)}` : '无截止时间'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span className={styles.timelineTime}>{formatDateTime(item.time)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              )}
+            </Card>
+          </FadeIn>
 
-      <WeeklyBriefCard />
+          {/* 最近动态 */}
+          <FadeIn delay={0.05}>
+            <Card className={styles.activityCard} title="最近动态">
+              {activities.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={<NotificationOutlined />}
+                  title="暂无最近动态"
+                  description="公告、帖子与任务动态会出现在这里"
+                />
+              ) : (
+                <div className={styles.timeline}>
+                  {activities.map((item, i) => (
+                    <div
+                      key={`${item.type}-${i}`}
+                      className={styles.timelineItem}
+                      onClick={() => navigate(item.link)}
+                    >
+                      <span className={styles.timelineIcon}>{TYPE_ICON[item.type]}</span>
+                      <div className={styles.timelineBody}>
+                        <div className={styles.timelineTitle}>{item.title}</div>
+                        <div className={styles.timelineDesc}>{item.description}</div>
+                      </div>
+                      <span className={styles.timelineTime}>{formatDateTime(item.time)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </FadeIn>
+        </div>
+
+        <div className={styles.sideCol}>
+          <WeeklyBriefCard />
+        </div>
+      </div>
 
       {/* 待审核任务弹窗 */}
       <Modal
         open={reviewModalOpen}
         onCancel={() => setReviewModalOpen(false)}
         footer={null}
-        title="🔍 待审核任务"
+        title="待审核任务"
         width={md ? 500 : undefined}
         destroyOnHidden
       >
-        {reviewTasks.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 24, color: token.colorTextQuaternary }}>暂无待审核任务</div>
+        {reviewListQuery.isPending ? (
+          <div style={{ textAlign: 'center', padding: 24, color: token.colorTextQuaternary }}>加载中…</div>
+        ) : reviewListQuery.isError ? (
+          <Result
+            status="warning"
+            title="获取失败"
+            extra={<Button onClick={() => reviewListQuery.refetch()}>重试</Button>}
+          />
+        ) : (reviewListQuery.data ?? []).length === 0 ? (
+          <EmptyState compact icon={<CheckCircleOutlined />} title="暂无待审核任务" />
         ) : (
           <List
-            dataSource={reviewTasks}
+            dataSource={reviewListQuery.data ?? []}
             renderItem={(t) => (
               <List.Item
                 style={{ cursor: 'pointer' }}

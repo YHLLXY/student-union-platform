@@ -1,5 +1,6 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
+import { unwrap } from '@/lib/sb';
 
 const log = logger.for('guide/guideService');
 
@@ -19,22 +20,17 @@ export interface GuideEntry {
 
 /** 按模块获取所有指南条目（按 sort_order 排序） */
 export async function fetchGuides(moduleKey: string): Promise<GuideEntry[]> {
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchGuides', supabase
     .from('platform_guides')
-    .select('*, creator:created_by(name), updater:updated_by(name)')
+    .select('*, creator:users!created_by(name), updater:users!updated_by(name)')
     .eq('module_key', moduleKey)
     .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true }));
 
-  if (error) {
-    log.error('fetchGuides 查询失败', error);
-    return [];
-  }
-
-  return (data || []).map((g: Record<string, unknown>) => ({
+  return rows.map((g) => ({
     ...g,
-    creator_name: (g.creator as { name: string } | null)?.name ?? undefined,
-    updater_name: (g.updater as { name: string } | null)?.name ?? undefined,
+    creator_name: g.creator?.name ?? undefined,
+    updater_name: g.updater?.name ?? undefined,
   })) as unknown as GuideEntry[];
 }
 

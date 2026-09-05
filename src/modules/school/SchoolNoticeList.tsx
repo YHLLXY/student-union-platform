@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Empty, Grid, theme } from 'antd';
-import { PlusOutlined, PushpinFilled } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Tag, Button, Modal, Grid, theme } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlusOutlined, PushpinFilled, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState, PageHeader } from '@/components/common';
 import { hasMinRole, formatDateTime } from '@/utils/helpers';
 import { fetchSchoolNotices, subscribeToSchoolNotices } from './schoolService';
-import type { SchoolNotice } from './schoolService';
 import SchoolNoticeForm from './SchoolNoticeForm';
 import styles from './school.module.css';
 
@@ -13,40 +14,54 @@ export default function SchoolNoticeList() {
   const { token } = theme.useToken();
   const { md } = Grid.useBreakpoint();
   const user = useAuth();
-  const [notices, setNotices] = useState<SchoolNotice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadNotices = useCallback(async () => {
-    const data = await fetchSchoolNotices();
-    setNotices(data);
-    setLoading(false);
-  }, []);
+  const noticesQuery = useQuery({
+    queryKey: ['schoolNotices'],
+    queryFn: fetchSchoolNotices,
+  });
 
+  const notices = noticesQuery.data ?? [];
+  const loadNotices = () => queryClient.invalidateQueries({ queryKey: ['schoolNotices'] });
+
+  // Realtime：新校讯 → 刷新列表
   useEffect(() => {
-    loadNotices();
     const unsubscribe = subscribeToSchoolNotices(loadNotices);
     return unsubscribe;
-  }, [loadNotices]);
+  }, []);
 
   const canCreate = hasMinRole(user.role, 'presidium');
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>🏫 学校信息</h2>
-        {canCreate && (
+      <PageHeader
+        icon={<BankOutlined />}
+        title="学校信息"
+        subtitle="校级通知与重要安排"
+        extra={canCreate && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
             发布校讯
           </Button>
         )}
-      </div>
+      />
 
-      {loading ? (
+      {noticesQuery.isPending ? (
         <CardStreamSkeleton />
+      ) : noticesQuery.isError ? (
+        <EmptyState
+          icon={<BankOutlined />}
+          title="加载失败"
+          description="网络异常或服务暂时不可用，请稍后重试"
+          action={<Button type="primary" onClick={() => noticesQuery.refetch()}>重新加载</Button>}
+        />
       ) : notices.length === 0 ? (
-        <Empty description="暂无校级通知" />
+        <EmptyState
+          icon={<BankOutlined />}
+          title="暂无校级通知"
+          description="学校发布的最新通知会出现在这里"
+        />
       ) : (
         notices.map((notice) => (
           <Card

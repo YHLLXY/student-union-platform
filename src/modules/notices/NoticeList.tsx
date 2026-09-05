@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Modal, Empty, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
-import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined } from '@ant-design/icons';
+import { Card, Tag, Button, Modal, Form, Input, Select, DatePicker, message, Grid, theme } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlusOutlined, PushpinFilled, FileTextOutlined, EyeOutlined, BellOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState, PageHeader } from '@/components/common';
 import supabase from '@/supabaseClient';
 import { hasMinRole, formatDateTime } from '@/utils/helpers';
 import { trackEvent } from '@/utils/analytics';
@@ -17,79 +19,70 @@ export default function NoticeList() {
   const { token } = theme.useToken();
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
-  const [notices, setNotices] = useState<Notice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [linkedTasks, setLinkedTasks] = useState<Record<string, { id: string; title: string; status: string; assignee_name?: string }[]>>({});
   const [convertTarget, setConvertTarget] = useState<Notice | null>(null);
   const [convertLoading, setConvertLoading] = useState(false);
   const [convertForm] = Form.useForm();
-  const [readStats, setReadStats] = useState<Record<string, { read: number; total: number }>>({});
-  const [myReadIds, setMyReadIds] = useState<Set<string>>(new Set());
   const [readersModal, setReadersModal] = useState<{ open: boolean; noticeId: string; readers: { read: { id: string; name: string }[]; unread: { id: string; name: string }[] } } | null>(null);
 
-  const loadReadStats = useCallback(async (noticesData: Notice[]) => {
-    if (noticesData.length === 0) return;
-    const ids = noticesData.map((n) => n.id);
-    // 并行查已读统计 + 部门人数
-    const [allReads, deptCount] = await Promise.all([
-      supabase
-        .from('notice_reads')
-        .select('notice_id, user_id')
-        .in('notice_id', ids),
-      supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('department', user.department)
-        .neq('role', 'removed'),
-    ]);
+  // 公告列表 + 已读统计 + 关联任务（单查询聚合，贴近真实渲染所需）
+  const noticesQuery = useQuery({
+    queryKey: ['notices', user.department, user.id],
+    queryFn: async () => {
+      const data = await fetchNotices(user.department);
+      const ids = data.map((n) => n.id);
 
-    const total = deptCount.count ?? 0;
-    const readMap: Record<string, number> = {};
-    const myReadSet = new Set<string>();
+      const [allReads, deptCount, allTaskIds] = await Promise.all([
+        ids.length > 0
+          ? supabase.from('notice_reads').select('notice_id, user_id').in('notice_id', ids)
+          : Promise.resolve({ data: [] as { notice_id: string; user_id: string }[], count: null }),
+        supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('department', user.department)
+          .neq('role', 'removed'),
+        [...new Set(data.flatMap((n) => n.linked_tasks ?? []))],
+      ]);
 
-    for (const r of allReads.data || []) {
-      const nid = r.notice_id as string;
-      readMap[nid] = (readMap[nid] || 0) + 1;
-      if (r.user_id === user.id) {
-        myReadSet.add(nid);
+      const total = deptCount.count ?? 0;
+      const readMap: Record<string, number> = {};
+      const myReadSet = new Set<string>();
+      for (const r of allReads.data ?? []) {
+        readMap[r.notice_id] = (readMap[r.notice_id] || 0) + 1;
+        if (r.user_id === user.id) myReadSet.add(r.notice_id);
       }
-    }
+      const stats: Record<string, { read: number; total: number }> = {};
+      for (const nid of ids) stats[nid] = { read: readMap[nid] ?? 0, total };
 
-    const stats: Record<string, { read: number; total: number }> = {};
-    for (const nid of ids) {
-      stats[nid] = { read: readMap[nid] ?? 0, total };
-    }
-
-    setReadStats(stats);
-    setMyReadIds(myReadSet);
-  }, [user.department, user.id]);
-
-  const loadNotices = useCallback(async () => {
-    const data = await fetchNotices(user.department);
-    setNotices(data);
-    setLoading(false);
-    const allTaskIds = [...new Set(data.flatMap((n) => n.linked_tasks ?? []))];
-    if (allTaskIds.length > 0) {
-      const infos = await fetchLinkedTaskInfos(allTaskIds);
-      const map: Record<string, typeof infos> = {};
+      const infos = allTaskIds.length > 0 ? await fetchLinkedTaskInfos(allTaskIds) : [];
+      const linkedMap: Record<string, typeof infos> = {};
       for (const n of data) {
         if (n.linked_tasks && n.linked_tasks.length > 0) {
-          map[n.id] = infos.filter((t) => n.linked_tasks!.includes(t.id));
+          linkedMap[n.id] = infos.filter((t) => n.linked_tasks!.includes(t.id));
         }
       }
-      setLinkedTasks(map);
-    }
-    // 加载已读统计
-    loadReadStats(data);
-  }, [user.department, loadReadStats]);
 
+      return { notices: data, readStats: stats, myReadIds: myReadSet, linkedTasks: linkedMap };
+    },
+  });
+
+  const notices = noticesQuery.data?.notices ?? [];
+  const readStats = noticesQuery.data?.readStats ?? {};
+  const myReadIds = noticesQuery.data?.myReadIds ?? new Set<string>();
+  const linkedTasks = noticesQuery.data?.linkedTasks ?? {};
+  const loading = noticesQuery.isPending;
+
+  const loadNotices = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['notices'] });
+  }, [queryClient]);
+
+  // Realtime：新公告 → 刷新列表
   useEffect(() => {
-    loadNotices();
     const unsubscribe = subscribeToNotices(user.department, loadNotices);
     return unsubscribe;
-  }, [loadNotices, user.department]);
+  }, [user.department, loadNotices]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
 
@@ -98,12 +91,22 @@ export default function NoticeList() {
     setExpandedId(isCurrentlyExpanded ? null : noticeId);
     // 展开时标记已读
     if (!isCurrentlyExpanded && !myReadIds.has(noticeId)) {
-      setMyReadIds((prev) => new Set(prev).add(noticeId));
-      setReadStats((prev) => {
-        const cur = prev[noticeId];
-        return { ...prev, [noticeId]: { read: (cur?.read ?? 0) + 1, total: cur?.total ?? 0 } };
+      // 乐观更新：直接写查询缓存，避免整页重取
+      queryClient.setQueryData<{
+        notices: Notice[];
+        readStats: Record<string, { read: number; total: number }>;
+        myReadIds: Set<string>;
+        linkedTasks: Record<string, { id: string; title: string; status: string; assignee_name?: string }[]>;
+      }>(['notices', user.department, user.id], (old) => {
+        if (!old) return old;
+        const cur = old.readStats[noticeId];
+        return {
+          ...old,
+          readStats: { ...old.readStats, [noticeId]: { read: (cur?.read ?? 0) + 1, total: cur?.total ?? 0 } },
+          myReadIds: new Set(old.myReadIds).add(noticeId),
+        };
       });
-      markNoticeRead(noticeId, user.id);
+      markNoticeRead(noticeId, user.id).catch(() => {});
       trackEvent({
         event_type: 'notice_read',
         userId: user.id,
@@ -117,25 +120,32 @@ export default function NoticeList() {
   const handleShowReaders = async (noticeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!canCreate) return; // 仅 dept_head+ 可查看具体已读/未读人名单
-    const readers = await fetchNoticeReaders(noticeId, user.department);
+    const readers = await fetchNoticeReaders(noticeId, user.department).catch(() => null);
+    if (!readers) { message.error('获取已读名单失败'); return; }
     setReadersModal({ open: true, noticeId, readers });
   };
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>📢 部门公告</h2>
-        {canCreate && (
+      <PageHeader
+        icon={<BellOutlined />}
+        title="部门公告"
+        subtitle="部门内部的通知、会议纪要与活动安排"
+        extra={canCreate && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
             发布公告
           </Button>
         )}
-      </div>
+      />
 
       {loading ? (
         <CardStreamSkeleton />
       ) : notices.length === 0 ? (
-        <Empty description="暂无公告" />
+        <EmptyState
+          icon={<BellOutlined />}
+          title="暂无公告"
+          description={canCreate ? '点击右上角「发布公告」发布第一条公告' : '部门发布的新公告会出现在这里'}
+        />
       ) : (
         notices.map((notice, i) => (
           <Card
@@ -233,7 +243,7 @@ export default function NoticeList() {
         destroyOnHidden
       >
         <div>
-          <h3 style={{ marginBottom: 16 }}>📋 从公告创建任务</h3>
+          <h3 style={{ marginBottom: 16 }}>从公告创建任务</h3>
           {convertTarget && (
             <>
               <p style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 16 }}>
@@ -274,9 +284,9 @@ export default function NoticeList() {
                 <Form.Item name="priority" label="优先级" initialValue="normal">
                   <Select
                     options={[
-                      { value: 'normal', label: '🔵 普通' },
-                      { value: 'important', label: '🟠 重要' },
-                      { value: 'urgent', label: '🔴 紧急' },
+                      { value: 'normal', label: '普通' },
+                      { value: 'important', label: '重要' },
+                      { value: 'urgent', label: '紧急' },
                     ]}
                   />
                 </Form.Item>

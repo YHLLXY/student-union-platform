@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Popover, Spin, Drawer, Grid } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BellOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
@@ -27,35 +28,37 @@ const TYPE_ICON: Record<string, string> = {
 export default function NotificationBell() {
   const user = useAuth();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [shake, setShake] = useState(false);
   const prevCountRef = useRef(0);
   const { md } = Grid.useBreakpoint();
 
-  const loadData = useCallback(async () => {
-    const [list, count] = await Promise.all([
-      fetchNotifications(user.id),
-      fetchUnreadCount(user.id),
-    ]);
-    setNotifications(list);
-    setUnreadCount(count);
-  }, [user.id]);
+  // 通知列表 + 未读数（单查询聚合）
+  const notifQuery = useQuery({
+    queryKey: ['notifications', user.id],
+    queryFn: async () => {
+      const [list, count] = await Promise.all([
+        fetchNotifications(user.id),
+        fetchUnreadCount(user.id),
+      ]);
+      return { list, count };
+    },
+  });
 
-  // 初次加载
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const notifications = notifQuery.data?.list ?? [];
+  const unreadCount = notifQuery.data?.count ?? 0;
+  const loading = notifQuery.isFetching;
+
+  const refresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }, [queryClient]);
 
   // Realtime 订阅
   useEffect(() => {
-    const unsubscribe = subscribeToNotifications(user.id, () => {
-      loadData();
-    });
+    const unsubscribe = subscribeToNotifications(user.id, refresh);
     return unsubscribe;
-  }, [user.id, loadData]);
+  }, [user.id, refresh]);
 
   // Bell 摇晃：新通知到达时触发一次
   useEffect(() => {
@@ -71,19 +74,24 @@ export default function NotificationBell() {
   // 面板打开时刷新数据（桌面 + 移动公用）
   const handleOpen = useCallback((visible: boolean) => {
     setOpen(visible);
-    if (visible) {
-      setLoading(true);
-      loadData().finally(() => setLoading(false));
-    }
-  }, [loadData]);
+    if (visible) refresh();
+  }, [refresh]);
 
   const handleClick = async (notif: Notification) => {
     if (!notif.is_read) {
-      await markAsRead(notif.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n)),
+      // 乐观更新缓存，后端标记失败时回滚重取
+      queryClient.setQueryData<{ list: Notification[]; count: number }>(
+        ['notifications', user.id],
+        (old) =>
+          old
+            ? {
+                list: old.list.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n)),
+                count: Math.max(0, old.count - 1),
+              }
+            : old,
       );
-      setUnreadCount((c) => Math.max(0, c - 1));
+      const ok = await markAsRead(notif.id);
+      if (!ok) refresh();
     }
     if (notif.related_link) {
       setOpen(false);
@@ -92,15 +100,14 @@ export default function NotificationBell() {
   };
 
   const handleMarkAllRead = async () => {
-    await markAllAsRead(user.id);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+    const ok = await markAllAsRead(user.id);
+    if (ok) refresh();
   };
 
   // 通知列表渲染（桌面 Popover + 移动 Drawer 共用）
   const notifList = useMemo(() => (
     <div className={styles.panelList}>
-      {loading ? (
+      {loading && notifications.length === 0 ? (
         <div className={styles.panelLoading}><Spin size="small" /> 加载中...</div>
       ) : notifications.length === 0 ? (
         <div className={styles.panelEmpty}>暂无通知</div>
@@ -139,7 +146,7 @@ export default function NotificationBell() {
           {bellTrigger}
         </span>
         <Drawer
-          title="🔔 消息通知"
+          title="消息通知"
           open={open}
           onClose={() => setOpen(false)}
           placement="right"
@@ -163,7 +170,7 @@ export default function NotificationBell() {
   const panel = (
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
-        <span className={styles.panelTitle}>🔔 消息通知</span>
+        <span className={styles.panelTitle}>消息通知</span>
         {unreadCount > 0 && (
           <button className={styles.markAllBtn} onClick={handleMarkAllRead}>
             全部已读

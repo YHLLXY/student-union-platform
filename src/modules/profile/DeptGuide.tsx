@@ -16,10 +16,10 @@ export default function DeptGuidePanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDeptGuide(user.department).then((data) => {
-      setGuide(data);
-      setLoading(false);
-    });
+    // 指南可缺失（未填写过），失败时按无指南渲染
+    fetchDeptGuide(user.department)
+      .then((data) => { setGuide(data); setLoading(false); })
+      .catch(() => { setGuide(null); setLoading(false); });
   }, [user.department]);
 
   if (loading) {

@@ -1,5 +1,5 @@
 .page {
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -59,6 +59,75 @@
 
 .statZero {
   color: var(--text-disabled);
+}
+
+/* 主体两栏：主列（待办+动态）+ 侧栏（周简报） */
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sideCol {
+  min-width: 0;
+}
+
+/* 待办列表 */
+.todoList {
+  display: flex;
+  flex-direction: column;
+}
+
+.todoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.todoItem:last-child {
+  border-bottom: none;
+}
+
+.todoItem:hover {
+  background: var(--bg-card-hover);
+}
+
+.todoTag {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.todoBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.todoTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todoMeta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 /* 动态时间轴 */
@@ -145,6 +214,12 @@
 
 .quickBtn {
   flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {

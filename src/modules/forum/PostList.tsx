@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Button, Menu, Modal, Empty, Grid } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Card, Tag, Button, Menu, Modal, Grid } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PlusOutlined, MessageOutlined, FolderOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState, PageHeader } from '@/components/common';
 import { formatDateTime, hasMinRole } from '@/utils/helpers';
 import { FORUM_CATEGORIES } from '@/utils/constants';
 import { fetchPosts } from './forumService';
-import type { ForumPost } from './forumService';
 import PostDetail from './PostDetail';
 import PostForm from './PostForm';
 import styles from './forum.module.css';
@@ -18,35 +19,37 @@ const categoryItems = Object.entries(FORUM_CATEGORIES)
 export default function PostList() {
   const { md } = Grid.useBreakpoint();
   const user = useAuth();
-  const [posts, setPosts] = useState<ForumPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [category, setCategory] = useState('all');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const loadPosts = useCallback(async () => {
-    const data = await fetchPosts(user.department, category);
-    setPosts(data);
-    setLoading(false);
-  }, [user.department, category]);
+  // staleTime 30s 下切换分类按 key 各自缓存，回切秒开
+  const postsQuery = useQuery({
+    queryKey: ['forumPosts', user.department, category],
+    queryFn: () => fetchPosts(user.department, category === 'all' ? undefined : category),
+  });
 
-  useEffect(() => { loadPosts(); }, [loadPosts]);
+  const posts = postsQuery.data ?? [];
+  const loadPosts = () => queryClient.invalidateQueries({ queryKey: ['forumPosts'] });
 
   const handleSelect = ({ key }: { key: string }) => {
     setCategory(key);
-    setLoading(true);
   };
 
   return (
     <div className={styles.layout}>
       <div className={styles.sidebar}>
-        <div className={styles.sidebarTitle}>📂 分类</div>
+        <div className={styles.sidebarTitle}>
+          <FolderOutlined style={{ marginRight: 6 }} />
+          分类
+        </div>
         <Menu
           mode="inline"
           selectedKeys={[category]}
           onClick={handleSelect}
           items={[
-            { key: 'all', label: `全部` },
+            { key: 'all', label: '全部' },
             ...categoryItems.map((c) => ({ key: c.key, label: c.label })),
           ]}
           style={{ borderRight: 0 }}
@@ -54,19 +57,32 @@ export default function PostList() {
       </div>
 
       <div className={styles.mainArea}>
-        <div className={styles.pageHeader}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>💬 部门论坛</h2>
-          {hasMinRole(user.role, 'dept_head') && (
+        <PageHeader
+          icon={<MessageOutlined />}
+          title="部门论坛"
+          subtitle="工作讨论、活动策划与资料共享"
+          extra={hasMinRole(user.role, 'dept_head') && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
               发帖
             </Button>
           )}
-        </div>
+        />
 
-        {loading ? (
+        {postsQuery.isPending ? (
           <CardStreamSkeleton />
+        ) : postsQuery.isError ? (
+          <EmptyState
+            icon={<MessageOutlined />}
+            title="帖子加载失败"
+            description="网络异常或服务暂时不可用，请稍后重试"
+            action={<Button type="primary" onClick={() => postsQuery.refetch()}>重新加载</Button>}
+          />
         ) : posts.length === 0 ? (
-          <Empty description="暂无帖子" />
+          <EmptyState
+            icon={<MessageOutlined />}
+            title="暂无帖子"
+            description="选择左侧分类浏览，或发布第一个帖子"
+          />
         ) : (
           posts.map((post, i) => (
             <Card
@@ -79,7 +95,7 @@ export default function PostList() {
               <div className={styles.postMeta}>
                 <Tag>{FORUM_CATEGORIES[post.category] ?? '讨论'}</Tag>
                 <span>{post.author_name}</span>
-                <span>💬 {post.reply_count}</span>
+                <span><MessageOutlined /> {post.reply_count}</span>
                 <span>{formatDateTime(post.created_at)}</span>
               </div>
             </Card>

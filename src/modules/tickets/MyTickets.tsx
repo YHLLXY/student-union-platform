@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Tag, Empty, Button, Popconfirm, message, theme } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
 import { formatDateTime } from '@/utils/helpers';
@@ -11,17 +12,16 @@ import styles from './tickets.module.css';
 export default function MyTickets() {
   const { token } = theme.useToken();
   const user = useAuth();
-  const [tickets, setTickets] = useState<MyTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [refunding, setRefunding] = useState<string | null>(null);
 
-  const loadMyTickets = useCallback(async () => {
-    const data = await fetchMyTickets(user.id);
-    setTickets(data);
-    setLoading(false);
-  }, [user.id]);
+  const myTicketsQuery = useQuery({
+    queryKey: ['myTickets', user.id],
+    queryFn: () => fetchMyTickets(user.id),
+  });
 
-  useEffect(() => { loadMyTickets(); }, [loadMyTickets]);
+  const tickets = myTicketsQuery.data ?? [];
+  const loadMyTickets = () => queryClient.invalidateQueries({ queryKey: ['myTickets'] });
 
   const handleRefund = async (t: MyTicket) => {
     setRefunding(t.id);
@@ -50,10 +50,10 @@ export default function MyTickets() {
     return event.getTime() - now.getTime() > fiveHours;
   };
 
-  if (loading) return <CardStreamSkeleton />;
+  if (myTicketsQuery.isPending) return <CardStreamSkeleton />;
 
   if (tickets.length === 0) {
-    return <Empty description="你还没有抢到票" />;
+    return <Empty description={myTicketsQuery.isError ? '票券加载失败，请重试' : '你还没有抢到票'} />;
   }
 
   return (

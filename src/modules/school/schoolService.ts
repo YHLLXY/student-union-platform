@@ -1,5 +1,6 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
+import { unwrap } from '@/lib/sb';
 
 const log = logger.for('school/schoolService');
 
@@ -15,20 +16,15 @@ export interface SchoolNotice {
 
 /** 获取学校通知 */
 export async function fetchSchoolNotices(): Promise<SchoolNotice[]> {
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchSchoolNotices', supabase
     .from('school_notices')
     .select('*, creator:created_by(name)')
     .order('is_pinned', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }));
 
-  if (error) {
-    log.error('fetchSchoolNotices 查询失败', error);
-    return [];
-  }
-
-  return (data || []).map((n: Record<string, unknown>) => ({
+  return rows.map((n) => ({
     ...n,
-    creator_name: (n.creator as { name: string } | null)?.name ?? '未知',
+    creator_name: n.creator?.name ?? '未知',
   })) as unknown as SchoolNotice[];
 }
 

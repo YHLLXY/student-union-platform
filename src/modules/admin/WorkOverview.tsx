@@ -21,7 +21,9 @@ export default function WorkOverview() {
 
   useEffect(() => {
     setLoading(true);
-    fetchMemberWorkSummaries(user.role, user.department).then((d) => { setData(d); setLoading(false); });
+    fetchMemberWorkSummaries(user.role, user.department)
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => { setLoading(false); });
   }, [user.role, user.department]);
 
   const sorted = [...data].sort((a, b) => {

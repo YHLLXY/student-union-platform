@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, Select, Button, Popconfirm, message, Tabs } from 'antd';
 import { useAuth } from '@/components/AuthContext';
 import { RouteSkeleton } from '@/components/SkeletonBlocks';
@@ -16,17 +17,16 @@ const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: 
 
 export default function MemberManage() {
   const user = useAuth();
-  const [members, setMembers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('members');
 
-  const loadMembers = useCallback(async () => {
-    const data = await fetchAllMembers(user.role, user.department);
-    setMembers(data);
-    setLoading(false);
-  }, [user.role, user.department]);
+  const membersQuery = useQuery({
+    queryKey: ['members', user.role, user.department],
+    queryFn: () => fetchAllMembers(user.role, user.department),
+  });
 
-  useEffect(() => { loadMembers(); }, [loadMembers]);
+  const members = membersQuery.data ?? [];
+  const loadMembers = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     const ok = await updateMemberRole(memberId, newRole);
@@ -133,7 +133,7 @@ export default function MemberManage() {
       : []),
   ];
 
-  if (loading) return <RouteSkeleton />;
+  if (membersQuery.isPending) return <RouteSkeleton />;
 
   const memberContent = (
     <div>

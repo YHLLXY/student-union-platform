@@ -48,8 +48,13 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
   const [addingDept, setAddingDept] = useState<string[]>([]);
 
   const load = () => {
-    fetchPostDetail(postId).then((p) => { setPost(p); if (p) setAddingDept(p.collaborating_departments ?? []); });
-    fetchReplies(postId).then(setReplies);
+    // 弹窗内临时数据：命令式拉取，但必须暴露错误（SbError 约定）
+    fetchPostDetail(postId)
+      .then((p) => { setPost(p); if (p) setAddingDept(p.collaborating_departments ?? []); })
+      .catch(() => message.error('帖子加载失败'));
+    fetchReplies(postId)
+      .then(setReplies)
+      .catch(() => message.error('回复加载失败'));
   };
 
   useEffect(() => { load(); }, [postId]);
@@ -62,7 +67,7 @@ export default function PostDetail({ postId, onClose, onDeleted }: PostDetailPro
     if (ok) {
       message.success('回复成功');
       setReplyText('');
-      fetchReplies(postId).then(setReplies);
+      fetchReplies(postId).then(setReplies).catch(() => message.error('回复加载失败'));
     } else {
       message.error('回复失败');
     }

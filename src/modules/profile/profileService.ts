@@ -1,5 +1,6 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
+import { unwrap, unwrapCount } from '@/lib/sb';
 
 const log = logger.for('profile/profileService');
 
@@ -11,34 +12,26 @@ export interface UserStats {
 
 /** 获取用户任务统计（优化：3 次独立查询改为 Promise.all 并行） */
 export async function fetchUserStats(userId: string): Promise<UserStats> {
-  const [completedRes, pendingRes, overdueRes] = await Promise.all([
-    supabase
+  const [completed, pending, overdue] = await Promise.all([
+    unwrapCount('userStatsCompleted', supabase
       .from('tasks')
       .select('id', { count: 'exact', head: true })
       .eq('assigned_to', userId)
-      .eq('status', 'completed'),
-    supabase
+      .eq('status', 'completed')),
+    unwrapCount('userStatsPending', supabase
       .from('tasks')
       .select('id', { count: 'exact', head: true })
       .eq('assigned_to', userId)
-      .in('status', ['pending', 'in_progress', 'review']),
-    supabase
+      .in('status', ['pending', 'in_progress', 'review'])),
+    unwrapCount('userStatsOverdue', supabase
       .from('tasks')
       .select('id', { count: 'exact', head: true })
       .eq('assigned_to', userId)
       .neq('status', 'completed')
-      .lt('deadline', new Date().toISOString()),
+      .lt('deadline', new Date().toISOString())),
   ]);
 
-  if (completedRes.error) log.error('fetchUserStats completed 查询失败', completedRes.error);
-  if (pendingRes.error) log.error('fetchUserStats pending 查询失败', pendingRes.error);
-  if (overdueRes.error) log.error('fetchUserStats overdue 查询失败', overdueRes.error);
-
-  return {
-    completed: completedRes.data?.length ?? 0,
-    pending: pendingRes.data?.length ?? 0,
-    overdue: overdueRes.data?.length ?? 0,
-  };
+  return { completed, pending, overdue };
 }
 
 // ========== 年度热力图数据 ==========
@@ -54,18 +47,13 @@ export async function fetchYearHeatmapData(userId: string, year: number): Promis
   const start = new Date(year, 0, 1).toISOString();
   const end = new Date(year, 11, 31, 23, 59, 59).toISOString();
 
-  const { data, error } = await supabase
+  const data = await unwrap('fetchYearHeatmapData', supabase
     .from('task_submissions')
     .select('submitted_at, task:tasks!inner(id, title)')
     .eq('user_id', userId)
     .gte('submitted_at', start)
     .lte('submitted_at', end)
-    .order('submitted_at', { ascending: true });
-
-  if (error) {
-    log.error('fetchYearHeatmapData 查询失败', error);
-    return [];
-  }
+    .order('submitted_at', { ascending: true }));
 
   // 按日期分组，去重（同一天同一任务多次提交算一次）
   const dayMap: Record<string, { id: string; title: string }[]> = {};
@@ -110,16 +98,13 @@ export async function fetchUserTasksByMonth(userId: string, year: number, month:
   const start = new Date(year, month - 1, 1).toISOString();
   const end = new Date(year, month, 0, 23, 59, 59).toISOString();
 
-  const { data, error } = await supabase
+  return unwrap('fetchUserTasksByMonth', supabase
     .from('tasks')
     .select('id, title, status, deadline')
     .eq('assigned_to', userId)
     .gte('deadline', start)
     .lte('deadline', end)
-    .order('deadline', { ascending: true });
-
-  if (error) { log.error('fetchUserTasksByMonth 查询失败', error); return []; }
-  return data ?? [];
+    .order('deadline', { ascending: true }));
 }
 
 /** 修改密码 */
@@ -141,18 +126,13 @@ export async function fetchHeatmapData(userId: string, year: number, month: numb
   const start = new Date(year, month - 1, 1).toISOString();
   const end = new Date(year, month, 0, 23, 59, 59).toISOString();
 
-  const { data, error } = await supabase
+  const data = await unwrap('fetchHeatmapData', supabase
     .from('task_submissions')
     .select('submitted_at, task:tasks!inner(id, title)')
     .eq('user_id', userId)
     .gte('submitted_at', start)
     .lte('submitted_at', end)
-    .order('submitted_at', { ascending: true });
-
-  if (error) {
-    log.error('fetchHeatmapData 查询失败', error);
-    return [];
-  }
+    .order('submitted_at', { ascending: true }));
 
   // 按日期分组，收集任务信息（去重：同一天同一任务多次提交算一次）
   const dayMap: Record<string, { id: string; title: string }[]> = {};
@@ -199,33 +179,28 @@ export interface LeaderboardEntry {
 export async function fetchLeaderboard(department: string): Promise<LeaderboardEntry[]> {
   const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  const { data: members } = await supabase
+  const members = await unwrap('leaderboardMembers', supabase
     .from('users')
     .select('id, name, avatar_url')
     .eq('department', department)
-    .neq('role', 'removed');
+    .neq('role', 'removed'));
 
-  if (!members || members.length === 0) return [];
+  if (members.length === 0) return [];
 
   const memberIds = members.map((m) => m.id);
 
   // 一次查询所有人的本月完成任务 → 客户端分组计数
-  const { data: tasks, error: taskErr } = await supabase
+  const tasks = await unwrap('leaderboardTasks', supabase
     .from('tasks')
     .select('assigned_to')
     .in('assigned_to', memberIds)
     .eq('status', 'completed')
-    .gte('deadline', start);
-
-  if (taskErr) {
-    log.error('fetchLeaderboard 批量查询失败', taskErr);
-    return members.map((m) => ({ user_id: m.id, name: m.name, avatar_url: m.avatar_url ?? null, completed: 0, rank: 0 }));
-  }
+    .gte('deadline', start));
 
   const countMap: Record<string, number> = {};
-  for (const t of tasks || []) {
-    const uid = t.assigned_to as string;
-    countMap[uid] = (countMap[uid] || 0) + 1;
+  for (const t of tasks) {
+    if (!t.assigned_to) continue;
+    countMap[t.assigned_to] = (countMap[t.assigned_to] || 0) + 1;
   }
 
   const results: LeaderboardEntry[] = members.map((m) => ({
@@ -256,19 +231,14 @@ export interface MemberInfo {
 
 /** 获取所有成员（含任务计数），不包含已移除的用户（优化：N+1 → 2 次批量查询） */
 export async function fetchAllMembers(): Promise<MemberInfo[]> {
-  const { data: users, error } = await supabase
+  const users = await unwrap('directoryMembers', supabase
     .from('users')
     .select('id, name, student_id, department, role, avatar_url')
     .neq('role', 'removed')
     .order('department')
-    .order('name');
+    .order('name'));
 
-  if (error) {
-    log.error('fetchAllMembers 查询失败', error);
-    return [];
-  }
-
-  if (!users || users.length === 0) return [];
+  if (users.length === 0) return [];
 
   const userIds = users.map((u) => u.id);
   const now = new Date().toISOString();
@@ -288,31 +258,28 @@ export async function fetchAllMembers(): Promise<MemberInfo[]> {
       .lt('deadline', now),
   ]);
 
-  if (inProgressRes.error) log.error('fetchAllMembers inProgress 查询失败', inProgressRes.error);
-  if (overdueRes.error) log.error('fetchAllMembers overdue 查询失败', overdueRes.error);
-
   // 客户端分组计数
   const inProgressMap: Record<string, number> = {};
   for (const t of inProgressRes.data || []) {
-    const uid = t.assigned_to as string;
-    inProgressMap[uid] = (inProgressMap[uid] || 0) + 1;
+    if (!t.assigned_to) continue;
+    inProgressMap[t.assigned_to] = (inProgressMap[t.assigned_to] || 0) + 1;
   }
 
   const overdueMap: Record<string, number> = {};
   for (const t of overdueRes.data || []) {
-    const uid = t.assigned_to as string;
-    overdueMap[uid] = (overdueMap[uid] || 0) + 1;
+    if (!t.assigned_to) continue;
+    overdueMap[t.assigned_to] = (overdueMap[t.assigned_to] || 0) + 1;
   }
 
-  return users.map((u: Record<string, unknown>) => ({
-    id: u.id as string,
-    name: u.name as string,
-    student_id: u.student_id as string,
-    department: u.department as string,
-    role: u.role as string,
-    avatar_url: u.avatar_url as string | null,
-    in_progress: inProgressMap[u.id as string] ?? 0,
-    overdue: overdueMap[u.id as string] ?? 0,
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    student_id: u.student_id,
+    department: u.department,
+    role: u.role,
+    avatar_url: u.avatar_url,
+    in_progress: inProgressMap[u.id] ?? 0,
+    overdue: overdueMap[u.id] ?? 0,
   }));
 }
 
@@ -326,37 +293,34 @@ export async function fetchMilestoneSummary(userId: string): Promise<{
   const threeDays = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
   // 查询用户所有关联的、有里程碑的任务
-  const { data: tasks } = await supabase
+  const tasks = await unwrap('milestoneSummaryTasks', supabase
     .from('tasks')
     .select('id')
     .eq('assigned_to', userId)
-    .eq('has_milestones', true);
+    .eq('has_milestones', true));
 
-  if (!tasks || tasks.length === 0) return { milestoneOverdue: 0, milestoneUpcoming: 0 };
+  if (tasks.length === 0) return { milestoneOverdue: 0, milestoneUpcoming: 0 };
 
-  const taskIds = tasks.map((t: { id: string }) => t.id);
+  const taskIds = tasks.map((t) => t.id);
 
   // 并行查询逾期 + 近日截止
-  const [overdueRes, upcomingRes] = await Promise.all([
-    supabase
+  const [milestoneOverdue, milestoneUpcoming] = await Promise.all([
+    unwrapCount('milestoneOverdue', supabase
       .from('task_milestones')
       .select('id', { count: 'exact', head: true })
       .in('task_id', taskIds)
       .eq('status', 'pending')
-      .lt('deadline', now),
-    supabase
+      .lt('deadline', now)),
+    unwrapCount('milestoneUpcoming', supabase
       .from('task_milestones')
       .select('id', { count: 'exact', head: true })
       .in('task_id', taskIds)
       .eq('status', 'pending')
       .gte('deadline', now)
-      .lte('deadline', threeDays),
+      .lte('deadline', threeDays)),
   ]);
 
-  return {
-    milestoneOverdue: overdueRes.count ?? 0,
-    milestoneUpcoming: upcomingRes.count ?? 0,
-  };
+  return { milestoneOverdue, milestoneUpcoming };
 }
 
 // ========== 部门新人指南 ==========
@@ -446,19 +410,14 @@ export async function fetchAllUserTasks(userId: string): Promise<{
   pending: TaskBrief[];
   overdue: TaskBrief[];
 }> {
-  const { data, error } = await supabase
+  const data = await unwrap('fetchAllUserTasks', supabase
     .from('tasks')
     .select('id, title, priority, status, deadline, assigned_department')
     .eq('assigned_to', userId)
     .order('deadline', { ascending: true, nullsFirst: false })
-    .limit(100);
+    .limit(100));
 
-  if (error) {
-    log.error('fetchAllUserTasks 查询失败', error);
-    return { completed: [], pending: [], overdue: [] };
-  }
-
-  const tasks = (data || []) as TaskBrief[];
+  const tasks = data as TaskBrief[];
   const now = new Date().toISOString();
 
   return {

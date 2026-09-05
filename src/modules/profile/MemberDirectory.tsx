@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, Input, Tag, Avatar, Empty, Tooltip, theme } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
@@ -6,25 +7,20 @@ import type { MemberInfo } from './profileService';
 import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
 import { DEPARTMENTS } from '@/utils/constants';
-import { logger } from '@/diagnostics';
 import styles from './profile.module.css';
-
-const log = logger.for('profile/MemberDirectory');
 
 export default function MemberDirectory() {
   const { token } = theme.useToken();
-  const [members, setMembers] = useState<MemberInfo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
 
-  useEffect(() => {
-    fetchAllMembers().then((data) => {
-      setMembers(data);
-      setLoading(false);
-      log.info('通讯录加载完成', { count: data.length });
-    });
-  }, []);
+  const membersQuery = useQuery({
+    queryKey: ['directory'],
+    queryFn: fetchAllMembers,
+  });
+
+  const members: MemberInfo[] = membersQuery.data ?? [];
+  const loading = membersQuery.isPending;
 
   const filtered = useMemo(() => members.filter((m) => {
     const matchSearch =

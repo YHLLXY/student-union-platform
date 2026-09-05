@@ -1,12 +1,10 @@
 import supabase from '@/supabaseClient';
-import { logger } from '@/diagnostics';
 import { hasMinRole, getDepartmentLabel } from '@/utils/helpers';
+import { unwrap, unwrapCount } from '@/lib/sb';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 
 dayjs.extend(isoWeek);
-
-const log = logger.for('dashboard/dashboardService');
 
 // ========== 类型 ==========
 
@@ -23,6 +21,23 @@ export interface ActivityItem {
   time: string;
   link: string;
 }
+
+/** 首页待办条目（待审核 / 已逾期） */
+export interface TodoTaskItem {
+  id: string;
+  title: string;
+  kind: 'review' | 'overdue';
+  deadline: string | null;
+  assignee_name: string | null;
+}
+
+function tasksCountQuery(departmentFilter: string | null) {
+  let q = supabase.from('tasks').select('id', { count: 'exact', head: true });
+  if (departmentFilter) q = q.eq('assigned_department', departmentFilter);
+  return q;
+}
+
+type TaskCountQuery = ReturnType<typeof tasksCountQuery>;
 
 // ========== 统计卡片 ==========
 
@@ -42,50 +57,78 @@ export async function fetchDashboardStats(
   const isGlobalRole = hasMinRole(role, 'president');
   const canReview = hasMinRole(role, 'dept_head');
 
-  const addDeptFilter = <T extends { eq: (col: string, val: string) => T }>(q: T) => {
-    return isGlobalRole ? q : q.eq('assigned_department', department);
-  };
+  const countTasks = (label: string, extra: (q: TaskCountQuery) => TaskCountQuery) =>
+    unwrapCount(label, extra(tasksCountQuery(isGlobalRole ? null : department)));
 
-  const queries: Promise<{ count: number } | null>[] = [
-    // 待审核任务（仅 dept_head+ 可见）
-    (async () => {
-      if (!canReview) return { count: 0 };
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'review');
-      q = addDeptFilter(q);
-      const { count, error } = await q;
-      if (error) { log.error('reviewTasks 查询失败', error); return null; }
-      return { count: count ?? 0 };
-    })(),
-    // 逾期任务（全员可见本部门）
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .neq('status', 'completed')
-        .lt('deadline', now);
-      q = addDeptFilter(q);
-      const { count, error } = await q;
-      if (error) { log.error('overdueTasks 查询失败', error); return null; }
-      return { count: count ?? 0 };
-    })(),
-    // 今日截止（全员可见本部门）
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .neq('status', 'completed')
+  const [reviewTasks, overdueTasks, todayDeadline] = await Promise.all([
+    canReview
+      ? countTasks('reviewTasks', (q) => q.eq('status', 'review'))
+      : Promise.resolve(0),
+    countTasks('overdueTasks', (q) =>
+      q.neq('status', 'completed').lt('deadline', now)),
+    countTasks('todayDeadline', (q) =>
+      q.neq('status', 'completed')
         .gte('deadline', todayStart.toISOString())
-        .lte('deadline', todayEnd.toISOString());
-      q = addDeptFilter(q);
-      const { count, error } = await q;
-      if (error) { log.error('todayDeadline 查询失败', error); return null; }
-      return { count: count ?? 0 };
-    })(),
-  ];
+        .lte('deadline', todayEnd.toISOString())),
+  ]);
 
-  const results = await Promise.all(queries);
+  return { reviewTasks, overdueTasks, todayDeadline };
+}
 
-  return {
-    reviewTasks: results[0]?.count ?? 0,
-    overdueTasks: results[1]?.count ?? 0,
-    todayDeadline: results[2]?.count ?? 0,
-  };
+// ========== 首页待办聚合（v4 新增）==========
+
+/**
+ * 首页待办列表：dept_head+ 附带待审核任务，全员可见逾期任务。
+ * 两段查询并行，各取最新 6 条，前端标注类型后合并。
+ */
+export async function fetchTodoTasks(
+  department: string,
+  role: string,
+): Promise<TodoTaskItem[]> {
+  const now = new Date().toISOString();
+  const isGlobalRole = hasMinRole(role, 'president');
+  const canReview = hasMinRole(role, 'dept_head');
+
+  const baseSelect = 'id, title, deadline, assignee:users!assigned_to(name)';
+
+  const overdueQuery = (() => {
+    let q = supabase.from('tasks').select(baseSelect)
+      .neq('status', 'completed')
+      .lt('deadline', now)
+      .order('deadline', { ascending: true, nullsFirst: false })
+      .limit(6);
+    if (!isGlobalRole) q = q.eq('assigned_department', department);
+    return unwrap('todoOverdue', q);
+  })();
+
+  const reviewQuery = canReview
+    ? (() => {
+        let q = supabase.from('tasks').select(baseSelect)
+          .eq('status', 'review')
+          .order('updated_at', { ascending: false })
+          .limit(6);
+        if (!isGlobalRole) q = q.eq('assigned_department', department);
+        return unwrap('todoReview', q);
+      })()
+    : Promise.resolve([]);
+
+  const [overdueRows, reviewRows] = await Promise.all([overdueQuery, reviewQuery]);
+
+  const mapRow = (
+    row: (typeof overdueRows)[number],
+    kind: TodoTaskItem['kind'],
+  ): TodoTaskItem => ({
+    id: row.id,
+    title: row.title,
+    kind,
+    deadline: row.deadline,
+    assignee_name: row.assignee?.name ?? null,
+  });
+
+  return [
+    ...overdueRows.map((r) => mapRow(r, 'overdue')),
+    ...reviewRows.map((r) => mapRow(r, 'review')),
+  ].slice(0, 10);
 }
 
 // ========== 最近动态 ==========
@@ -95,60 +138,57 @@ export async function fetchRecentActivity(
   userId: string,
   department: string,
 ): Promise<ActivityItem[]> {
-  const [noticesRes, forumRes, submissionsRes] = await Promise.all([
-    // 最近公告
-    supabase
+  const [notices, forumPosts, submissions] = await Promise.all([
+    unwrap('recentNotices', supabase
       .from('notices')
       .select('id, title, created_at')
       .eq('department', department)
       .order('created_at', { ascending: false })
-      .limit(5),
-    // 最近论坛帖子
-    supabase
+      .limit(5)),
+    unwrap('recentForumPosts', supabase
       .from('forum_posts')
       .select('id, title, created_at')
       .or(`department.eq.${department},collaborating_departments.cs.{${department}}`)
       .order('created_at', { ascending: false })
-      .limit(5),
-    // 最近任务提交
-    supabase
+      .limit(5)),
+    unwrap('recentSubmissions', supabase
       .from('task_submissions')
       .select('submitted_at, task:tasks!inner(id, title)')
       .eq('user_id', userId)
       .order('submitted_at', { ascending: false })
-      .limit(5),
+      .limit(5)),
   ]);
 
   const items: ActivityItem[] = [];
 
-  for (const n of noticesRes.data || []) {
+  for (const n of notices) {
     items.push({
       type: 'notice',
-      title: n.title as string,
+      title: n.title,
       description: '发布了新公告',
-      time: n.created_at as string,
+      time: n.created_at,
       link: '/notices',
     });
   }
 
-  for (const p of forumRes.data || []) {
+  for (const p of forumPosts) {
     items.push({
       type: 'forum',
-      title: p.title as string,
+      title: p.title,
       description: '新帖子',
-      time: p.created_at as string,
+      time: p.created_at,
       link: '/forum',
     });
   }
 
-  for (const s of submissionsRes.data || []) {
+  for (const s of submissions) {
     const task = s.task as unknown as { title: string } | { title: string }[] | null;
     const taskTitle = Array.isArray(task) ? task[0]?.title : task?.title;
     items.push({
       type: 'submission',
       title: taskTitle ?? '未知任务',
       description: '你提交了任务成果',
-      time: s.submitted_at as string,
+      time: s.submitted_at,
       link: '/tasks',
     });
   }
@@ -159,7 +199,7 @@ export async function fetchRecentActivity(
   return items.slice(0, 10);
 }
 
-/** 获取最近提交的任务列表（统计卡片"进行中"点击时查看） */
+/** 获取待审核任务列表（统计卡片点击时查看） */
 export async function fetchDashboardReviewTasks(
   department: string,
   role: string,
@@ -174,12 +214,7 @@ export async function fetchDashboardReviewTasks(
     q = q.eq('assigned_department', department);
   }
 
-  const { data, error } = await q;
-  if (error) {
-    log.error('fetchDashboardReviewTasks 失败', error);
-    return [];
-  }
-  return (data || []) as { id: string; title: string; deadline: string | null }[];
+  return unwrap('dashboardReviewTasks', q);
 }
 
 // ========== 数据简报（Phase 6）==========
@@ -216,65 +251,33 @@ export async function fetchWeeklyBrief(
   const lastWeekEnd = now.subtract(1, 'week').endOf('isoWeek').toISOString();
 
   const isGlobalRole = hasMinRole(role, 'president');
-  const addDeptFilter = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
-    isGlobalRole ? q : q.eq('assigned_department', department);
 
-  const weekLabel = `${now.startOf('isoWeek').format('M/D')} - ${now.endOf('isoWeek').format('M/D')}`;
+  const countTasks = (label: string, extra: (q: TaskCountQuery) => TaskCountQuery) =>
+    unwrapCount(label, extra(tasksCountQuery(isGlobalRole ? null : department)));
 
-  // 并行：4 个 count + 1 个数据查询（用于 Top 部门统计）
-  const [
-    completedThisRes,
-    completedLastRes,
-    totalThisRes,
-    overdueThisRes,
-    topDeptRes,
-  ] = await Promise.all([
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('updated_at', weekStart).lte('updated_at', weekEnd);
-      q = addDeptFilter(q);
-      const { count } = await q;
-      return count ?? 0;
-    })(),
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('updated_at', lastWeekStart).lte('updated_at', lastWeekEnd);
-      q = addDeptFilter(q);
-      const { count } = await q;
-      return count ?? 0;
-    })(),
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .gte('created_at', weekStart).lte('created_at', weekEnd);
-      q = addDeptFilter(q);
-      const { count } = await q;
-      return count ?? 0;
-    })(),
-    (async () => {
-      let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
-        .neq('status', 'completed')
-        .lt('deadline', weekEnd);
-      q = addDeptFilter(q);
-      const { count } = await q;
-      return count ?? 0;
-    })(),
-    (async () => {
-      let q = supabase.from('tasks').select('assigned_department')
-        .eq('status', 'completed')
-        .gte('updated_at', weekStart).lte('updated_at', weekEnd);
-      q = addDeptFilter(q);
-      const { data } = await q;
-      return data || [];
-    })(),
-  ]);
+  const [completedThisWeek, completedLastWeek, totalThisWeek, overdueThisWeek, topDeptRows] =
+    await Promise.all([
+      countTasks('briefCompletedThis', (q) =>
+        q.eq('status', 'completed').gte('updated_at', weekStart).lte('updated_at', weekEnd)),
+      countTasks('briefCompletedLast', (q) =>
+        q.eq('status', 'completed').gte('updated_at', lastWeekStart).lte('updated_at', lastWeekEnd)),
+      countTasks('briefTotalThis', (q) =>
+        q.gte('created_at', weekStart).lte('created_at', weekEnd)),
+      countTasks('briefOverdue', (q) =>
+        q.neq('status', 'completed').lt('deadline', weekEnd)),
+      (() => {
+        let q = supabase.from('tasks').select('assigned_department')
+          .eq('status', 'completed')
+          .gte('updated_at', weekStart).lte('updated_at', weekEnd);
+        if (!isGlobalRole) q = q.eq('assigned_department', department);
+        return unwrap('briefTopDept', q);
+      })(),
+    ]);
 
   // 客户端 GROUP BY：计算本周最活跃部门
   const deptMap: Record<string, number> = {};
-  for (const row of topDeptRes) {
-    const d = (row as { assigned_department: string }).assigned_department;
-    deptMap[d] = (deptMap[d] || 0) + 1;
+  for (const row of topDeptRows) {
+    deptMap[row.assigned_department] = (deptMap[row.assigned_department] || 0) + 1;
   }
   let topDepartment: WeeklyBrief['topDepartment'] = null;
   let maxCount = 0;
@@ -286,11 +289,11 @@ export async function fetchWeeklyBrief(
   }
 
   return {
-    weekLabel,
-    completedThisWeek: completedThisRes,
-    completedLastWeek: completedLastRes,
-    totalThisWeek: totalThisRes,
-    overdueThisWeek: overdueThisRes,
+    weekLabel: `${now.startOf('isoWeek').format('M/D')} - ${now.endOf('isoWeek').format('M/D')}`,
+    completedThisWeek,
+    completedLastWeek,
+    totalThisWeek,
+    overdueThisWeek,
     topDepartment,
   };
 }
@@ -308,42 +311,35 @@ export async function fetchMonthlyReport(
   const monthLabel = now.format('YYYY年M月');
 
   const isGlobalRole = hasMinRole(role, 'president');
-  const addDeptFilter = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
-    isGlobalRole ? q : q.eq('assigned_department', department);
 
   // 并行：3 个数据查询
-  const [allTasksRes, completedRes, usersRes] = await Promise.all([
-    // 本月全部任务
-    (async () => {
+  const [allTasks, completedTasks, users] = await Promise.all([
+    (() => {
       let q = supabase.from('tasks')
         .select('id, assigned_department, assigned_to, status, deadline')
         .gte('created_at', monthStart).lte('created_at', monthEnd);
-      q = addDeptFilter(q);
-      const { data } = await q;
-      return (data || []) as { id: string; assigned_department: string; assigned_to: string | null; status: string; deadline: string | null }[];
+      if (!isGlobalRole) q = q.eq('assigned_department', department);
+      return unwrap('reportAllTasks', q);
     })(),
-    // 本月完成任务（按执行人分组用于排行榜）
-    (async () => {
+    (() => {
       let q = supabase.from('tasks')
         .select('id, assigned_to')
         .eq('status', 'completed')
         .gte('updated_at', monthStart).lte('updated_at', monthEnd);
-      q = addDeptFilter(q);
-      const { data } = await q;
-      return (data || []) as { id: string; assigned_to: string | null }[];
+      if (!isGlobalRole) q = q.eq('assigned_department', department);
+      return unwrap('reportCompleted', q);
     })(),
-    // 用户名列表（用于排行榜展示）
-    supabase.from('users').select('id, name').neq('role', 'removed'),
+    unwrap('reportUsers', supabase.from('users').select('id, name').neq('role', 'removed')),
   ]);
 
   // 客户端 GROUP BY：按部门
   const deptStats: Record<string, { completed: number; total: number; overdue: number }> = {};
-  for (const t of allTasksRes) {
-    const d = t.assigned_department;
-    if (!deptStats[d]) deptStats[d] = { completed: 0, total: 0, overdue: 0 };
-    deptStats[d].total++;
-    if (t.status === 'completed') deptStats[d].completed++;
-    if (t.status !== 'completed' && t.deadline && dayjs(t.deadline).isBefore(now)) deptStats[d].overdue++;
+  for (const t of allTasks) {
+    if (!deptStats[t.assigned_department]) deptStats[t.assigned_department] = { completed: 0, total: 0, overdue: 0 };
+    const s = deptStats[t.assigned_department];
+    s.total++;
+    if (t.status === 'completed') s.completed++;
+    if (t.status !== 'completed' && t.deadline && dayjs(t.deadline).isBefore(now)) s.overdue++;
   }
   // 按部门统计已完成 + 总数
   const byDepartment = Object.entries(deptStats).map(([dept, s]) => ({
@@ -356,15 +352,14 @@ export async function fetchMonthlyReport(
 
   // 客户端 GROUP BY：按人（仅已完成任务）
   const personMap: Record<string, number> = {};
-  for (const t of completedRes) {
+  for (const t of completedTasks) {
     if (t.assigned_to) {
       personMap[t.assigned_to] = (personMap[t.assigned_to] || 0) + 1;
     }
   }
   const userNameMap: Record<string, string> = {};
-  for (const u of (usersRes.data || [])) {
-    const user = u as { id: string; name: string };
-    userNameMap[user.id] = user.name;
+  for (const u of users) {
+    userNameMap[u.id] = u.name;
   }
   const byPerson = Object.entries(personMap)
     .map(([userId, completed]) => ({
@@ -375,11 +370,11 @@ export async function fetchMonthlyReport(
     .sort((a, b) => b.completed - a.completed)
     .slice(0, 10);
 
-  const totalCompleted = completedRes.length;
-  const totalOverdue = allTasksRes.filter(
+  const totalCompleted = completedTasks.length;
+  const totalOverdue = allTasks.filter(
     t => t.status !== 'completed' && t.deadline && dayjs(t.deadline).isBefore(now),
   ).length;
-  const totalTasks = allTasksRes.length;
+  const totalTasks = allTasks.length;
 
   return {
     monthLabel,

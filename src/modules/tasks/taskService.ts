@@ -2,6 +2,7 @@ import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
 import { hasMinRole } from '@/utils/helpers';
 import { createNotification } from '@/modules/notification/notificationService';
+import { unwrap, unwrapCount } from '@/lib/sb';
 import type { Attachment } from '@/components/FileUpload';
 import type { Database } from '@/types/database';
 
@@ -89,7 +90,7 @@ export interface TemplateStep {
 export async function fetchTasks(userId: string, department: string, role: string): Promise<Task[]> {
   let query = supabase
     .from('tasks')
-    .select('*, creator:created_by(name), assignee:assigned_to(name)')
+    .select('*, creator:users!created_by(name), assignee:users!assigned_to(name)')
     .order('created_at', { ascending: false });
 
   // volunteer: 只看指派给自己的或本部门的任务
@@ -101,35 +102,27 @@ export async function fetchTasks(userId: string, department: string, role: strin
   }
   // president / teacher / developer: 看全部，不加过滤
 
-  const { data, error } = await query;
+  const rows = await unwrap('fetchTasks', query);
 
-  if (error) {
-    log.error('fetchTasks 查询失败', error);
-    return [];
-  }
-
-  return (data || []).map((t: Record<string, unknown>) => ({
+  return rows.map((t) => ({
     ...t,
-    creator_name: (t.creator as { name: string } | null)?.name ?? '未知',
-    assignee_name: (t.assignee as { name: string } | null)?.name ?? undefined,
+    creator_name: t.creator?.name ?? '未知',
+    assignee_name: t.assignee?.name ?? undefined,
   })) as unknown as Task[];
 }
 
 /** 获取单个任务详情 */
 export async function fetchTaskDetail(taskId: string): Promise<Task | null> {
-  const { data, error } = await supabase
+  const t = await unwrap('fetchTaskDetail', supabase
     .from('tasks')
-    .select('*, creator:created_by(name), assignee:assigned_to(name)')
+    .select('*, creator:users!created_by(name), assignee:users!assigned_to(name)')
     .eq('id', taskId)
-    .single();
+    .single());
 
-  if (error || !data) return null;
-
-  const t = data as Record<string, unknown>;
   return {
     ...t,
-    creator_name: (t.creator as { name: string } | null)?.name ?? '未知',
-    assignee_name: (t.assignee as { name: string } | null)?.name ?? undefined,
+    creator_name: t.creator?.name ?? '未知',
+    assignee_name: t.assignee?.name ?? undefined,
   } as unknown as Task;
 }
 
@@ -251,17 +244,15 @@ export async function submitTask(
 
 /** 获取任务提交记录 */
 export async function fetchTaskSubmissions(taskId: string): Promise<TaskSubmission[]> {
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchTaskSubmissions', supabase
     .from('task_submissions')
     .select('*, submitter:user_id(name)')
     .eq('task_id', taskId)
-    .order('submitted_at', { ascending: false });
+    .order('submitted_at', { ascending: false }));
 
-  if (error) return [];
-
-  return (data || []).map((s: Record<string, unknown>) => ({
+  return rows.map((s) => ({
     ...s,
-    submitter_name: (s.submitter as { name: string } | null)?.name ?? '未知',
+    submitter_name: s.submitter?.name ?? '未知',
   })) as unknown as TaskSubmission[];
 }
 
@@ -354,17 +345,11 @@ export function subscribeToTasks(
 
 /** 获取本部门任务模板列表 */
 export async function fetchTemplates(department: string): Promise<TaskTemplate[]> {
-  const { data, error } = await supabase
+  return (await unwrap('fetchTemplates', supabase
     .from('task_templates')
     .select('*')
     .eq('department', department)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    log.error('fetchTemplates 查询失败', error);
-    return [];
-  }
-  return (data || []) as TaskTemplate[];
+    .order('created_at', { ascending: false }))) as TaskTemplate[];
 }
 
 /** 创建任务模板 */
@@ -435,36 +420,25 @@ export async function updateHandoverNote(taskId: string, note: string): Promise<
 
 /** 获取关联到某任务的通知 */
 export async function fetchLinkedNotices(taskId: string): Promise<LinkedNotice[]> {
-  const { data, error } = await supabase
+  return (await unwrap('fetchLinkedNotices', supabase
     .from('notices')
     .select('id, title, type')
-    .contains('linked_tasks', [taskId]);
-
-  if (error) {
-    log.error('fetchLinkedNotices 查询失败', error);
-    return [];
-  }
-  return (data || []) as LinkedNotice[];
+    .contains('linked_tasks', [taskId]))) as LinkedNotice[];
 }
 
 // ========== 任务里程碑 CRUD ==========
 
 /** 获取任务的里程碑列表 */
 export async function fetchMilestones(taskId: string): Promise<TaskMilestone[]> {
-  const { data, error } = await supabase
+  const rows = await unwrap('fetchMilestones', supabase
     .from('task_milestones')
     .select('*, completer:completed_by(name)')
     .eq('task_id', taskId)
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true }));
 
-  if (error) {
-    log.error('fetchMilestones 查询失败', error);
-    return [];
-  }
-
-  return (data || []).map((m: Record<string, unknown>) => ({
+  return rows.map((m) => ({
     ...m,
-    completer_name: (m.completer as { name: string } | null)?.name ?? undefined,
+    completer_name: m.completer?.name ?? undefined,
   })) as unknown as TaskMilestone[];
 }
 
@@ -532,12 +506,10 @@ export async function deleteMilestone(id: string): Promise<boolean> {
 
 /** 获取某任务的逾期里程碑数（用于任务卡片 Badge） */
 export async function fetchTaskOverdueMilestones(taskId: string): Promise<number> {
-  const { count } = await supabase
+  return unwrapCount('fetchTaskOverdueMilestones', supabase
     .from('task_milestones')
     .select('id', { count: 'exact', head: true })
     .eq('task_id', taskId)
     .eq('status', 'pending')
-    .lt('deadline', new Date().toISOString());
-
-  return count ?? 0;
+    .lt('deadline', new Date().toISOString()));
 }

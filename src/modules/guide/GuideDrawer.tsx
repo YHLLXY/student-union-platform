@@ -61,10 +61,15 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
 
   const loadGuides = useCallback(async () => {
     setLoading(true);
-    await seedDefaultGuides();
-    const data = await fetchGuides(activeTab);
-    setGuides(data);
-    setLoading(false);
+    try {
+      await seedDefaultGuides();
+      const data = await fetchGuides(activeTab);
+      setGuides(data);
+    } catch {
+      message.error('指南加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab]);
 
   useEffect(() => {

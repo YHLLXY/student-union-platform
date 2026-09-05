@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, Tag, Button, Tabs, Modal, Empty, message, Grid } from 'antd';
 import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
@@ -14,24 +15,31 @@ import styles from './tickets.module.css';
 export default function TicketList() {
   const user = useAuth();
   const { md } = Grid.useBreakpoint();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('available');
-  const [grabbedIds, setGrabbedIds] = useState<Set<string>>(new Set());
 
-  const loadTickets = useCallback(async () => {
-    const [data, ids] = await Promise.all([
-      fetchTickets(),
-      fetchMyGrabbedIds(user.id),
-    ]);
-    setTickets(data);
-    setGrabbedIds(ids);
-    setLoading(false);
-  }, [user.id]);
+  // 票务列表 + 已抢 ID 一次拉齐
+  const ticketsQuery = useQuery({
+    queryKey: ['tickets', user.id],
+    queryFn: async () => {
+      const [data, ids] = await Promise.all([
+        fetchTickets(),
+        fetchMyGrabbedIds(user.id),
+      ]);
+      return { tickets: data, grabbedIds: ids };
+    },
+  });
 
+  const tickets = ticketsQuery.data?.tickets ?? [];
+  const grabbedIds = ticketsQuery.data?.grabbedIds ?? new Set<string>();
+
+  const loadTickets = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['tickets'] });
+  }, [queryClient]);
+
+  // Realtime：票务变更（新票/他人抢票）→ 刷新剩余数
   useEffect(() => {
-    loadTickets();
     const unsubscribe = subscribeToTickets(loadTickets);
     return unsubscribe;
   }, [loadTickets]);
@@ -59,10 +67,19 @@ export default function TicketList() {
     {
       key: 'available',
       label: '可抢票务',
-      children: loading ? (
+      children: ticketsQuery.isPending ? (
         <CardStreamSkeleton />
+      ) : ticketsQuery.isError ? (
+        <div style={{ paddingTop: 40 }}>
+          <Empty
+            description="票务加载失败，请重试"
+            style={{ padding: 24 }}
+          >
+            <Button type="primary" onClick={() => ticketsQuery.refetch()}>重新加载</Button>
+          </Empty>
+        </div>
       ) : tickets.length === 0 ? (
-        <Empty description="暂无票务" />
+        <Empty description="暂无可抢票务" />
       ) : (
         <div className={styles.ticketGrid}>
           {tickets.map((ticket, i) => {
@@ -119,7 +136,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
       label: '我的票券',
       children: <MyTickets />,
     },
-  ], [loading, tickets, grabbedIds, handleGrab]);
+  ], [ticketsQuery, tickets, grabbedIds, handleGrab]);
 
   return (
     <div>
