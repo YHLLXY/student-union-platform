@@ -1,7 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { LoginPage, getCurrentUser } from '@/modules/auth';
 import type { UserProfile } from '@/modules/auth';
+import supabase from '@/supabaseClient';
 import { AuthContext } from '@/components/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -28,6 +30,7 @@ function VersionNotifier() {
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     getCurrentUser()
@@ -37,6 +40,19 @@ export default function App() {
         setUser(null);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  // 会话监听：token 被撤销/过期且无法刷新时，收敛回登录页而非留僵尸页面
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        queryClient.clear();
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
