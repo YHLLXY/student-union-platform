@@ -11,6 +11,8 @@
 ![PWA](https://img.shields.io/badge/PWA-可安装_·_离线可用-5a0fc8?logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+**在线访问**：[https://yhllxy.github.io/student-union-platform/](https://yhllxy.github.io/student-union-platform/)
+
 ---
 
 ## 目录
@@ -220,7 +222,7 @@ npm run preview   # 本地预览生产构建
 
 ## 部署
 
-项目通过 GitHub Actions 自动部署到 **GitHub Pages**（工作流：[.github/workflows/deploy.yml](.github/workflows/deploy.yml)）：
+项目通过 GitHub Actions 自动部署到 **GitHub Pages**（工作流：[.github/workflows/deploy.yml](.github/workflows/deploy.yml)），线上地址：**<https://yhllxy.github.io/student-union-platform/>**：
 
 1. push 到 `master` 分支触发；
 2. `npm ci && npm run build`（Supabase 密钥从仓库 Secrets 注入，需配置 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`）；
