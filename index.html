@@ -11,7 +11,20 @@
 
     <!-- 主题色（亮色 + 暗色） -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1a3a5c" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141414" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101414" />
+
+    <!-- 首帧主题预设：先于 CSS 读 localStorage，避免暗色用户白闪 -->
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem('theme-mode');
+          var dark = m === 'dark' || (m !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
 
     <!-- iOS Safari 全屏 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

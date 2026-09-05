@@ -17,6 +17,8 @@ import {
   MenuOutlined,
   BookOutlined,
   SearchOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { signOut } from '@/modules/auth';
@@ -26,6 +28,7 @@ import { hasMinRole, getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import FeedbackModal from './FeedbackModal';
 import PwaInstallButton from './PwaInstallButton';
 import { trackEvent } from '@/utils/analytics';
+import { useThemeMode } from '@/theme/ThemeModeProvider';
 import { GuideDrawer } from '@/modules/guide';
 import { NotificationBell } from '@/modules/notification';
 import {
@@ -57,6 +60,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { token } = theme.useToken();
   const user = useAuth();
   const queryClient = useQueryClient();
+  const { mode, resolvedDark, setMode } = useThemeMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -151,6 +155,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     window.location.reload();
   };
 
+  const themeLabel = { light: '☀️ 亮色', dark: '🌙 暗色', system: '💻 跟随系统' } as const;
   const userMenuItems: MenuProps['items'] = [
     {
       key: 'info',
@@ -159,6 +164,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
       style: { fontSize: 12, color: token.colorTextTertiary },
     },
     { type: 'divider' },
+    {
+      key: 'theme',
+      icon: resolvedDark ? <MoonOutlined /> : <SunOutlined />,
+      label: `主题：${themeLabel[mode]}`,
+      children: [
+        { key: 'theme-light', label: themeLabel.light, onClick: () => setMode('light') },
+        { key: 'theme-dark', label: themeLabel.dark, onClick: () => setMode('dark') },
+        { key: 'theme-system', label: themeLabel.system, onClick: () => setMode('system') },
+      ],
+    },
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -190,6 +205,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           />
         )}
         <div className={styles.headerRight}>
+          {md && (
+            <Button
+              type="text"
+              icon={resolvedDark ? <SunOutlined /> : <MoonOutlined />}
+              onClick={() => setMode(resolvedDark ? 'light' : 'dark')}
+              style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16 }}
+              title={resolvedDark ? '切换亮色模式' : '切换暗色模式'}
+            />
+          )}
           {md && (
             <Button
               type="text"

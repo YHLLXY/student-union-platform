@@ -97,3 +97,60 @@
   --mobile-content-padding: 16px;
   --mobile-card-gap: 12px;
 }
+
+/* ============================================================
+   暗色主题覆盖（[data-theme='dark'] 由 ThemeModeProvider 写入
+   documentElement；index.html 头部内联脚本先行设置避免首帧闪烁）
+   与 antd darkAlgorithm 的 token 保持语义一致
+   ============================================================ */
+[data-theme='dark'] {
+  /* ---- 品牌色（主色提亮保证深底对比度） ---- */
+  --color-primary: #2f6db3;
+  --color-primary-dark: #10263f;
+  --color-primary-light: #1a3a5c;
+  --color-info: #3498db;
+  --color-info-light: #69c0ff;
+  --color-success: #2ecc71;
+  --color-warning: #f39c12;
+  --color-error: #e74c3c;
+  --color-purple: #9b59b6;
+
+  /* ---- 文本 ---- */
+  --text-primary: #e8ecf1;
+  --text-secondary: #a0aab4;
+  --text-tertiary: #7d8791;
+  --text-disabled: #5a636d;
+
+  /* ---- 背景 ---- */
+  --bg-page: #101418;
+  --bg-card: #171c22;
+  --bg-card-hover: #1c2229;
+  --bg-subtle: #1a2027;
+
+  /* ---- 语义背景 ---- */
+  --bg-info: #14222e;
+  --bg-info-hover: #172a38;
+  --bg-warning: #2a2113;
+  --bg-warning-hover: #322716;
+  --bg-error: #2c1715;
+  --bg-selected: #1c2f42;
+  --bg-highlight: #3a3320;
+  --bg-active: #1f262e;
+
+  /* ---- 边框 ---- */
+  --border-default: #2a323c;
+  --border-light: #222932;
+  --border-input: #3a4450;
+
+  /* ---- 阴影（深底阴影加深） ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* ---- 渐变 ---- */
+  --header-gradient: linear-gradient(135deg, #0a1219 0%, #12222e 50%, #16323f 100%);
+  --login-gradient: linear-gradient(135deg, #0a1219 0%, #12222e 40%, #16323f 100%);
+  --accent-gradient: linear-gradient(135deg, #16324f 0%, #2b6cb0 100%);
+}

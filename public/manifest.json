@@ -7,7 +7,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f0f2f5",
-  "theme_color": "#1677ff",
+  "theme_color": "#1a3a5c",
   "icons": [
     {
       "src": "/student-union-platform/icon-192.svg",
