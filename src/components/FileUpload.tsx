@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Upload, message } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined, FileOutlined } from '@ant-design/icons';
 import type { UploadProps, UploadFile } from 'antd';
 import supabase from '@/supabaseClient';
-import { formatFileSize as formatSize, getFileIcon } from '@/utils/helpers';
+import { formatFileSize as formatSize, getFileIconColor } from '@/utils/helpers';
 import styles from './file-upload.module.css';
 
 const { Dragger } = Upload;
@@ -157,7 +157,7 @@ export default function FileUpload({ module, value = [], onChange, maxCount = 5 
           return (
             <div className={styles.uploadFileItem}>
               <span className={styles.fileIcon}>
-                {getFileIcon(att?.type ?? file.type ?? '')}
+                <FileOutlined style={{ color: getFileIconColor(att?.type ?? file.type ?? '') }} />
               </span>
               <span className={styles.fileName}>{file.name}</span>
               {att?.size !== undefined && (

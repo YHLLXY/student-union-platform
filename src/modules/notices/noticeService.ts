@@ -63,7 +63,7 @@ export async function createNotice(notice: {
     if (userIds.length > 0) {
       createBatchNotifications(userIds, {
         type: 'new_notice',
-        title: '📢 新部门公告',
+        title: '新部门公告',
         content: `本部门发布了新公告「${created.title}」`,
         relatedLink: '/notices',
       }).catch(() => {});

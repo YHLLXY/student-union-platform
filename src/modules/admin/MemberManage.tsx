@@ -138,7 +138,7 @@ export default function MemberManage() {
   const memberContent = (
     <div>
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>👥 成员管理</div>
+        <div className={styles.sectionTitle}>成员管理</div>
         <Table
           dataSource={members}
           columns={columns}
@@ -156,14 +156,14 @@ export default function MemberManage() {
 
   return (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>⚙️ 权限管理</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>权限管理</h2>
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
-          { key: 'members', label: '👥 成员管理', children: memberContent },
-          { key: 'overview', label: '📊 工作看板', children: <WorkOverview /> },
-          ...(adminAccess ? [{ key: 'analytics', label: '📈 数据看板', children: <AnalyticsDashboard /> }] : []),
+          { key: 'members', label: '成员管理', children: memberContent },
+          { key: 'overview', label: '工作看板', children: <WorkOverview /> },
+          ...(adminAccess ? [{ key: 'analytics', label: '数据看板', children: <AnalyticsDashboard /> }] : []),
         ]}
       />
     </div>

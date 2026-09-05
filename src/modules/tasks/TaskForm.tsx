@@ -89,7 +89,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>📝 发布任务</h3>
+      <h3 style={{ marginBottom: 20 }}>发布任务</h3>
       <Form
         form={form}
         layout="vertical"
@@ -100,7 +100,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
         }}
       >
         {templates.length > 0 && (
-          <Form.Item label="📋 从模板创建（可选）">
+          <Form.Item label="从模板创建（可选）">
             <Select
               allowClear
               placeholder="选择已有模板自动填入内容"
@@ -121,9 +121,9 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
         <Form.Item name="priority" label="优先级">
           <Select
             options={[
-              { value: 'normal', label: '🔵 普通' },
-              { value: 'important', label: '🟠 重要' },
-              { value: 'urgent', label: '🔴 紧急' },
+              { value: 'normal', label: '普通' },
+              { value: 'important', label: '重要' },
+              { value: 'urgent', label: '紧急' },
             ]}
           />
         </Form.Item>
@@ -132,7 +132,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
           <Select options={deptOptions} />
         </Form.Item>
 
-        <Form.Item name="collaborating_departments" label="🤝 关联部门（可选）">
+        <Form.Item name="collaborating_departments" label="关联部门（可选）">
           <Select
             mode="multiple"
             placeholder="选择需要配合的部门"
@@ -142,7 +142,7 @@ export default function TaskForm({ onSuccess, onClose }: TaskFormProps) {
         </Form.Item>
 
         <Form.Item name="enableMilestones" valuePropName="checked">
-          <Checkbox>✅ 启用里程碑模式，将模板步骤转为可追踪的检查点</Checkbox>
+          <Checkbox>启用里程碑模式，将模板步骤转为可追踪的检查点</Checkbox>
         </Form.Item>
 
         <Form.Item name="deadline" label="截止时间">

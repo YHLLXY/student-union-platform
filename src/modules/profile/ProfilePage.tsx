@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>👤 个人中心</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>个人中心</h2>
 
       {/* 统计面板 */}
       <div className={styles.statsRow}>
@@ -71,7 +71,7 @@ export default function ProfilePage() {
           {milestoneSummary.milestoneOverdue > 0 && (
             <Card className={styles.statCard}>
               <Statistic
-                title="⚠️ 里程碑逾期"
+                title="里程碑逾期"
                 value={milestoneSummary.milestoneOverdue}
                 styles={{ content: { color: token.colorError } }}
               />
@@ -106,12 +106,12 @@ export default function ProfilePage() {
       </Card>
 
       {/* 年度任务热力图 */}
-      <Card title="📊 年度任务热力图" style={{ marginBottom: 16 }}>
+      <Card title="年度任务热力图" style={{ marginBottom: 16 }}>
         <TaskCalendar />
       </Card>
 
       {/* 个人信息 */}
-      <Card title="📋 个人信息" className={styles.profileCard}>
+      <Card title="个人信息" className={styles.profileCard}>
         <Descriptions column={2} bordered size="small">
           <Descriptions.Item label="姓名">{user.name}</Descriptions.Item>
           <Descriptions.Item label="学号">{user.student_id}</Descriptions.Item>

@@ -49,7 +49,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
     <Modal
       open={open}
       onCancel={onClose}
-      title="✏️ 编辑部门新人指南"
+      title="编辑部门新人指南"
       width={md ? 600 : undefined}
       onOk={handleSubmit}
       confirmLoading={loading}
@@ -68,7 +68,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
         }}
       >
         <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
-          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>📌 基本信息</legend>
+          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>基本信息</legend>
           <Form.Item name="leader" label="部门负责人" style={{ marginBottom: 8 }}>
             <Input placeholder="例如：张三" />
           </Form.Item>
@@ -84,7 +84,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
         </fieldset>
 
         <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 16 }}>
-          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>📋 常用模板</legend>
+          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>常用模板</legend>
           <Form.List name="templates">
             {(fields, { add, remove }) => (
               <>
@@ -108,7 +108,7 @@ export default function DeptGuideForm({ open, department, currentGuide, onClose,
         </fieldset>
 
         <fieldset style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: '0 12px 12px', marginBottom: 0 }}>
-          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>❓ 常见问题</legend>
+          <legend style={{ fontWeight: 500, fontSize: 14, marginBottom: 0 }}>常见问题</legend>
           <Form.List name="faqs">
             {(fields, { add, remove }) => (
               <>

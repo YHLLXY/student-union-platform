@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, Tag, Button, Tabs, Modal, Empty, message, Grid } from 'antd';
-import { PlusOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, ClockCircleOutlined, GiftOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
 import { hasMinRole, formatDateTime } from '@/utils/helpers';
@@ -94,14 +94,14 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
                 style={{ animation: `fadeInUp var(--dur-slow) var(--ease-enter) ${Math.min(i * 0.06, 0.42)}s backwards` }}
                 className={styles.ticketCard}
               >
-                <div className={styles.cardCover}>🎫</div>
+                <div className={styles.cardCover}><GiftOutlined /></div>
                 <div className={styles.cardBody}>
                   <div className={styles.cardTitle}>{ticket.title}</div>
                   <div className={styles.cardMeta}>
-                    <span>🎬 活动：{formatDateTime(ticket.event_time)}</span>
-                    <span>🕐 开抢：{formatDateTime(ticket.open_time)}</span>
-                    <span>👤 发布者：{ticket.creator_name}</span>
-                    <span>📦 每人限抢 {ticket.per_user_limit} 张</span>
+                    <span>活动：{formatDateTime(ticket.event_time)}</span>
+                    <span>开抢：{formatDateTime(ticket.open_time)}</span>
+                    <span>发布者：{ticket.creator_name}</span>
+                    <span>每人限抢 {ticket.per_user_limit} 张</span>
                   </div>
                 </div>
                 <div className={styles.cardFooter}>
@@ -141,7 +141,7 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
   return (
     <div>
       <div className={styles.pageHeader}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>🎫 活动抢票</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>活动抢票</h2>
         {canCreate && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
             发布票务

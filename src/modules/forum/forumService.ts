@@ -176,7 +176,7 @@ export async function createReply(postId: string, userId: string, content: strin
     createNotification({
       userId: postData.created_by,
       type: 'forum_reply',
-      title: '💬 论坛新回复',
+      title: '论坛新回复',
       content: `你的帖子「${postData.title}」有新回复`,
       relatedLink: '/forum',
     }).catch(() => {});

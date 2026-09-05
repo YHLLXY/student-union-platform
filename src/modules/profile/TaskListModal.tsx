@@ -79,7 +79,7 @@ export default function TaskListModal({ open, initialTab, userId, onClose }: Tas
       onCancel={onClose}
       footer={null}
       width={md ? 640 : undefined}
-      title="📋 我的任务"
+      title="我的任务"
       destroyOnHidden
     >
       <Tabs

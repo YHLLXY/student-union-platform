@@ -193,7 +193,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
           <FileList attachments={task.attachments} />
         </Descriptions.Item>
         {task.handover_note && (
-          <Descriptions.Item label="📝 交接备注" span={2}>
+          <Descriptions.Item label="交接备注" span={2}>
             <div style={{ whiteSpace: 'pre-wrap', background: token.colorWarningBg, padding: 8, borderRadius: 4 }}>
               {task.handover_note}
             </div>
@@ -204,7 +204,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 步骤清单交互式 Checklist */}
       {steps.length > 0 && (
         <div className={styles.stepChecklist}>
-          <p style={{ fontWeight: 500, marginBottom: 8 }}>✅ 步骤清单</p>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>步骤清单</p>
           {steps.map((step, i) => (
             <div key={i} className={styles.stepItem}>
               <Checkbox checked={step.checked} style={{ pointerEvents: 'none' }}>
@@ -229,7 +229,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 来源公告 */}
       {task.linked_notice_id && (
         <div className={styles.linkedSection}>
-          <p style={{ fontWeight: 500, marginBottom: 8 }}>📋 来源公告</p>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>来源公告</p>
           <Tag color="blue">从公告创建</Tag>
         </div>
       )}
@@ -237,7 +237,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 关联公告 */}
       {linkedNotices.length > 0 && (
         <div className={styles.linkedSection}>
-          <p style={{ fontWeight: 500, marginBottom: 8 }}>📢 被以下公告关联</p>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>被以下公告关联</p>
           {linkedNotices.map((n) => (
             <Tag key={n.id} color="orange" style={{ cursor: 'pointer', marginBottom: 4 }}>
               {NOTICE_TYPES[n.type] ?? '通知'}：{n.title}
@@ -249,7 +249,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 提交完成区 */}
       {canSubmit && (
         <div style={{ marginBottom: 20, padding: '16px', background: token.colorFillQuaternary, borderRadius: 8 }}>
-          <p style={{ fontWeight: 500, marginBottom: 8 }}>📤 提交完成</p>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>提交完成</p>
           <TextArea
             rows={3}
             value={note}
@@ -259,7 +259,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
             style={{ marginBottom: 8 }}
           />
           <div className={styles.handoverHint}>
-            💡 填写交接备注，方便后继者了解注意事项
+            填写交接备注，方便后继者了解注意事项
           </div>
           <TextArea
             rows={2}
@@ -278,7 +278,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       {/* 已完成任务可追加交接备注 */}
       {task.status === 'completed' && user.id === (task.assigned_to || task.created_by) && (
         <div style={{ marginBottom: 20, padding: '16px', background: token.colorSuccessBg, borderRadius: 8 }}>
-          <p style={{ fontWeight: 500, marginBottom: 8 }}>📝 交接备注</p>
+          <p style={{ fontWeight: 500, marginBottom: 8 }}>交接备注</p>
           <TextArea
             rows={3}
             value={handoverNote}
@@ -292,7 +292,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
       )}
 
       {/* 审核记录 */}
-      <p style={{ fontWeight: 500, marginBottom: 8 }}>📋 提交记录</p>
+      <p style={{ fontWeight: 500, marginBottom: 8 }}>提交记录</p>
       {submissions.length === 0 ? (
         <p style={{ color: token.colorTextTertiary }}>暂无提交记录</p>
       ) : (

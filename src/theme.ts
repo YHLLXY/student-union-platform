@@ -1,3 +1,4 @@
+import { theme as antdTheme } from 'antd';
 import type { ThemeConfig } from 'antd';
 
 /* 设计令牌唯一来源（TS 侧）
@@ -6,7 +7,10 @@ import type { ThemeConfig } from 'antd';
 const BRAND_FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif";
 
-const theme: ThemeConfig = {
+/* 暗色下的品牌主色：#1a3a5c 在深底上对比度不足，提亮一档 */
+const PRIMARY_DARK_MODE = '#2f6db3';
+
+const lightTheme: ThemeConfig = {
   token: {
     colorPrimary: '#1a3a5c',
     colorSuccess: '#27ae60',
@@ -37,4 +41,41 @@ const theme: ThemeConfig = {
   },
 };
 
-export default theme;
+const darkTheme: ThemeConfig = {
+  algorithm: antdTheme.darkAlgorithm,
+  token: {
+    colorPrimary: PRIMARY_DARK_MODE,
+    colorSuccess: '#2ecc71',
+    colorWarning: '#f39c12',
+    colorError: '#e74c3c',
+    colorInfo: '#3498db',
+    colorBgLayout: '#101418',
+    colorBgContainer: '#171c22',
+    colorText: '#e8ecf1',
+    colorTextSecondary: '#a0aab4',
+    colorTextTertiary: '#7d8791',
+    colorTextQuaternary: '#5a636d',
+    colorBorder: '#3a4450',
+    colorBorderSecondary: '#222932',
+    borderRadius: 8,
+    fontFamily: BRAND_FONT,
+  },
+  components: {
+    Layout: {
+      headerBg: '#0f151b',
+      siderBg: '#171c22',
+      headerHeight: 56,
+    },
+    Menu: {
+      itemSelectedBg: '#1c2f42',
+      itemSelectedColor: '#6fa8dc',
+    },
+  },
+};
+
+/** 按明暗模式构建 antd 主题配置 */
+export function buildTheme(dark: boolean): ThemeConfig {
+  return dark ? darkTheme : lightTheme;
+}
+
+export default lightTheme;

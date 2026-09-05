@@ -11,4 +11,4 @@
 
 export { formatDate, formatDateTime } from './dateUtils';
 export { hasMinRole, isAdmin, getDepartmentLabel, getRoleLabel } from './roleUtils';
-export { formatFileSize, getFileIcon } from './fileUtils';
+export { formatFileSize, getFileIconColor } from './fileUtils';

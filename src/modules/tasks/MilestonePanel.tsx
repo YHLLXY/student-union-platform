@@ -70,7 +70,7 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
   if (milestones.length === 0) {
     return (
       <div className={styles.milestonePanel}>
-        <p style={{ fontWeight: 500, marginBottom: 8 }}>✅ 里程碑进度</p>
+        <p style={{ fontWeight: 500, marginBottom: 8 }}>里程碑进度</p>
         <p style={{ color: token.colorTextTertiary, fontSize: 13 }}>暂无里程碑</p>
       </div>
     );
@@ -89,7 +89,7 @@ export default function MilestonePanel({ taskId, userId, userRole, readonly }: M
   return (
     <div className={styles.milestonePanel}>
       <div className={styles.milestoneHeader}>
-        <p style={{ fontWeight: 500, margin: 0 }}>✅ 里程碑进度</p>
+        <p style={{ fontWeight: 500, margin: 0 }}>里程碑进度</p>
         <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{completed}/{milestones.length} 完成</span>
       </div>
       <Progress percent={progressPercent} size="small" style={{ marginBottom: 12 }} />

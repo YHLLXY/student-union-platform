@@ -29,7 +29,7 @@ export default function ChangePassword({ onClose }: ChangePasswordProps) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>🔒 修改密码</h3>
+      <h3 style={{ marginBottom: 20 }}>修改密码</h3>
       <Form layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="password"

@@ -50,9 +50,7 @@ const personColumns: ColumnsType<PersonRow> = [
   {
     title: '排名', dataIndex: 'rank', key: 'rank', width: 60,
     render: (_: unknown, row: PersonRow) => {
-      if (row.rank === 1) return <TrophyOutlined style={{ color: PODIUM_COLORS[0], fontSize: 16 }} />;
-      if (row.rank === 2) return <span style={{ color: PODIUM_COLORS[1], fontWeight: 600 }}>🥈</span>;
-      if (row.rank === 3) return <span style={{ color: PODIUM_COLORS[2], fontWeight: 600 }}>🥉</span>;
+      if (row.rank <= 3) return <TrophyOutlined style={{ color: PODIUM_COLORS[row.rank - 1], fontSize: 16 }} />;
       return row.rank;
     },
   },
@@ -93,7 +91,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
       onCancel={onClose}
       footer={null}
       width={md ? 720 : undefined}
-      title="📊 月度工作简报"
+      title="月度工作简报"
       destroyOnHidden
     >
       {loading ? (
@@ -129,7 +127,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
           </Descriptions>
 
           {/* 按部门 */}
-          <h4 className={styles.reportSectionTitle}>📋 按部门统计</h4>
+          <h4 className={styles.reportSectionTitle}>按部门统计</h4>
           {deptRows.length === 0 ? (
             <div className={styles.reportEmpty}>本月暂无部门数据</div>
           ) : (
@@ -144,7 +142,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
           )}
 
           {/* 按人排行榜 */}
-          <h4 className={styles.reportSectionTitle}>🏆 月度完成榜 Top 10</h4>
+          <h4 className={styles.reportSectionTitle}>月度完成榜 Top 10</h4>
           {personRows.length === 0 ? (
             <div className={styles.reportEmpty}>本月暂无个人数据</div>
           ) : (

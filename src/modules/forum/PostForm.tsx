@@ -22,7 +22,7 @@ const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: 
 
 const KNOWLEDGE_TEMPLATES: Record<string, { label: string; fields: { name: string; label: string; type: 'text' | 'textarea' | 'date' | 'number' | 'tags'; required?: boolean }[] }> = {
   meeting: {
-    label: '📋 会议纪要',
+    label: '会议纪要',
     fields: [
       { name: 'meeting_time', label: '会议时间', type: 'date', required: true },
       { name: 'location', label: '会议地点', type: 'text', required: true },
@@ -33,7 +33,7 @@ const KNOWLEDGE_TEMPLATES: Record<string, { label: string; fields: { name: strin
     ],
   },
   review: {
-    label: '📊 活动复盘',
+    label: '活动复盘',
     fields: [
       { name: 'activity_name', label: '活动名称', type: 'text', required: true },
       { name: 'activity_time', label: '活动时间', type: 'date' },
@@ -45,7 +45,7 @@ const KNOWLEDGE_TEMPLATES: Record<string, { label: string; fields: { name: strin
     ],
   },
   contact: {
-    label: '📇 外联通讯录',
+    label: '外联通讯录',
     fields: [
       { name: 'org_name', label: '单位名称', type: 'text', required: true },
       { name: 'contact_person', label: '联系人', type: 'text', required: true },
@@ -112,7 +112,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>📝 发帖</h3>
+      <h3 style={{ marginBottom: 20 }}>发帖</h3>
       <Form
         form={form}
         layout="vertical"
@@ -133,7 +133,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
           <>
             {!canPostKnowledge && (
               <div style={{ padding: '8px 12px', background: token.colorWarningBg, borderRadius: 4, marginBottom: 16, fontSize: 13, color: token.colorWarning }}>
-                ⚠️ 知识库仅部门负责人及以上可发布，你当前为只读权限
+                知识库仅部门负责人及以上可发布，你当前为只读权限
               </div>
             )}
             <Form.Item label="知识库模板" required>

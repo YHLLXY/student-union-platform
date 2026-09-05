@@ -65,7 +65,7 @@ export const FORUM_CATEGORIES: Record<string, string> = {
   activity: '活动策划',
   resource: '资料共享',
   casual: '闲聊',
-  knowledge: '📚 知识库',
+  knowledge: '知识库',
 };
 
 // 菜单配置

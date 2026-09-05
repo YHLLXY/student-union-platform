@@ -45,7 +45,7 @@ export default function Heatmap() {
   return (
     <div className={styles.heatmapContainer}>
       <div className={styles.heatmapHeader}>
-        <span className={styles.heatmapTitle}>📊 工作量热力图</span>
+        <span className={styles.heatmapTitle}>工作量热力图</span>
         <div className={styles.heatmapNav}>
           <LeftOutlined onClick={prevMonth} style={{ cursor: 'pointer' }} />
           <span style={{ margin: '0 8px', fontWeight: 500 }}>{year}年{month}月</span>

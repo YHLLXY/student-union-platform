@@ -8,7 +8,7 @@ import type { LeaderboardEntry } from './profileService';
 import { PODIUM_COLORS, PODIUM_BG } from '@/utils/themeColors';
 import styles from './profile.module.css';
 
-const PODIUM_LABELS = ['🥇', '🥈', '🥉'];
+const PODIUM_LABELS = ['1', '2', '3'];
 
 export default function Leaderboard() {
   const user = useAuth();
@@ -33,7 +33,7 @@ export default function Leaderboard() {
   return (
     <div className={styles.leaderboardContainer}>
       <div className={styles.leaderboardHeader}>
-        <span className={styles.leaderboardTitle}>🏆 本月任务排行</span>
+        <span className={styles.leaderboardTitle}>本月任务排行</span>
       </div>
 
       {loading ? (

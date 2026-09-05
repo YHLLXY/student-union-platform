@@ -47,7 +47,7 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>📢 发布公告</h3>
+      <h3 style={{ marginBottom: 20 }}>发布公告</h3>
       <Form
         layout="vertical"
         onFinish={handleSubmit}
@@ -71,7 +71,7 @@ export default function NoticeForm({ onSuccess, onClose }: NoticeFormProps) {
           <TextArea rows={5} placeholder="公告详细内容" maxLength={5000} />
         </Form.Item>
 
-        <Form.Item name="linked_tasks" label="🔗 关联任务（可选）">
+        <Form.Item name="linked_tasks" label="关联任务（可选）">
           <Select
             mode="multiple"
             placeholder="搜索并选择本部门进行中的任务"

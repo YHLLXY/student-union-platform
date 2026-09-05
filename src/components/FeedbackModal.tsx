@@ -5,9 +5,9 @@ import { BugOutlined, BulbOutlined, MessageOutlined } from '@ant-design/icons';
 const { TextArea } = Input;
 
 const FEEDBACK_TYPES = [
-  { value: 'bug', label: '🐛 问题反馈', icon: <BugOutlined /> },
-  { value: 'feature', label: '💡 功能建议', icon: <BulbOutlined /> },
-  { value: 'other', label: '💬 其他意见', icon: <MessageOutlined /> },
+  { value: 'bug', label: '问题反馈', icon: <BugOutlined /> },
+  { value: 'feature', label: '功能建议', icon: <BulbOutlined /> },
+  { value: 'other', label: '其他意见', icon: <MessageOutlined /> },
 ];
 
 const DEV_EMAIL = '3244780834@qq.com';
@@ -95,7 +95,7 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   return (
     <Modal
-      title="📬 联系开发者"
+      title="联系开发者"
       open={open}
       onCancel={onClose}
       width={560}
@@ -141,7 +141,7 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
         <Form.Item style={{ marginBottom: 0 }}>
           <Button type="primary" size="large" block onClick={handleSubmit}>
-            📧 打开邮件客户端发送反馈
+            打开邮件客户端发送反馈
           </Button>
         </Form.Item>
       </Form>

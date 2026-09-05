@@ -64,7 +64,7 @@ export function useVersionNotification() {
             : '请查看应用最新变化';
 
           notification.info({
-            message: `📢 平台已更新至 ${data.version}`,
+            message: `平台已更新至 ${data.version}`,
             description: changelogText,
             duration: 8,
             placement: 'topRight',
@@ -94,7 +94,7 @@ export function useVersionNotification() {
               : '请查看应用最新变化';
 
             notification.info({
-              message: `📢 平台已更新至 ${data.version}`,
+              message: `平台已更新至 ${data.version}`,
               description: changelogText,
               duration: 8,
               placement: 'topRight',

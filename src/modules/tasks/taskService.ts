@@ -172,7 +172,7 @@ export async function createTask(task: {
     createNotification({
       userId: created.assigned_to,
       type: 'task_assigned',
-      title: '📋 新任务指派',
+      title: '新任务指派',
       content: `你被指派了新任务「${created.title}」`,
       relatedLink: '/tasks',
     }).catch(() => {});
@@ -293,7 +293,7 @@ export async function reviewSubmission(
       createNotification({
         userId: submitterId,
         type: approved ? 'submission_approved' : 'submission_rejected',
-        title: approved ? '✅ 提交审核通过' : '↩️ 提交被驳回',
+        title: approved ? '提交审核通过' : '提交被驳回',
         content: `任务「${title ?? taskId}」${approved ? '已审核通过' : '被驳回'}${reviewNote ? `：${reviewNote}` : ''}`,
         relatedLink: '/tasks',
       }).catch(() => {});

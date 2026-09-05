@@ -34,7 +34,7 @@ export default function SchoolNoticeForm({ onSuccess, onClose }: SchoolNoticeFor
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>🏫 发布校讯</h3>
+      <h3 style={{ marginBottom: 20 }}>发布校讯</h3>
       <Form
         layout="vertical"
         onFinish={handleSubmit}

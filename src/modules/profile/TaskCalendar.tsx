@@ -105,7 +105,7 @@ export default function TaskCalendar() {
   return (
     <div className={styles.yearHeatmapContainer}>
       <div className={styles.yearHeatmapHeader}>
-        <span className={styles.yearHeatmapTitle}>📊 年度任务热力图</span>
+        <span className={styles.yearHeatmapTitle}>年度任务热力图</span>
         <span className={styles.yearHeatmapStats}>
           {totalSubmissions} 次提交 · {activeDays} 天活跃
         </span>

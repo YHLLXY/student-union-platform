@@ -1,3 +1,57 @@
-/* AnalyticsDashboard — 数据看板
-   样式由 antd Card/Statistic/Table 提供，无需额外自定义
-   保留文件以备后续追加 */
+/* AnalyticsDashboard — 数据看板 */
+
+.statRow {
+  margin-bottom: 16px;
+}
+
+.statRow > * {
+  min-width: 0;
+}
+
+.tableRow {
+  margin-bottom: 16px;
+}
+
+/* 最热模块卡：与 StatCard 视觉规格对齐 */
+.topModuleCard {
+  height: 100%;
+  transition: transform var(--dur-base) var(--ease-enter),
+    box-shadow var(--dur-base) var(--ease-enter);
+}
+
+.topModuleTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.topModuleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  font-size: 19px;
+  flex-shrink: 0;
+}
+
+.topModuleLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.topModuleName {
+  margin-top: var(--space-md);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventIcon {
+  margin-right: 6px;
+  opacity: 0.75;
+}

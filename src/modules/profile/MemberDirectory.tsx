@@ -34,14 +34,14 @@ export default function MemberDirectory() {
 
   if (loading) {
     return (
-      <Card title="📇 通讯录" style={{ marginBottom: 16 }}>
+      <Card title="通讯录" style={{ marginBottom: 16 }}>
         <ListSkeleton />
       </Card>
     );
   }
 
   return (
-    <Card title="📇 通讯录" style={{ marginBottom: 16 }}>
+    <Card title="通讯录" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <Input
           prefix={<SearchOutlined />}
@@ -92,13 +92,13 @@ export default function MemberDirectory() {
               </div>
               <div className={styles.memberStats}>
                 <Tooltip title="进行中任务">
-                  <span className={styles.memberStatItem}>
-                    🟢 {m.in_progress}
+                  <span className={styles.memberStatItem} style={{ color: token.colorSuccess }}>
+                    ● {m.in_progress}
                   </span>
                 </Tooltip>
                 <Tooltip title="逾期任务">
-                  <span className={styles.memberStatItem} style={m.overdue > 0 ? { color: token.colorError, fontWeight: 600 } : {}}>
-                    {m.overdue > 0 ? '🔴' : '⭕'} {m.overdue}
+                  <span className={styles.memberStatItem} style={m.overdue > 0 ? { color: token.colorError, fontWeight: 600 } : { color: token.colorTextQuaternary }}>
+                    ● {m.overdue}
                   </span>
                 </Tooltip>
               </div>

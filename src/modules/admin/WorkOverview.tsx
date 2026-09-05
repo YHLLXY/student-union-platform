@@ -43,7 +43,7 @@ export default function WorkOverview() {
     <div>
       <div className={styles.overviewHeader}>
         <span className={styles.overviewTitle}>
-          📊 成员工作看板
+          成员工作看板
           <span style={{ fontSize: 13, fontWeight: 400, color: token.colorTextSecondary, marginLeft: 8 }}>
             ({data.length} 人)
           </span>

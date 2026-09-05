@@ -155,7 +155,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     window.location.reload();
   };
 
-  const themeLabel = { light: '☀️ 亮色', dark: '🌙 暗色', system: '💻 跟随系统' } as const;
+  const themeLabel = { light: '亮色', dark: '暗色', system: '跟随系统' } as const;
   const userMenuItems: MenuProps['items'] = [
     {
       key: 'info',

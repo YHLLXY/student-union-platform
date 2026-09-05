@@ -47,7 +47,7 @@ export default function TicketForm({ onSuccess, onClose }: TicketFormProps) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 20 }}>🎫 发布票务</h3>
+      <h3 style={{ marginBottom: 20 }}>发布票务</h3>
       <Form
         layout="vertical"
         onFinish={handleSubmit}

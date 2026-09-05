@@ -158,7 +158,7 @@ export default function NoticeList() {
               {notice.is_pinned && <PushpinFilled style={{ color: token.colorWarning }} />}
               <Tag>{NOTICE_TYPES[notice.type] ?? '通知'}</Tag>
               {notice.linked_tasks && notice.linked_tasks.length > 0 && (
-                <Tag color="orange" style={{ fontSize: 11 }}>🔗 {notice.linked_tasks.length} 个关联任务</Tag>
+                <Tag color="orange" style={{ fontSize: 11 }}>{notice.linked_tasks.length} 个关联任务</Tag>
               )}
               <span className={`${styles.cardTitle} ${myReadIds.has(notice.id) ? styles.readTitle : ''}`}>{notice.title}</span>
             </div>
@@ -182,7 +182,7 @@ export default function NoticeList() {
                 <FileList attachments={notice.attachments} />
                 {linkedTasks[notice.id] && linkedTasks[notice.id].length > 0 && (
                   <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${token.colorBorderSecondary}` }}>
-                    <p style={{ fontWeight: 500, marginBottom: 8, fontSize: 14 }}>🔗 关联任务</p>
+                    <p style={{ fontWeight: 500, marginBottom: 8, fontSize: 14 }}>关联任务</p>
                     {linkedTasks[notice.id].map((t) => {
                       const st = TASK_STATUSES[t.status] ?? TASK_STATUSES.pending;
                       return (
@@ -309,14 +309,14 @@ export default function NoticeList() {
         onCancel={() => setReadersModal(null)}
         footer={null}
         width={md ? 420 : undefined}
-        title="📊 已读确认详情"
+        title="已读确认详情"
         destroyOnHidden
       >
         {readersModal && (
           <div>
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontWeight: 500, color: token.colorSuccess, marginBottom: 4 }}>
-                ✅ 已读 ({readersModal.readers.read.length} 人)
+                已读 ({readersModal.readers.read.length} 人)
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {readersModal.readers.read.length === 0 ? (

@@ -104,7 +104,7 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
       onCancel={onClose}
       footer={null}
       width={800}
-      title="📋 任务模板管理"
+      title="任务模板管理"
       destroyOnHidden
     >
       <div style={{ marginBottom: 16, textAlign: 'right' }}>

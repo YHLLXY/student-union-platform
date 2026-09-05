@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Popover, Spin, Drawer, Grid } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BellOutlined } from '@ant-design/icons';
+import {
+  BellOutlined, FileAddOutlined, CheckCircleOutlined, RollbackOutlined,
+  MessageOutlined, NotificationOutlined, WarningOutlined,
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { formatDateTime } from '@/utils/helpers';
@@ -15,14 +18,14 @@ import {
 import type { Notification } from './notificationService';
 import styles from './notification.module.css';
 
-/** 通知类型 → 图标映射 */
-const TYPE_ICON: Record<string, string> = {
-  task_assigned: '📋',
-  submission_approved: '✅',
-  submission_rejected: '↩️',
-  forum_reply: '💬',
-  new_notice: '📢',
-  milestone_overdue: '⚠️',
+/** 通知类型 → 图标映射（图标由主题 token 着色，数据层只存纯文本） */
+const TYPE_ICON: Record<string, { icon: React.ReactNode; color: string }> = {
+  task_assigned: { icon: <FileAddOutlined />, color: '#3498db' },
+  submission_approved: { icon: <CheckCircleOutlined />, color: '#27ae60' },
+  submission_rejected: { icon: <RollbackOutlined />, color: '#e67e22' },
+  forum_reply: { icon: <MessageOutlined />, color: '#8e44ad' },
+  new_notice: { icon: <NotificationOutlined />, color: '#1a6ea0' },
+  milestone_overdue: { icon: <WarningOutlined />, color: '#e74c3c' },
 };
 
 export default function NotificationBell() {
@@ -118,7 +121,7 @@ export default function NotificationBell() {
             className={`${styles.notifItem} ${!n.is_read ? styles.notifUnread : ''}`}
             onClick={() => handleClick(n)}
           >
-            <span className={styles.notifIcon}>{TYPE_ICON[n.type] ?? '🔔'}</span>
+            <span className={styles.notifIcon}>{TYPE_ICON[n.type]?.icon ?? <BellOutlined />}</span>
             <span className={`${styles.notifDot} ${n.is_read ? styles.notifDotRead : ''}`} />
             <div className={styles.notifBody}>
               <div className={styles.notifTitle}>{n.title}</div>
