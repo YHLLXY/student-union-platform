@@ -294,6 +294,10 @@ antd `theme.darkAlgorithm`（暗色主色提亮为 `#2f6db3` 保证对比度）+
 
 全项目 JS 动效只允许经由 `src/components/motion/`（`FadeIn / StaggerGroup / CountUpNumber`），业务代码禁止直接 import motion —— 将来更换动效库业务零改动；`prefers-reduced-motion` 全局降级，桌面 ≥1024px 布局与触摸目标 ≥44px 为不可破坏红线。
 
+### 6. 首屏性能（v4.1）
+
+Service Worker 对导航请求采用 stale-while-revalidate（已安装用户打开零网络等待，实测热加载 DCL 834ms → 127ms）；登录页关键路径经懒壳层 + @dnd-kit 独立分包瘦身 23%（431→332KB gz）；已登录用户经"本地会话 + 缓存档案 + 后台校正"消除启动阻塞往返。诊断方法与踩坑记录见 [docs/research/08](docs/research/08-首屏性能与ServiceWorker策略.md)。
+
 ---
 
 ## 文档索引

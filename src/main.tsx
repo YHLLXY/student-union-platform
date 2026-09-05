@@ -34,7 +34,9 @@ function ThemedApp() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* 动效基建：strict 模式强制全项目用 m 组件（体积优化，见 docs/research/01）；
-        reducedMotion="user" 自动尊重系统「减弱动态效果」设置 */}
+        reducedMotion="user" 自动尊重系统「减弱动态效果」设置。
+        注：domAnimation 曾尝试异步加载（v4.1 计划门禁实测失败——特性块仍被入口
+        preload 连带，急加载不降反升），保持同步导入 */}
     <LazyMotion features={domAnimation} strict>
       <ThemeModeProvider>
         <QueryClientProvider client={queryClient}>

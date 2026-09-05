@@ -55,6 +55,13 @@ export default defineConfig({
               priority: 7,
             },
             {
+              // @dnd-kit 仅任务看板使用：独立分组防止它随 vendor（react-router 急加载）
+              // "一人急加载、全组陪绑"地进入登录页关键路径
+              name: 'dnd',
+              test: /node_modules[\\/]@dnd-kit[\\/]/,
+              priority: 7,
+            },
+            {
               // 其余零散第三方（dayjs/@babel/runtime/tslib 等）
               name: 'vendor',
               test: /node_modules[\\/]/,

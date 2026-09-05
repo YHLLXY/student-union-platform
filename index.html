@@ -9,6 +9,11 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/student-union-platform/manifest.json" />
 
+    <!-- 预热 Supabase 建连（DNS+TCP+TLS），省去首个 API 请求的建连时间。
+         值由 Vite 在构建时做 HTML 常量替换（%VITE_*%）；变量缺失时字面保留、浏览器忽略该行，无副作用 -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
+
     <!-- 主题色（亮色 + 暗色） -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1a3a5c" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101414" />
@@ -57,18 +62,21 @@
 
         var updateToast = document.getElementById('pwa-update-toast');
         var newWorker = null;
+        var pendingActivate = false; // 用户已点击更新提示，等待新 SW 接管
+        var hasReloaded = false;
 
         function showUpdateToast() {
           if (!updateToast) return;
           updateToast.style.display = 'block';
           updateToast.onclick = function () {
             updateToast.style.display = 'none';
-            // 通知 waiting SW 跳过等待、立即激活
             if (newWorker) {
+              // 新 SW 激活接管后会触发 controllerchange，由它统一清缓存并刷新
+              pendingActivate = true;
               newWorker.postMessage({ type: 'skipWaiting' });
+            } else {
+              window.location.reload();
             }
-            // 刷新页面让 React 读取 changelog
-            window.location.reload();
           };
         }
 
@@ -93,14 +101,6 @@
               }
             });
           });
-        }
-
-        // SW 激活后，通知 React 应用检查版本更新
-        function onControllerChange() {
-          // SW 已更新并激活，刷新页面让 React 检查 changelog
-          if (navigator.serviceWorker.controller) {
-            console.log('[PWA] SW 已激活，即将检查版本更新公告');
-          }
         }
 
         // 版本检查（检查 version.json）
@@ -130,16 +130,22 @@
               registration.update().catch(function () {});
             }, 10 * 60 * 1000);
 
-            // 版本检查
-            checkVersion();
+            // 版本检查延后 3s：避开冷启动与关键资源抢带宽
+            setTimeout(checkVersion, 3000);
           })
           .catch(function (err) {
             console.warn('[PWA] SW 注册失败（非关键错误）:', err);
           });
 
-        // SW 激活时刷新页面（用户点击了"跳过等待"后）
+        // SW 接管页面时触发。注意：首次访问（clients.claim）也会触发，
+        // 必须用 pendingActivate 区分"用户主动更新"，否则首访会多刷一次
         navigator.serviceWorker.addEventListener('controllerchange', function () {
-          onControllerChange();
+          if (pendingActivate && !hasReloaded && navigator.serviceWorker.controller) {
+            hasReloaded = true;
+            // 新 SW 先清空全部缓存，随后的 reload 从网络拿全新 HTML + 资源
+            navigator.serviceWorker.controller.postMessage({ type: 'PURGE_ALL' });
+            setTimeout(function () { window.location.reload(); }, 300);
+          }
         });
 
         // 手动安装按钮兜底（beforeinstallprompt）

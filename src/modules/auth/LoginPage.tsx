@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Alert, Tabs, Button, message } from 'antd';
 import { ToolOutlined } from '@ant-design/icons';
 import {
@@ -11,8 +11,10 @@ import AuthShell from './AuthShell';
 import IdentityForm from './IdentityForm';
 import PasswordForm from './PasswordForm';
 import ForgotForm from './ForgotForm';
-import DevEntryModal from './DevEntryModal';
 import styles from './auth.module.css';
+
+// 开发者弹窗极少使用：懒加载把 Modal/InputNumber 组件移出登录页关键路径
+const DevEntryModal = lazy(() => import('./DevEntryModal'));
 
 interface LoginPageProps {
   onLoginSuccess: (user: UserProfile) => void;
@@ -271,23 +273,25 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         </Button>
       </div>
 
-      <DevEntryModal
-        open={devModalOpen}
-        onClose={() => setDevModalOpen(false)}
-        onVerified={(dev) => {
-          setTab('student');
-          setStudent({
-            name: dev.name,
-            id: dev.student_id,
-            inviteCode: dev.key,
-            department: 'developer',
-            role: 'developer',
-          });
-          setStep('login');
-          setDevModalOpen(false);
-          message.success(`已切换到开发者 ${dev.name}，请输入密码`);
-        }}
-      />
+      <Suspense fallback={null}>
+        <DevEntryModal
+          open={devModalOpen}
+          onClose={() => setDevModalOpen(false)}
+          onVerified={(dev) => {
+            setTab('student');
+            setStudent({
+              name: dev.name,
+              id: dev.student_id,
+              inviteCode: dev.key,
+              department: 'developer',
+              role: 'developer',
+            });
+            setStep('login');
+            setDevModalOpen(false);
+            message.success(`已切换到开发者 ${dev.name}，请输入密码`);
+          }}
+        />
+      </Suspense>
     </AuthShell>
   );
 }

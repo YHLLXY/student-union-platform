@@ -262,19 +262,61 @@ export async function signIn(
   return { user: userData as UserProfile, error: null };
 }
 
-/** 获取当前登录用户 */
-export async function getCurrentUser(): Promise<UserProfile | null> {
+/** 读取本地会话（auth.getSession，纯本地存储读取，不发网络请求） */
+export async function getLocalSession() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) return null;
+  return session;
+}
 
+/** 按 auth_id 拉取用户档案（一次 Supabase 网络往返） */
+export async function fetchProfileByAuthId(authId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('auth_id', session.user.id)
+    .eq('auth_id', authId)
     .single();
 
-  if (error) { log.error('getCurrentUser 查询失败', error); return null; }
+  if (error) { log.error('fetchProfileByAuthId 查询失败', error); return null; }
   return data as UserProfile | null;
+}
+
+/** 获取当前登录用户 */
+export async function getCurrentUser(): Promise<UserProfile | null> {
+  const session = await getLocalSession();
+  if (!session?.user) return null;
+  return fetchProfileByAuthId(session.user.id);
+}
+
+// ---------- 档案本地缓存（启动快速路径用，见 docs/plans/2026-09-05-首屏性能优化实施计划） ----------
+
+const PROFILE_CACHE_KEY = 'su_profile_cache_v1';
+
+/** 读取缓存档案；authId 不匹配（换了账号）一律视为无缓存 */
+export function readCachedProfile(authId: string): UserProfile | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { authId: string; profile: UserProfile };
+    return parsed.authId === authId ? parsed.profile : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeCachedProfile(profile: UserProfile): void {
+  try {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ authId: profile.auth_id, profile }));
+  } catch {
+    // 存储不可用（隐私模式等）静默降级
+  }
+}
+
+export function removeCachedProfile(): void {
+  try {
+    localStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {
+    // 同上
+  }
 }
 
 /** 退出登录 */
