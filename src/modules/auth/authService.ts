@@ -36,30 +36,54 @@ export function validatePasswordStrength(password: string): { valid: boolean; me
   return { valid: true, message: '' };
 }
 
-/** 检查邀请码是否有效（数据库查询 + 客户端二次校验） */
-export async function checkInviteCode(code: string) {
-  const { data, error } = await supabase
+/** 邀请码行（validate_invite_code 返回的 jsonb 与表结构同形） */
+interface InviteCodeRecord {
+  code: string;
+  role: string;
+  department: string;
+  expires_at: string | null;
+  used_count: number | null;
+  max_uses: number | null;
+  is_used: boolean | null;
+  revoked_at: string | null;
+}
+
+/**
+ * 按 code 精确取一条邀请码。
+ * 首选 rpc（RLS 收紧后匿名不可直查表，见 supabase-security-fix-step1.sql）；
+ * 函数尚未创建（PGRST202，第 1 步 SQL 未执行）时回退旧的直查写法，两种执行顺序都能工作。
+ */
+async function fetchInviteRow(code: string): Promise<InviteCodeRecord | null> {
+  const { data, error } = await supabase.rpc('validate_invite_code', { code_input: code });
+  if (!error) return (data ?? null) as InviteCodeRecord | null;
+  if (error.code !== 'PGRST202') {
+    log.error('validate_invite_code 调用失败', error);
+    return null;
+  }
+  const { data: row, error: legacyError } = await supabase
     .from('invite_codes')
     .select('*')
     .eq('code', code)
     .single();
+  if (legacyError) {
+    log.error('邀请码查询失败', legacyError);
+    return null;
+  }
+  return (row ?? null) as InviteCodeRecord | null;
+}
 
-  if (error || !data) return null;
-
-  // 客户端二次校验（数据库 RLS 不保证业务规则）
-
+/** 邀请码业务规则复核（撤销 / 过期 / 用尽）——数据库只负责取数 */
+function pickValidInvite(data: InviteCodeRecord, code: string): InviteCodeRecord | null {
   // 1. 已被撤销
   if (data.revoked_at) {
     console.warn('[auth] 邀请码已被撤销:', code);
     return null;
   }
-
   // 2. 已过期
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
     console.warn('[auth] 邀请码已过期:', code, data.expires_at);
     return null;
   }
-
   // 3. 已用完
   const usedCount = data.used_count ?? (data.is_used ? 1 : 0);
   const maxUses = data.max_uses ?? 1;
@@ -67,20 +91,30 @@ export async function checkInviteCode(code: string) {
     console.warn('[auth] 邀请码已用完:', code, usedCount, '/', maxUses);
     return null;
   }
-
   return data;
 }
 
-/** 检查学号是否已注册 */
+/** 检查邀请码是否有效（数据库取数 + 客户端规则复核） */
+export async function checkInviteCode(code: string) {
+  const row = await fetchInviteRow(code);
+  return row ? pickValidInvite(row, code) : null;
+}
+
+/** 检查学号是否已注册（rpc 只返回布尔，不暴露用户数据） */
 export async function checkStudentId(studentId: string): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await supabase.rpc('check_student_registered', { student_id_input: studentId });
+  if (!error) return data === true;
+  if (error.code !== 'PGRST202') {
+    log.error('check_student_registered 调用失败', error);
+    return false;
+  }
+  const { data: row, error: legacyError } = await supabase
     .from('users')
     .select('id')
     .eq('student_id', studentId)
     .single();
-
-  if (error) { log.error('checkStudentId 查询失败', error); return false; }
-  return !!data;
+  if (legacyError) { log.error('checkStudentId 查询失败', legacyError); return false; }
+  return !!row;
 }
 
 /** 注册：创建 Auth 用户 → 写入 users 表 → 标记邀请码已用 */
@@ -213,23 +247,9 @@ export async function signUpTeacher(
 
 /** 检查教师邀请码是否有效（role=teacher） */
 export async function checkTeacherCode(code: string) {
-  const { data, error } = await supabase
-    .from('invite_codes')
-    .select('*')
-    .eq('code', code)
-    .eq('role', 'teacher')
-    .single();
-
-  if (error || !data) return null;
-
-  // 同样做客户端二次校验
-  if (data.revoked_at) return null;
-  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
-  const usedCount = data.used_count ?? (data.is_used ? 1 : 0);
-  const maxUses = data.max_uses ?? 1;
-  if (usedCount >= maxUses) return null;
-
-  return data;
+  const row = await fetchInviteRow(code);
+  if (!row || row.role !== 'teacher') return null;
+  return pickValidInvite(row, code);
 }
 
 /** 登录 */
@@ -330,17 +350,28 @@ export async function changePassword(newPassword: string) {
   return { error };
 }
 
-/** 验证用户身份：姓名 + 学号是否匹配已注册用户 */
+/** 验证用户身份：姓名 + 学号是否匹配已注册用户（rpc 精确匹配，不可枚举） */
 export async function verifyUser(name: string, studentId: string): Promise<{ authId: string; name: string } | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabase.rpc('verify_user_identity', {
+    name_input: name,
+    student_id_input: studentId,
+  });
+  if (!error) {
+    const row = data as { auth_id: string; name: string } | null;
+    return row?.auth_id ? { authId: row.auth_id, name: row.name } : null;
+  }
+  if (error.code !== 'PGRST202') {
+    log.error('verify_user_identity 调用失败', error);
+    return null;
+  }
+  const { data: legacy, error: legacyError } = await supabase
     .from('users')
     .select('auth_id, name')
     .eq('student_id', studentId)
     .eq('name', name)
     .single();
-
-  if (error || !data || !data.auth_id) return null;
-  return { authId: data.auth_id, name: data.name };
+  if (legacyError || !legacy || !legacy.auth_id) return null;
+  return { authId: legacy.auth_id, name: legacy.name };
 }
 
 /** 自主重置密码（通过 auth_id 调用数据库函数） */

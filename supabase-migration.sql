@@ -597,3 +597,92 @@ WHERE is_used = true
 
 -- 4. 索引：按创建者查询
 CREATE INDEX IF NOT EXISTS idx_invite_created_by ON invite_codes(created_by);
+
+-- ============================================================
+-- 第十六部分：安全加固（2026-09-05，对应 supabase-security-fix-step1/2.sql）
+-- ============================================================
+-- 背景：本文件前段（第 183-215 行）users/tasks/notices 等核心表的 RLS 曾被整体
+--       注释停用，而 Supabase 对未开 RLS 的表默认授予 anon 全部权限（anon key
+--       打包在前端公开 JS 里），实测匿名可读全员名单、可写可删任意业务数据。
+-- 方案：登录前必需的 3 条匿名查询改走 SECURITY DEFINER 函数（最小暴露、不可枚举）；
+--       其余表开启 RLS 后仅对 authenticated 放行（USING(true)/WITH CHECK(true)，
+--       与此前登录用户的实际权限完全一致，应用功能零变化），anon 一律拒绝。
+-- 注意：函数须先于 RLS 创建（本部分即为该顺序）；
+--       对已运行的生产库，请按 supabase-security-fix-step1.sql → 部署新版前端 →
+--       supabase-security-fix-step2.sql 的顺序分步执行，勿一次性跑本文件。
+
+-- ---- 1. 匿名最小暴露函数（同 step1） ----
+
+CREATE OR REPLACE FUNCTION validate_invite_code(code_input text)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT to_jsonb(ic)
+  FROM invite_codes ic
+  WHERE ic.code = code_input
+$$;
+
+CREATE OR REPLACE FUNCTION check_student_registered(student_id_input text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM users u WHERE u.student_id = student_id_input
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION verify_user_identity(name_input text, student_id_input text)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT to_jsonb(r)
+  FROM (
+    SELECT u.auth_id, u.name
+    FROM users u
+    WHERE u.student_id = student_id_input AND u.name = name_input
+  ) r
+$$;
+
+GRANT EXECUTE ON FUNCTION validate_invite_code(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION check_student_registered(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION verify_user_identity(text, text) TO anon, authenticated;
+
+-- ---- 2. 全表 RLS：authenticated 全量放行，anon 拒绝（同 step2） ----
+
+ALTER TABLE users            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invite_codes     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notices          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE school_notices   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE forum_posts      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE forum_replies    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tickets          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ticket_records   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_templates   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_milestones  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_guides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usage_events     ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'users', 'invite_codes', 'tasks', 'task_submissions', 'notices',
+    'school_notices', 'forum_posts', 'forum_replies', 'tickets',
+    'ticket_records', 'task_templates', 'task_milestones',
+    'department_guides', 'usage_events'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS authenticated_full_access ON %I', t);
+    EXECUTE format(
+      'CREATE POLICY authenticated_full_access ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)',
+      t
+    );
+  END LOOP;
+END $$;

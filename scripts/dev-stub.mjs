@@ -226,6 +226,19 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { success: true, message: '抢票成功' });
     }
     if (fn === 'reset_user_password') return send(res, 200, true);
+    if (fn === 'validate_invite_code') {
+      const body = await readBody(req);
+      return send(res, 200, db.invite_codes.find((c) => c.code === body.code_input) || null);
+    }
+    if (fn === 'check_student_registered') {
+      const body = await readBody(req);
+      return send(res, 200, db.users.some((u) => u.student_id === body.student_id_input));
+    }
+    if (fn === 'verify_user_identity') {
+      const body = await readBody(req);
+      const u = db.users.find((x) => x.student_id === body.student_id_input && x.name === body.name_input);
+      return send(res, 200, u ? { auth_id: u.auth_id, name: u.name } : null);
+    }
     return send(res, 200, {});
   }
 

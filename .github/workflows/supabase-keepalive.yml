@@ -1,0 +1,29 @@
+name: Supabase Keepalive
+
+# 事故复盘（2026-09-05）：免费版项目 7 天无 API 请求会被自动暂停（Paused），
+# 暂停期间线上域名直接失效，全站不可用。此工作流每 3 天对 REST 发一次
+# 轻量查询保持项目活跃，防止再次因不活跃被暂停。
+# 注意：GitHub 会在仓库 60 天无提交后停用 scheduled workflow——正常迭代即可避免。
+
+on:
+  schedule:
+    - cron: '0 3 */3 * *' # 每 3 天 03:00 UTC（北京时间 11:00）
+  workflow_dispatch: # 支持手动触发
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST（users 表轻量查询，RLS 下返回空集也算活跃）
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+              -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+              "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/users?select=id&limit=1")
+            echo "keepalive attempt $i -> HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 60
+          done
+          echo "::error::Supabase 保活探测连续 3 次失败，请检查项目是否又被暂停"
+          exit 1

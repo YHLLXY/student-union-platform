@@ -691,6 +691,18 @@ export interface Database {
         Args: { user_id: string; new_password: string };
         Returns: boolean;
       };
+      validate_invite_code: {
+        Args: { code_input: string };
+        Returns: Json;
+      };
+      check_student_registered: {
+        Args: { student_id_input: string };
+        Returns: boolean;
+      };
+      verify_user_identity: {
+        Args: { name_input: string; student_id_input: string };
+        Returns: Json;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
