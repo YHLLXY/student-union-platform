@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Table, Select, Button, Popconfirm, message, Tabs } from 'antd';
+import { Table, Select, Button, Popconfirm, message, Tabs, Grid } from 'antd';
 import { useAuth } from '@/components/AuthContext';
 import { RouteSkeleton } from '@/components/SkeletonBlocks';
 import { getDepartmentLabel, getRoleLabel, isAdmin } from '@/utils/helpers';
@@ -17,6 +17,7 @@ const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: 
 
 export default function MemberManage() {
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('members');
 
@@ -71,7 +72,8 @@ export default function MemberManage() {
 
   const columns = [
     { title: '姓名', dataIndex: 'name', key: 'name' },
-    { title: '学号/工号', dataIndex: 'student_id', key: 'student_id' },
+    // 移动端隐藏学号列，减少横向滚动（操作列更容易到达）
+    ...(md ? [{ title: '学号/工号', dataIndex: 'student_id', key: 'student_id' }] : []),
     {
       title: '部门', dataIndex: 'department', key: 'department',
       render: (d: string, record: UserProfile) => {

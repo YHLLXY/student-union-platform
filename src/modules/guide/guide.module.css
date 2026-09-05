@@ -25,7 +25,7 @@
 
 .guideCollapse :global(.ant-collapse-item) {
   border: 1px solid var(--border-default) !important;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 8px;
   overflow: hidden;
 }

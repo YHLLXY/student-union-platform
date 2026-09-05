@@ -63,10 +63,10 @@
   gap: 8px;
   padding: 8px 12px;
   background: var(--bg-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
 }
 
 .fileListItem:hover {
@@ -79,7 +79,7 @@
   color: var(--color-info);
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast);
 }
 
 .fileListItem:hover .downloadIcon {

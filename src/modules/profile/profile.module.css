@@ -7,12 +7,21 @@
 .statCard {
   flex: 1;
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition: box-shadow var(--transition-normal), transform var(--transition-fast);
 }
 
 .statCard:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+.statCard:active {
+  transform: translateY(0) scale(0.995);
+}
+
+/* 数字等宽，加载/刷新时数值不跳动 */
+.statCard :global(.ant-statistic-content-value) {
+  font-variant-numeric: tabular-nums;
 }
 
 .profileCard {
@@ -97,7 +106,7 @@
   color: var(--text-primary);
   padding: 4px;
   border-radius: 4px;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
 }
 
 .yearNavBtn:hover {
@@ -188,7 +197,7 @@
   width: 15px;
   height: 15px;
   border-radius: 3px;
-  transition: outline 0.1s;
+  transition: outline var(--dur-fast);
   cursor: default;
 }
 
@@ -236,7 +245,7 @@
   flex-direction: column;
   align-items: center;
   padding: 16px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   text-align: center;
 }
 
@@ -272,8 +281,8 @@
   display: flex;
   align-items: center;
   padding: 8px 10px;
-  border-radius: 6px;
-  transition: background 0.15s;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
 }
 
 .rankItem:hover {
@@ -318,7 +327,7 @@
   color: var(--color-info);
   background: var(--bg-info);
   padding: 0 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-info-light);
 }
 
@@ -353,10 +362,10 @@
 
 .memberCard {
   cursor: default;
-  transition: box-shadow 0.2s;
+  transition: box-shadow var(--transition-normal);
 }
 .memberCard:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .memberCardBody {
@@ -414,13 +423,13 @@
 .taskModalItem {
   padding: 10px 14px;
   border-left: 3px solid var(--color-info);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-card-hover);
-  transition: box-shadow 0.15s;
+  transition: box-shadow var(--transition-fast);
 }
 
 .taskModalItem:hover {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .taskModalItemUrgent {
@@ -462,6 +471,11 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-sm);
+  }
+
+  /* 当前共 3 卡，末卡跨双列避免孤儿行（卡数变更时需复核） */
+  .statsRow > *:last-child {
+    grid-column: span 2;
   }
 
   .directoryGrid {

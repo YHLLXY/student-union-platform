@@ -89,12 +89,14 @@
   display: flex;
   flex-direction: row;
   height: calc(100vh - var(--header-height) - var(--safe-area-top));
+  height: calc(100dvh - var(--header-height) - var(--safe-area-top));
 }
 
 .contentArea {
   padding: var(--space-2xl);
   padding-bottom: calc(var(--space-2xl) + var(--safe-area-bottom));
   height: calc(100vh - var(--header-height) - var(--safe-area-top));
+  height: calc(100dvh - var(--header-height) - var(--safe-area-top));
   overflow-y: auto;
   background: var(--bg-page);
 }

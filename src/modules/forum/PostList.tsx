@@ -37,24 +37,28 @@ export default function PostList() {
     setCategory(key);
   };
 
+  const categoryMenuItems = [
+    { key: 'all', label: '全部' },
+    ...categoryItems.map((c) => ({ key: c.key, label: c.label })),
+  ];
+
   return (
     <div className={styles.layout}>
-      <div className={styles.sidebar}>
-        <div className={styles.sidebarTitle}>
-          <FolderOutlined style={{ marginRight: 6 }} />
-          分类
+      {md && (
+        <div className={styles.sidebar}>
+          <div className={styles.sidebarTitle}>
+            <FolderOutlined style={{ marginRight: 6 }} />
+            分类
+          </div>
+          <Menu
+            mode="inline"
+            selectedKeys={[category]}
+            onClick={handleSelect}
+            items={categoryMenuItems}
+            style={{ borderRight: 0 }}
+          />
         </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[category]}
-          onClick={handleSelect}
-          items={[
-            { key: 'all', label: '全部' },
-            ...categoryItems.map((c) => ({ key: c.key, label: c.label })),
-          ]}
-          style={{ borderRight: 0 }}
-        />
-      </div>
+      )}
 
       <div className={styles.mainArea}>
         <PageHeader
@@ -67,6 +71,24 @@ export default function PostList() {
             </Button>
           )}
         />
+
+        {/* 移动端：分类折叠为横向滚动 chips，避免纵向长列表把标题挤出首屏 */}
+        {!md && (
+          <div className={styles.categoryChips} role="tablist" aria-label="帖子分类">
+            {categoryMenuItems.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                role="tab"
+                aria-selected={category === c.key}
+                className={`${styles.chip} ${category === c.key ? styles.chipActive : ''}`}
+                onClick={() => setCategory(c.key)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {postsQuery.isPending ? (
           <CardStreamSkeleton />
@@ -81,7 +103,7 @@ export default function PostList() {
           <EmptyState
             icon={<MessageOutlined />}
             title="暂无帖子"
-            description="选择左侧分类浏览，或发布第一个帖子"
+            description="切换上方分类浏览，或发布第一个帖子"
           />
         ) : (
           posts.map((post, i) => (

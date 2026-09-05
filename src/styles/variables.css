@@ -96,6 +96,9 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --mobile-content-padding: 16px;
   --mobile-card-gap: 12px;
+
+  /* ---- 层级（Toast 必须压过 antd 弹层 z-index 1000+） ---- */
+  --z-toast: 99999;
 }
 
 /* ============================================================

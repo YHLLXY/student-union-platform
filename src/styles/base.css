@@ -20,6 +20,18 @@ body {
   outline-offset: 2px;
 }
 
+/* iOS Safari：聚焦字号 <16px 的输入框会触发页面自动放大。移动端统一提到 16px，
+   只作用于真实可聚焦的 input/textarea，不影响 Select 展示文本的视觉字号 */
+@media (max-width: 768px) {
+  input.ant-input,
+  textarea.ant-input,
+  .ant-input-affix-wrapper > input.ant-input,
+  .ant-select-selection-search-input,
+  .ant-picker-input > input {
+    font-size: 16px !important;
+  }
+}
+
 /* PWA 新版本提示 Toast：容器在 index.html 中创建（display:none 内联兜底），
    显示逻辑见 index.html 内联脚本 showUpdateToast() */
 #pwa-update-toast {
@@ -27,7 +39,7 @@ body {
   bottom: calc(80px + var(--safe-area-bottom));
   left: 16px;
   right: 16px;
-  z-index: 99999;
+  z-index: var(--z-toast);
   background: var(--color-primary);
   color: #fff;
   padding: 14px 18px;

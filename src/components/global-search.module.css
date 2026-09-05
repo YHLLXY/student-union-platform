@@ -39,8 +39,8 @@
   left: 0;
   right: 0;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   max-height: 360px;
   overflow-y: auto;
   z-index: 1050;

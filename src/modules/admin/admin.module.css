@@ -46,6 +46,12 @@
   .overviewGrid {
     grid-template-columns: 1fr;
   }
+
+  /* 移动端收紧表格单元格，减少横向滚动量（antd 默认 16px） */
+  :global(.ant-table-wrapper .ant-table-thead > tr > th),
+  :global(.ant-table-wrapper .ant-table-tbody > tr > td) {
+    padding-inline: 10px;
+  }
 }
 
 /* 平板 */

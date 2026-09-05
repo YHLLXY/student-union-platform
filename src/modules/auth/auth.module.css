@@ -151,6 +151,11 @@
   margin-top: 4px;
 }
 
+/* 触控目标：默认 32px 高低于移动端可用下限 */
+.devEntry button {
+  min-height: 40px;
+}
+
 .stepHint {
   margin-bottom: var(--space-lg);
   padding: 10px 14px;

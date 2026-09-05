@@ -14,7 +14,7 @@
 
 // ======================== 配置 ========================
 
-var CACHE_VERSION = 'v4.1.1';
+var CACHE_VERSION = 'v4.2.0';
 var APP_SHELL = 'app-shell-' + CACHE_VERSION;
 var APP_ASSETS = 'app-assets-' + CACHE_VERSION;
 

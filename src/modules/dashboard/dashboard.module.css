@@ -31,14 +31,18 @@
 
 .statCard {
   flex: 1;
-  border-radius: 8px;
-  transition: box-shadow 0.2s, transform 0.15s;
+  border-radius: var(--radius-md);
+  transition: box-shadow var(--transition-normal), transform var(--transition-fast);
   cursor: pointer;
 }
 
 .statCard:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+.statCard:active {
+  transform: translateY(0) scale(0.995);
 }
 
 .statIcon {
@@ -50,6 +54,7 @@
   font-size: 28px;
   font-weight: 700;
   margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .statLabel {
@@ -132,7 +137,7 @@
 
 /* 动态时间轴 */
 .activityCard {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .activityTitle {
@@ -238,11 +243,15 @@
     gap: 8px;
   }
 
-  /* 统计卡片：2 列网格 */
+  /* 统计卡片：2 列网格；当前共 3 卡，末卡跨双列避免孤儿行（卡数变更时需复核） */
   .statsRow {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+  }
+
+  .statsRow > *:last-child {
+    grid-column: span 2;
   }
 
   .statValue {

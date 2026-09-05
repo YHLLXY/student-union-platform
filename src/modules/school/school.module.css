@@ -7,12 +7,16 @@
 
 .noticeCard {
   margin-bottom: 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .noticeCard:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
+}
+
+.noticeCard:active {
+  transform: translateY(0) scale(0.995);
 }
 
 .pinnedCard {
@@ -32,6 +36,7 @@
 }
 
 .cardTitle {
+  text-wrap: balance;
   font-size: 15px;
   font-weight: 500;
 }

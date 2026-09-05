@@ -190,7 +190,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100dvh' }}>
       <Header className={styles.header}>
         {!md && <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ color: '#fff', fontSize: 16 }} />}
         <div className={styles.logo}>学生会</div>

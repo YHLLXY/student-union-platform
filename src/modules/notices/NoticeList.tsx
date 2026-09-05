@@ -144,7 +144,7 @@ export default function NoticeList() {
         <EmptyState
           icon={<BellOutlined />}
           title="暂无公告"
-          description={canCreate ? '点击右上角「发布公告」发布第一条公告' : '部门发布的新公告会出现在这里'}
+          description={canCreate ? '点击上方「发布公告」发布第一条公告' : '部门发布的新公告会出现在这里'}
         />
       ) : (
         notices.map((notice, i) => (
