@@ -14,7 +14,7 @@
 
 // ======================== 配置 ========================
 
-var CACHE_VERSION = 'v4.2.1';
+var CACHE_VERSION = 'v4.2.2';
 var APP_SHELL = 'app-shell-' + CACHE_VERSION;
 var APP_ASSETS = 'app-assets-' + CACHE_VERSION;
 
@@ -35,6 +35,12 @@ var SHELL_FILES = [
 
 function isNavigation(request) {
   return request.mode === 'navigate';
+}
+
+// 带非 html 扩展名的路径 = 真实文件（如 使用指南.md）。
+// 这类导航若也回 shell，会被 SPA 劫持成首页（v4.2.1 生产实测踩坑：点"使用指南"打开 md 反而落到首页）
+function isRealFile(url) {
+  return /\.(?!html?$)[a-z0-9]+$/i.test(url.pathname);
 }
 
 function isStaticAsset(url) {
@@ -114,7 +120,7 @@ self.addEventListener('fetch', function (event) {
   // 导航请求（HTML 页面）：stale-while-revalidate
   // 只查本代缓存（APP_SHELL）——全局 caches.match 会按缓存创建顺序命中旧代 shell，
   // 新版预缓存会被旧版永久遮蔽（v4.1.0 生产实测踩坑）；SPA + HashRouter 所有导航同一份 HTML
-  if (isNavigation(event.request)) {
+  if (isNavigation(event.request) && !isRealFile(url)) {
     var SHELL_URL = BASE + '/index.html';
     event.respondWith(
       caches.open(APP_SHELL).then(function (cache) {
