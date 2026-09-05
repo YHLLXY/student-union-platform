@@ -114,7 +114,7 @@ student-union-platform/
 │   ├── supabaseClient.ts    # Supabase 客户端（createClient<Database>）
 │   ├── theme.ts             # antd 双主题构建器（亮/暗算法）
 │   ├── types/
-│   │   └── database.ts      # 手写 14 表 Database 类型（Row/Insert/Update/Relationships）
+│   │   └── database.ts      # 手写 17 表 Database 类型（Row/Insert/Update/Relationships）
 │   ├── lib/
 │   │   ├── sb.ts            # 服务层错误约定：unwrap / unwrapMaybe / unwrapCount
 │   │   └── queryClient.ts   # TanStack Query 全局配置
@@ -278,7 +278,7 @@ package.json "version"     ←→     public/version.json (version + changelog) 
 
 ### 2. 端到端类型安全（不依赖 CLI 的手写 Database 类型）
 
-手工编写 14 张表的 `Row / Insert / Update` 与字面量外键 `Relationships`，`createClient<Database>` 后所有查询（含嵌套关联查询）全部类型检查，服务层清零 `as unknown as` 强转。关键经验：**双外键关联表必须用 `别名:目标表!列名()` 语法提示**（FK 名提示反而不被支持），过程记录见 [docs/research/06](docs/research/06-Supabase类型与TanStackQuery实践.md)。
+手工编写 17 张表的 `Row / Insert / Update` 与字面量外键 `Relationships`，`createClient<Database>` 后所有查询（含嵌套关联查询）全部类型检查，服务层清零 `as unknown as` 强转。关键经验：**双外键关联表必须用 `别名:目标表!列名()` 语法提示**（FK 名提示反而不被支持），过程记录见 [docs/research/06](docs/research/06-Supabase类型与TanStackQuery实践.md)。
 
 ### 3. 服务层错误约定 + TanStack Query 数据层
 
