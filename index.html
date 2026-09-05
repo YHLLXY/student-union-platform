@@ -62,8 +62,6 @@
 
         var updateToast = document.getElementById('pwa-update-toast');
         var newWorker = null;
-        var pendingActivate = false; // 用户已点击更新提示，等待新 SW 接管
-        var hasReloaded = false;
 
         function showUpdateToast() {
           if (!updateToast) return;
@@ -71,9 +69,11 @@
           updateToast.onclick = function () {
             updateToast.style.display = 'none';
             if (newWorker) {
-              // 新 SW 激活接管后会触发 controllerchange，由它统一清缓存并刷新
-              pendingActivate = true;
-              newWorker.postMessage({ type: 'skipWaiting' });
+              // 清理旧代缓存由新 SW 在自身上下文完成（此时通常已自激活，消息处理对
+              // waiting/active 两种状态都成立），且不受本页 reload 时序影响；
+              // 本线程稍后直接刷新即可拿到新版（新 SW 服务自己的预缓存 shell）
+              newWorker.postMessage({ type: 'ACTIVATE_AND_PURGE_OLD' });
+              setTimeout(function () { window.location.reload(); }, 300);
             } else {
               window.location.reload();
             }
@@ -137,16 +137,9 @@
             console.warn('[PWA] SW 注册失败（非关键错误）:', err);
           });
 
-        // SW 接管页面时触发。注意：首次访问（clients.claim）也会触发，
-        // 必须用 pendingActivate 区分"用户主动更新"，否则首访会多刷一次
-        navigator.serviceWorker.addEventListener('controllerchange', function () {
-          if (pendingActivate && !hasReloaded && navigator.serviceWorker.controller) {
-            hasReloaded = true;
-            // 新 SW 先清空全部缓存，随后的 reload 从网络拿全新 HTML + 资源
-            navigator.serviceWorker.controller.postMessage({ type: 'PURGE_ALL' });
-            setTimeout(function () { window.location.reload(); }, 300);
-          }
-        });
+        // 注意：新版本 SW 在 install 即 skipWaiting + activate 里 clients.claim 自激活
+        // （沿用 v4.0 设计），controllerchange 会在用户点击前就触发一次（claim 接管），
+        // 因此这里不做任何自动刷新——更新通过 SWR 下次导航自动生效，或由 toast 点击即时生效
 
         // 手动安装按钮兜底（beforeinstallprompt）
         var deferredPrompt = null;

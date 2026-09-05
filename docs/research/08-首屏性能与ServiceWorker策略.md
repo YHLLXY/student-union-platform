@@ -47,13 +47,19 @@ performance.getEntriesByType('resource');     // 每个资源的 transferSize / 
 
 ### 版本更新链路（保持原有 UX 语义）
 
+**前提事实**：本项目 SW 沿用 v4.0 的自激活设计——install 即 `skipWaiting()`、activate 里 `clients.claim()`，新版本不等待用户授权即接管；toast 是"立即换新 + 顺手清理"的入口而非激活开关。
+
 | 环节 | 设计 |
 |------|------|
 | 更新检测 | 浏览器导航时自动 byte-diff `sw.js`；另有 10 分钟 `registration.update()` 轮询 |
-| 提示 | `updatefound` → toast"新版本已就绪"（不变） |
-| 激活 | 用户点击 toast → `skipWaiting` → 新 SW `clients.claim()` 接管 |
-| **防误刷** | `controllerchange` 在**首次访问**也会触发（claim 接管），必须用 `pendingActivate` 标志区分"用户主动更新"，否则首访多刷一次（审查阶段发现的坑） |
-| 清缓存 | 接管后主线程 `postMessage({type:'PURGE_ALL'})` → 新 SW 清空全部 app-* 缓存 → 300ms 后 `reload()` → 从网络拿全新 HTML+资源 |
+| 自动生效 | 自激活 + SWR 只服务**本代**预缓存 shell → 新 SW 接管后的下一次导航自动是新版，无需任何用户动作 |
+| 提示 | `updatefound` → toast"新版本已就绪"（install 完成过快时 trackUpdate 可能错过 installing/waiting 状态，toast 偶发不弹——v4.0 起既有行为，更新不受影响） |
+| 点击 toast | `postMessage({type:'ACTIVATE_AND_PURGE_OLD'})` 给新 Worker + 300ms 后直接 `reload()` |
+
+### v4.1.1：生产实测暴露的两个竞态/遮蔽坑（v4.1.0 首版实现踩中）
+
+1. **清理竞态**：首版把 PURGE_ALL 挂在"主线程收到 controllerchange 后回发消息"上——生产机上 300ms 的 reload 跑赢了新 SW 激活，controllerchange 在旧页面没来得及触发，清理被跳过（本地机器快，测试两次都没暴露）。**修复**：清理整体移入 Worker 侧——`ACTIVATE_AND_PURGE_OLD` 消息处理器内部 `skipWaiting → claim → 删旧代`，用 `waitUntil` 保证执行；Worker 在状态切换后是同一执行环境，完全不依赖页面存活与主线程时序。
+2. **旧代 shell 遮蔽**：SWR 首版用全局 `caches.match(SHELL_URL)`，而 CacheStorage 按缓存**创建顺序**返回第一个命中——版本更迭后旧代 shell（先创建）会永久遮蔽新代预缓存，用户永远拿旧 HTML。**修复**：导航只查本代 `caches.open(APP_SHELL)` 的 shell 键，代际之间天然隔离。
 
 ### 旧资源保护：activate 保留 2 代
 

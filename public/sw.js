@@ -14,7 +14,7 @@
 
 // ======================== 配置 ========================
 
-var CACHE_VERSION = 'v4.1.0';
+var CACHE_VERSION = 'v4.1.1';
 var APP_SHELL = 'app-shell-' + CACHE_VERSION;
 var APP_ASSETS = 'app-assets-' + CACHE_VERSION;
 
@@ -112,25 +112,25 @@ self.addEventListener('fetch', function (event) {
   }
 
   // 导航请求（HTML 页面）：stale-while-revalidate
-  // 一律服务预缓存的 shell（SPA + HashRouter，所有导航同一份 HTML，即 Workbox NavigationRoute 模式），
-  // 后台拉新 HTML 写回 shell 键 → 打开零网络等待，更新在下次导航生效或由版本 toast 触发
+  // 只查本代缓存（APP_SHELL）——全局 caches.match 会按缓存创建顺序命中旧代 shell，
+  // 新版预缓存会被旧版永久遮蔽（v4.1.0 生产实测踩坑）；SPA + HashRouter 所有导航同一份 HTML
   if (isNavigation(event.request)) {
     var SHELL_URL = BASE + '/index.html';
     event.respondWith(
-      caches.match(SHELL_URL).then(function (cached) {
-        var networkUpdate = fetch(SHELL_URL).then(function (response) {
-          if (response && response.ok) {
-            var cloned = response.clone();
-            caches.open(APP_SHELL).then(function (cache) {
+      caches.open(APP_SHELL).then(function (cache) {
+        return cache.match(SHELL_URL).then(function (cached) {
+          var networkUpdate = fetch(SHELL_URL).then(function (response) {
+            if (response && response.ok) {
+              var cloned = response.clone();
               cache.put(SHELL_URL, cloned);
-            });
-          }
-          return response;
-        }).catch(function () {
-          // 后台更新失败（如离线）：已有缓存时静默忽略；无缓存时返回错误响应走浏览器离线页
-          return Response.error();
+            }
+            return response;
+          }).catch(function () {
+            // 后台更新失败（如离线）：已有缓存时静默忽略；无缓存时返回错误响应走浏览器离线页
+            return Response.error();
+          });
+          return cached || networkUpdate;
         });
-        return cached || networkUpdate;
       })
     );
     return;
@@ -165,22 +165,26 @@ self.addEventListener('fetch', function (event) {
 // ======================== Message（主线程通信） ========================
 
 self.addEventListener('message', function (event) {
-  if (event.data && event.data.type === 'skipWaiting') {
-    console.log('[SW] 收到 skipWaiting 指令');
-    self.skipWaiting();
-  }
-  // 用户点击更新 toast、新 SW 接管后触发：清空全部缓存，
-  // 紧随其后的 location.reload() 将从网络拿全新 HTML + 资源
-  if (event.data && event.data.type === 'PURGE_ALL') {
-    console.log('[SW] 收到 PURGE_ALL 指令，清空应用缓存');
-    event.waitUntil(
-      caches.keys().then(function (keys) {
-        return Promise.all(
-          keys
-            .filter(function (key) { return key.indexOf('app-shell-') === 0 || key.indexOf('app-assets-') === 0; })
-            .map(function (key) { return caches.delete(key); })
-        );
-      })
-    );
+  // 用户点击更新提示：新 SW 自己完成「接管 + 清旧代」，全过程在 Worker 上下文内执行。
+  // 不能依赖主线程在 controllerchange 后回发 PURGE_ALL——reload 可能跑赢激活（v4.1.0 生产实测踩坑），
+  // 而 Worker 在状态切换后仍是同一执行环境，waitUntil 保证清理必然完成。
+  if (event.data && event.data.type === 'ACTIVATE_AND_PURGE_OLD') {
+    console.log('[SW] 收到 ACTIVATE_AND_PURGE_OLD：接管并清理旧代缓存');
+    event.waitUntil((async function () {
+      await self.skipWaiting();
+      await self.clients.claim();
+      var keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(function (key) {
+            return (key.indexOf('app-shell-') === 0 || key.indexOf('app-assets-') === 0) &&
+                   key !== APP_SHELL && key !== APP_ASSETS;
+          })
+          .map(function (key) {
+            console.log('[SW] 清理旧代缓存:', key);
+            return caches.delete(key);
+          })
+      );
+    })());
   }
 });
