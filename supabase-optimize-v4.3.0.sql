@@ -5,9 +5,8 @@
 -- 内容与 supabase-migration.sql 第十七部分完全一致（由脚本抽取，勿手工编辑本文件，
 -- 改动请改 supabase-migration.sql 后重新抽取）。
 -- 特性：全部幂等，可重复执行；不改变任何业务语义；可在部署 v4.3.0 前端前后任意时刻执行。
--- 表名已全部写成 public.xxx 并显式 SET search_path —— 2026-09-11 首次执行时遇到
---   ERROR: 42P01 relation "users" does not exist（SQL Editor 会话 search_path 不含 public 所致），
---   故加此两道保险；若你的库不在 public schema，见文末「万一还是报 42P01」三行诊断。
+-- 表名已全部写成 public.xxx 并显式 SET search_path；真正踩到的坑其实是「贴到了另一个
+--   Supabase 项目」——详见下方「为什么所有表名都写成 public.xxx」一段的更正说明。
 -- ============================================================
 -- 第十七部分：数据库优化升级（2026-09-11，v4.3.0）
 -- ============================================================
@@ -27,12 +26,16 @@
 -- 说明：全部用普通 CREATE INDEX（不加 CONCURRENTLY）——CONCURRENTLY 不能在事务块内执行，
 --       而 Supabase SQL Editor 会包事务；本库表体量小，短暂写锁可忽略。
 --
--- ⚠️ 为什么所有表名都写成 public.xxx（2026-09-11 用户实测补丁）：
---      首次执行时报 `42P01 relation "users" does not exist`，但 users 明明在库里——
---      PostgREST 的 /rest/v1/users 一直正常工作，说明它就在 API 暴露的 public schema 下；
---      报错是 SQL Editor 会话的 search_path 不一定含 public，未限定表名解析不到。
---      故这里 ① 显式 SET search_path，② 所有表名一律写成 public.表名，两道保险；
---      这样在 search_path 正常/异常、编辑器/psql/CLI 各种入口下都能直接执行。
+-- ⚠️ 为什么所有表名都写成 public.xxx —— 附一次误判的更正（2026-09-11 用户实测）：
+--      首次执行报 `42P01 relation "users" does not exist`，当时判定为「SQL Editor 会话的
+--      search_path 不含 public」；但把表名改成全限定 `public.users` 之后**仍然**报同样的错，
+--      这个判定就被证伪了——Postgres 只在表确实不存在时，才会对全限定名报此错。
+--      真正原因：贴脚本时打开的是**另一个 Supabase 项目**（Dashboard 会记住上次打开的项目，
+--      从历史记录进来极易落到隔壁库），那个库里当然没有本项目的表。
+--      正确项目是 bbyykrgitgawqwdgcxhp；复核方式是拿项目 URL 直接打 REST 接口，
+--      /rest/v1/users 返回 200（body 是空数组，那是 RLS 拦掉了匿名行）即证明表在该库 public 下。
+--      保留 public. 前缀与 SET search_path：成本为零、覆盖 search_path 真异常的场景；
+--      但排查顺序要改成「**先确认连的是哪个库**（SELECT current_database()），再谈 schema」。
 
 SET search_path = public;
 

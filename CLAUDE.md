@@ -176,9 +176,23 @@ module/
 3. **提醒用户手动执行迁移**（复制 SQL → Supabase Dashboard → SQL Editor）
 4. 用户确认执行后，功能才能正常使用
 
-**写 SQL 的铁律：表名一律带  前缀。** Supabase SQL Editor 会话的  不一定包含 ，写裸表名会报 （2026-09-11 实测踩过）。函数同理写 ，并在脚本开头  兜底。
+**排查 SQL 报错的顺序（2026-09-11 误判一次后固化，务必按序走，别跳步）：**
 
-**需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有两份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分，纯索引/触发器/约束优化，幂等、可在部署前后任意时刻执行）。
+1. **先确认连的是不是同一个库**：`SELECT current_database(), current_schema(), current_setting('search_path');`。报 `42P01 relation "xxx" does not exist` 时，**第一嫌疑是「SQL Editor 打开的是另一个 Supabase 项目」**（Dashboard 会记住上次打开的项目，从历史记录进来极易落到隔壁库）——正确项目是 `bbyykrgitgawqwdgcxhp`。
+2. **再看限定名**：如果连表名带 `public.` 前缀都报「不存在」，那就**一定是那个库里真的没有这张表**，不要再往 `search_path` 上想（Postgres 只在表确实不存在时才对全限定名报此错）。据此可反推是连错库。
+3. **可用的交叉验证**：用 `.env` 里的项目 URL 直接打 REST 接口（`curl -s -o /dev/null -w '%{http_code}' "$VITE_SUPABASE_URL/rest/v1/users?select=id&limit=1" -H "apikey: $KEY"`）；返回 **200**（哪怕 body 是 `[]`，那是 RLS 拦掉匿名行）就证明表在该库的 public schema 下。
+
+**写 SQL 的加固（成本为零，保留）：表名一律带 `public.` 前缀，脚本开头 `SET search_path = public;` 兜底。** 函数同理写 `public.函数名()`。这覆盖的是 `search_path` 真异常的场景，不是上面那个误判的原因。
+
+**DDL 脚本必须自带「反馈」**：建索引/建触发器成功时 SQL Editor 只显示 `Success. No rows returned`，用户会以为没生效。故每个一次性脚本**结尾都要留一条只读的验收查询**（`WITH expected AS (SELECT * FROM (VALUES …) AS e(…)) SELECT … '[OK]'/'[缺失]' …`），把「建了什么、成没成」直接打成表。
+
+**脚本工具（别再手抄 SQL，两份内容必须逐字一致）：**
+
+- `node scripts/extract-sql-section.mjs <第N部分> <输出文件名>` —— 从 `supabase-migration.sql` 抽取某章节生成独立执行脚本（自动识别章节边界，抬头标注勿手改）。
+- `node scripts/check-sql.mjs <sql 文件>` —— 静态体检：语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点（零依赖）；另可选装 `pgsql-ast-parser` 做真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
+- 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
+
+**需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有四份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
 
 ### 数据导出
 
