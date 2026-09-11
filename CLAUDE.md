@@ -105,6 +105,8 @@ src/
 **其它注意：**
 - stub 是按「真实 PostgREST 线上报文形态」仿真的（`.or()`、`.contains()` → `cs.{}`、`count=exact`、`别名:users!外键列(fields)`、列默认值 `TABLE_DEFAULTS`、**`order` 排序 / `limit`·`offset`·`Range` 分页窗口 / `not.` 取反**）。新增查询写法若在测试里静默失配，先补 `scripts/dev-stub.mjs` 的对应形态，不要绕过断言；
 - **stub 的响应体必须按真实协议序列化**：`send()` 早先对字符串原样输出，而真实 PostgREST 对标量 RPC（如返回 `text` 的 `ticket_qr_token`）返回的是**带引号的 JSON 字符串**。后果不是断言失败，而是 `unwrap` 解析失败后把令牌原文当 `error.message` 抛出来（v4.4.0 排查耗时最久的一项）。**遇到「解析失败」类错误先查 stub 的报文形态，别急着改业务代码**；
+- **stub 的回写响应必须是「落库后的整行」**：POST 的 representation 早先只回传「请求体 + id/created_at」，缺了 `TABLE_DEFAULTS` 补上的列。后果是 `users.onboarded`（DEFAULT false）在响应里根本不存在 → 前端拿到 `undefined` → 新人引导永远不弹，而这类缺口只在「断言某个默认值生效」时才暴露。v4.5.0 已改为回传入库行（顺带修掉「多行插入时所有行共用最后一行 id」的老 bug）；
+- **弹窗里的表单不要在 `afterOpenChange` / `onOpenChange` 里回填**：面板动画结束（约 300ms）后才 setFieldsValue，会覆盖用户在这段时间里输入的内容 —— v4.5.0 的资料编辑就这么丢过一次输入（E2E 抓到的），正确写法是「用 `{open && <Form/>}` 条件挂载，初值走 `initialValues`」；
 - E2E 必须 `serviceWorkers: 'block'`：应用注册了 PWA service worker，而 Playwright **不拦截由 SW 处理的请求**——不屏蔽 SW，`page.route` 防线会形同虚设；
 - CI：`.github/workflows/deploy.yml` 的 `test` job（oxlint + 单测 + E2E）全绿才允许 `build` → `deploy`，且该 job **不注入任何生产凭据**。
 
@@ -169,7 +171,7 @@ module/
   - **新依赖先看包体积、且能懒加载的一律懒加载**：新增 `import` 后必须量一次首屏体积（见下）。v4.4.0 的二维码链就是这样发现的——`qrcode`/`html5-qrcode` 被 `priority: 1` 的 vendor 兜底分组吸走，而 vendor 是入口静态 import 的，等于每次进站白付 100+ KB gz
 - **首屏体积的量法与预算（改动分包 / 加依赖后必跑）：**
   - `npm run build && node scripts/measure-eager.mjs` —— 口径是 `dist/index.html` 引用的**全部 .js** 的 gzip 之和；`<link rel="modulepreload">` 也要算（入口会**静态 import** 它们，是真会阻塞首屏的），只有动态 `import()` 的 chunk 不算
-  - 预算 **≤340 KB gz**；历史基线：v4.3.0 = 319.5，v4.4.0 = 325.2
+  - 预算 **≤340 KB gz**；历史基线：v4.3.0 = 319.5，v4.4.0 = 325.2，v4.5.0 = 325.3（新增的论坛互动 / 引导 / 资料编辑全部落在懒加载 chunk 里，首屏仅 +0.1）
   - `entriesAwareMergeThreshold`（当前 8KB）是这套分包里最敏感的旋钮：调高会把次要页面的 antd 块并进入口共享块（200KB → 首屏 535 KB gz），调低到 8KB 各入口各自成块（325 KB gz）
 - **乐观更新：** 拖拽/标记已读等操作先改本地 state → 后台同步 → 失败回滚。**必须用 `setState(prev => prev.map(...))` 而非对象 mutation。**
 - **组件受控模式：** 可复用组件使用标准 `value` + `onChange` 接口，与 antd Form 无缝集成
@@ -200,7 +202,7 @@ module/
 - `node scripts/check-sql.mjs <sql 文件>` —— 静态体检三关：① 结构自检（语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点，零依赖）；② **DDL 顺序检查**（触发器 `UPDATE OF 列` / 索引列引用了本文件后面才 `ADD COLUMN` 的列即报错——42703 就是这么来的）；③ 可选 `pgsql-ast-parser` 真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
 - 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
 
-**需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有四份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
+**需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有五份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-phase3-v4.5.0.sql`（第十九部分，含新表/新列/触发器/策略）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
 
 ### 数据导出
 
@@ -326,9 +328,9 @@ git push origin master
 - **Auth：** 邮箱 = `学号@stuunion.org`，`users` 表通过 `auth_id` 关联 `auth.users`
 
 **核心表：**
-`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides` | `points_ledger`（v4.4.0）
+`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides` | `points_ledger`（v4.4.0）| `forum_likes` | `forum_bookmarks`（v4.5.0）
 
-**迁移文件：** `supabase-migration.sql`（18 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化、Phase 2 数据层）；大段独立脚本见根目录 `supabase-*.sql`（另有只读验收脚本 `supabase-verify-v4.3.0.sql`）
+**迁移文件：** `supabase-migration.sql`（19 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化、Phase 2/3 数据层）；大段独立脚本见根目录 `supabase-*.sql`（另有只读验收脚本 `supabase-verify-v4.3.0.sql`）
 
 **数据库优化（v4.3.0，第十七部分）：** `users.auth_id` 唯一索引（RLS 策略判定热路径）、22 条外键索引、11 条复合索引、`updated_at` 触发器、两个枚举列 CHECK（NOT VALID）。执行脚本 `supabase-optimize-v4.3.0.sql`，**由用户在 Supabase 手动执行**，不执行也不影响功能。
 
@@ -339,6 +341,23 @@ git push origin master
 3. **两条防伪触发器**：`task_submissions.status` 进入 `approved`/`rejected`、`ticket_records` 的两个签到列，都必须「部门负责人及以上」（放行 `service_role` 供运维）。不加固的话任何志愿者都能给自己加分，积分排行就失去意义。
 
 **学期键：** 形如 `2026-2027-1`（9 月~次年 1 月为第 1 学期）。数据库侧是 `public.semester_of()`，前端侧是 `src/utils/semester.ts` 的 `currentSemester()`——**两边必须同口径**，改一处要改两处。
+
+**Phase 3 数据层（v4.5.0，第十九部分）：** 执行脚本 `supabase-phase3-v4.5.0.sql`（**需用户在 Supabase 执行**）。四点设计意图，改动前务必先读：
+
+1. **帖子列表不再 N+1**。`forum_posts` 新增 `reply_count` / `like_count` 两个**计数列**，由 `trg_forum_replies_count` / `trg_forum_likes_count` 触发器维护；回填语句在同一个脚本里。列表因此只需一条查询（`select('*, author:created_by(name)')`），原先「每个帖子各发一条 `head: true` 的 count」已删除。**这两个计数列是只读的**——客户端写它既没用也没意义。
+2. **`forum_likes` / `forum_bookmarks` 是全库第一对按行 RLS 的表**（Phase 4 C2 的先行试点）：复合主键 `(post_id, user_id)` 保证一人一帖一行；SELECT 放行全体登录用户，INSERT / DELETE 一律要求 `user_id = current_app_user_id()`，**有意不建 UPDATE 策略**（点赞行没有可改字段）。前端的 `toggleLike` 把 23505 当成功处理，双击/重试都不会报错。
+3. **置顶有权重，计数没有**。`forum_posts.pinned_at` 由 `trg_forum_posts_pin_guard` 守着（部门负责人及以上，放行 `service_role`）——置顶是面向全体的可见性加权；而两个计数列**有意不加守卫**（改动它拿不到任何权限、也不影响业务判断，加「守卫 + 事务内 GUC 绕行」不划算）。若哪天计数被用于考核，这条注释与代码必须同步改。
+4. **`users.onboarded` 的存量回填用固定时间字面量**（`created_at < '2026-09-12 00:00:00+08'`）而不是 `now()`：脚本要能重复执行，用 `now()` 会把「上次执行之后新注册的人」误标成已引导。前端读取一律用 `onboarded === false` 判断——v4.4.0 之前的本地缓存里没有这个字段，用 `!user.onboarded` 会让全体老用户升级瞬间被弹一次引导。
+
+**@提及（v4.5.0）不占任何 DDL**：`notifications.type` 在第十七部分特意没加 CHECK，就是为了今天能直接写 `'mention'`（当时已把原因写在注释里）。提及对象由**前端**在正文里解析——只有从成员候选面板点选过的人才会进 `mentionIds`，数据库不解析 Markdown 正文。这是有意的取舍：通知不是权限，「正文里恰好出现了某个姓名」不该误通知，而漏发的最坏后果只是少一条提醒。
+
+## v4.5.0 增强（2026-09-12）
+
+1. **论坛互动** — 帖子卡与详情页可点赞 / 收藏（乐观更新 + 计数列），侧栏新增「我的收藏」筛选；部门负责人及以上可置顶，列表置顶帖排最前
+2. **@提及** — 帖子与回复编辑器输入 `@` 弹出成员候选（`MentionInput`，光标定位在 mention.ts 的纯函数里），正文按名册高亮（`MentionText` / `mentionComponents`），被提及者收 `mention` 通知
+3. **新人引导** — 新注册账号首次登录弹三步抽屉（看使用指南 → 认领第一个任务 → 完善个人资料），可跳过；完成或跳过后落库 `users.onboarded = true`
+4. **个人资料编辑** — 个人中心「编辑资料」：显示名、头像（复用 attachments 公开 bucket，路径 `avatars/{userId}/`）、联系方式；`AuthUpdateContext` 让顶部头像与个人信息卡片即时回显，不必刷新
+5. **性能** — 论坛列表的回复数/点赞数改读计数列，查询数从 1+N 降为 1（见上文第十九部分）
 
 ## v4.4.0 增强（2026-09-11）
 

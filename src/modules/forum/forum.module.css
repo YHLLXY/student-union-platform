@@ -90,6 +90,101 @@
   margin-top: 16px;
 }
 
+/* ---- 点赞 / 收藏 / 置顶（卡片与详情共用一套按钮样式） ---- */
+.postActions,
+.detailActions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.detailActions {
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-default);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.actionBtn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.actionBtn:active {
+  transform: scale(0.97);
+}
+
+/* 已点赞 / 已收藏 / 已置顶：仅换色，不加位移——列表里同时在动的元素越少越安静 */
+.actionActive {
+  color: var(--color-info);
+  background: var(--bg-selected);
+}
+
+.actionActive:hover {
+  color: var(--color-info);
+  background: var(--bg-info-hover);
+}
+
+.actionCount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- @提及 ---- */
+.mention {
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-selected);
+  color: var(--color-info);
+}
+
+.mentionList {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: -4px -8px;
+}
+
+.mentionOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mentionOption:hover,
+.mentionOption:focus-visible {
+  background: var(--bg-selected);
+}
+
+.mentionOptionDept {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
 .templateContent {
   margin-bottom: 16px;
 }

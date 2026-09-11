@@ -132,6 +132,16 @@
 
 ## 待处理
 
+### #12 antd `List` 组件弃用警告
+
+- **日期：** 2026-09-12（v4.5.0 E2E 控制台实测发现）
+- **类型：** 弃用警告
+- **严重程度：** 低（仅控制台警告，不影响功能）
+- **现象：** 控制台输出 `Warning: [antd: List] The List component is deprecated. And will be removed in next major version.`
+- **影响范围：** 1 处——[DashBoardPage.tsx:2](src/modules/dashboard/DashBoardPage.tsx#L2) 引入并使用了 antd `List`
+- **修复方案：** 该处是简单的竖向条目列表，直接换成 `<div>` + flex（或复用项目已有骨架/空态组件），不必引入替代库
+- **排期：** 与其余 antd 6 清理（#1、#11）合并做一轮，不影响功能
+
 ### #11 antd Drawer `width` / `height` 弃用警告
 
 - **日期：** 2026-09-11（v4.4.0 开发中实测发现）
@@ -149,6 +159,7 @@
 - **严重程度：** 中（仅当攻击者知道 Supabase 项目 URL 且有技术能力直接调 REST API 时才可被利用）
 - **现状（2026-09-05 安全加固后）：** 原来「16 张表仅 1 张启用 RLS」的问题**已解决第一层**——`supabase-migration.sql` 第十六部分已对全部业务表启用 RLS，`anon` 一律拒绝、`authenticated` 全量放行，登录前必需的 3 条匿名查询改走 `SECURITY DEFINER` 最小暴露函数。即：**拿到 anon key 已无法匿名读写任何业务数据**。
 - **仍然存在的缺口：** 已登录用户之间没有行级隔离——任何登录用户直接调 REST API 仍可读写全部表（前端 `hasMinRole()` 只是 UI 层拦截，不构成边界）。数据库侧目前只有 `auth.role()` 粒度的策略。
+- **进展（2026-09-12，v4.5.0）：** 第一批**按行 RLS** 已落地——`forum_likes` / `forum_bookmarks`（复合主键 + `user_id = public.current_app_user_id()` 约束 INSERT/DELETE，无 UPDATE 策略），复用第十八部分写好的 `current_app_user_id()` / `is_organizer()`。这批是 C2 的试点：把「辅助函数 + 逐动作策略 + 客户端不依赖写权限」这套写法先在两张小表上跑通，再往大表推。
 - **修复方案（Phase 4 C2 细粒度 RLS）：** 引入辅助函数 `is_admin()` / `is_dept_head_of(dept)`，逐表按 SELECT/INSERT/UPDATE/DELETE 定义策略；兼容 `created_by IS NULL` 的历史数据；分两批（先读后写）上线，每批执行后跑全量 E2E + 三角色矩阵回归。
 - **排期：** Phase 4（详见 `docs/plans/2026-09-06-全方位升级实施计划-v4.3至v4.6.md`），不在 v4.3.0 处理。
 

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { resetStub, fillIdentity, loginAs, logout, gotoModule, btn } from './helpers';
+import { resetStub, fillIdentity, loginAs, logout, gotoModule, btn, dismissOnboarding } from './helpers';
 
 /**
  * E2E 冒烟① 注册 → 登录 → 改密
@@ -32,6 +32,11 @@ test.describe('冒烟① 注册 → 登录 → 改密', () => {
     // 注册即登录 → 工作台，且顶部显示本人姓名
     await expect(page).toHaveURL(/#\/dashboard/);
     await expect(page.locator('header').getByText(NEW_MEMBER.name, { exact: true })).toBeVisible();
+
+    // 新注册用户 onboarded = false → 新人引导自动弹出（v4.5.0 / B2）。
+    // 它带全屏遮罩，必须关掉，否则后面的「退出登录」点不到。
+    await expect(page.getByText('欢迎加入学生会交流平台')).toBeVisible();
+    await dismissOnboarding(page);
 
     // ---------- 2. 退出后用同一账号重新登录（已注册用户跳过邀请码校验） ----------
     await logout(page, NEW_MEMBER.name);

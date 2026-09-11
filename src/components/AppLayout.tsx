@@ -29,7 +29,7 @@ import FeedbackModal from './FeedbackModal';
 import PwaInstallButton from './PwaInstallButton';
 import { trackEvent } from '@/utils/analytics';
 import { useThemeMode } from '@/theme/ThemeModeProvider';
-import { GuideDrawer } from '@/modules/guide';
+import { GuideDrawer, OnboardingGuide } from '@/modules/guide';
 import { NotificationBell } from '@/modules/notification';
 import {
   fetchUnreadByModule,
@@ -236,7 +236,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <NotificationBell />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className={styles.userInfo}>
-              <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: md ? 8 : 0 }} />
+              <Avatar
+                size="small"
+                src={user.avatar_url || undefined}
+                icon={<UserOutlined />}
+                style={{ marginRight: md ? 8 : 0 }}
+              />
               <span className={styles.userNameText}>{user.name}</span>
             </div>
           </Dropdown>
@@ -308,6 +313,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </Layout>
 
       <GuideDrawer open={guideOpen} onClose={() => setGuideOpen(false)} />
+
+      {/* 新人引导：仅当档案里 onboarded 严格为 false 时出现（见 OnboardingGuide 注释） */}
+      <OnboardingGuide onOpenGuide={() => setGuideOpen(true)} />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* 移动端搜索 Drawer */}

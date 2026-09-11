@@ -11,6 +11,15 @@ export interface UserProfile {
   department: string;
   role: string;
   created_at: string;
+  avatar_url: string | null;
+  /**
+   * 是否已看过新人引导（v4.5.0 新增）。注意：v4.4.0 之前写入的本地缓存里没有这个字段，
+   * 因此读取处一律用 `=== false` 判断 —— undefined 绝不能触发引导，
+   * 否则升级到 v4.5.0 的瞬间全体老用户都会被弹一次。
+   */
+  onboarded: boolean;
+  contact_phone: string | null;
+  contact_email: string | null;
 }
 
 /**

@@ -474,3 +474,36 @@ export async function fetchMyPoints(userId: string, semester: string = currentSe
   const total = entries.reduce((sum, e) => sum + e.delta, 0);
   return { semester, total, entries: entries as PointsEntry[] };
 }
+
+// ========== 个人资料编辑（第十九部分 / v4.5.0） ==========
+
+/** 允许本人自行修改的字段。**有意不含** role / department / student_id：那是权限与身份，
+ *  只能由权限管理页（dept_head+）或数据库管理员变更，不能给「改资料」开这个口子。 */
+export interface ProfilePatch {
+  name?: string;
+  avatar_url?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  onboarded?: boolean;
+}
+
+/**
+ * 更新本人资料。写函数沿用项目约定返回布尔（不抛 SbError），失败在服务层记日志。
+ * 联系方式的可见范围沿用现有权限：users 表对所有登录用户可读，
+ * 因此「部门可见」是靠界面（个人中心 / 通讯录）体现，而不是靠列级权限。
+ */
+export async function updateMyProfile(userId: string, patch: ProfilePatch): Promise<boolean> {
+  if (Object.keys(patch).length === 0) return true;
+
+  const { error } = await supabase
+    .from('users')
+    .update(patch)
+    .eq('id', userId);
+
+  if (error) {
+    log.error('updateMyProfile 更新失败', error);
+    return false;
+  }
+  return true;
+}
+

@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Card, Statistic, Descriptions, Button, Modal, message, theme } from 'antd';
+import { Card, Statistic, Descriptions, Button, Modal, message, theme, Space, Avatar } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
+  LockOutlined, EditOutlined, UserOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import { fetchUserStats, fetchMilestoneSummary } from './profileService';
@@ -13,6 +16,7 @@ import Leaderboard from './Leaderboard';
 import MemberDirectory from './MemberDirectory';
 import DeptGuide from './DeptGuide';
 import PointsPanel from './PointsPanel';
+import ProfileEditModal from './ProfileEditModal';
 import TaskListModal from './TaskListModal';
 import styles from './profile.module.css';
 
@@ -20,6 +24,7 @@ export default function ProfilePage() {
   const { token } = theme.useToken();
   const user = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalTab, setTaskModalTab] = useState('completed');
 
@@ -115,19 +120,37 @@ export default function ProfilePage() {
 
       {/* 个人信息 */}
       <Card title="个人信息" className={styles.profileCard}>
+        <div className={styles.profileIdentity}>
+          <Avatar size={64} src={user.avatar_url || undefined} icon={<UserOutlined />} />
+          <div>
+            <div className={styles.profileName}>{user.name}</div>
+            <div className={styles.profileSub}>
+              {getDepartmentLabel(user.department)} · {getRoleLabel(user.role)}
+            </div>
+          </div>
+        </div>
         <Descriptions column={2} bordered size="small">
           <Descriptions.Item label="姓名">{user.name}</Descriptions.Item>
           <Descriptions.Item label="学号">{user.student_id}</Descriptions.Item>
           <Descriptions.Item label="部门">{getDepartmentLabel(user.department)}</Descriptions.Item>
           <Descriptions.Item label="角色">{getRoleLabel(user.role)}</Descriptions.Item>
+          <Descriptions.Item label="联系方式">{user.contact_phone || '未填写'}</Descriptions.Item>
+          <Descriptions.Item label="邮箱">{user.contact_email || '未填写'}</Descriptions.Item>
           <Descriptions.Item label="注册时间">{user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '-'}</Descriptions.Item>
           <Descriptions.Item label="操作">
-            <Button icon={<LockOutlined />} size="small" onClick={() => setShowPassword(true)}>
-              修改密码
-            </Button>
+            <Space>
+              <Button icon={<EditOutlined />} size="small" type="primary" onClick={() => setShowEdit(true)}>
+                编辑资料
+              </Button>
+              <Button icon={<LockOutlined />} size="small" onClick={() => setShowPassword(true)}>
+                修改密码
+              </Button>
+            </Space>
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <ProfileEditModal open={showEdit} onClose={() => setShowEdit(false)} />
 
       <TaskListModal
         open={taskModalOpen}

@@ -98,6 +98,11 @@ export interface Database {
           role: string;
           avatar_url: string | null;
           created_at: string;
+          /** 是否已看过新人引导（完成或跳过都置 true）。默认 false，见第十九部分。 */
+          onboarded: boolean;
+          /** 联系方式，本人在个人中心自行填写；NULL = 未填写 */
+          contact_phone: string | null;
+          contact_email: string | null;
         };
         Insert: {
           id?: string;
@@ -108,6 +113,9 @@ export interface Database {
           role?: string;
           avatar_url?: string | null;
           created_at?: string;
+          onboarded?: boolean;
+          contact_phone?: string | null;
+          contact_email?: string | null;
         };
         Update: {
           id?: string;
@@ -118,6 +126,9 @@ export interface Database {
           role?: string;
           avatar_url?: string | null;
           created_at?: string;
+          onboarded?: boolean;
+          contact_phone?: string | null;
+          contact_email?: string | null;
         };
         Relationships: [];
       };
@@ -351,6 +362,12 @@ export interface Database {
           template_type: string | null;
           template_data: Json | null;
           attachments: AttachmentMeta[] | null;
+          /** 置顶时间；NULL = 未置顶。排序键 pinned_at DESC NULLS LAST, created_at DESC */
+          pinned_at: string | null;
+          /** 回复数缓存列，由 trg_forum_replies_count 维护 —— 客户端只读，不要写入 */
+          reply_count: number;
+          /** 点赞数缓存列，由 trg_forum_likes_count 维护 —— 客户端只读，不要写入 */
+          like_count: number;
         };
         Insert: {
           id?: string;
@@ -365,6 +382,9 @@ export interface Database {
           template_type?: string | null;
           template_data?: Json | null;
           attachments?: AttachmentMeta[];
+          pinned_at?: string | null;
+          reply_count?: number;
+          like_count?: number;
         };
         Update: {
           id?: string;
@@ -379,8 +399,53 @@ export interface Database {
           template_type?: string | null;
           template_data?: Json | null;
           attachments?: AttachmentMeta[];
+          pinned_at?: string | null;
+          reply_count?: number;
+          like_count?: number;
         };
         Relationships: [FkUsers<['created_by'], 'forum_posts_created_by_fkey'>];
+      };
+      forum_likes: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          post_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          Rel<'forum_likes_post_id_fkey', ['post_id'], 'forum_posts'>,
+          FkUsers<['user_id'], 'forum_likes_user_id_fkey'>,
+        ];
+      };
+      forum_bookmarks: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          post_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          Rel<'forum_bookmarks_post_id_fkey', ['post_id'], 'forum_posts'>,
+          FkUsers<['user_id'], 'forum_bookmarks_user_id_fkey'>,
+        ];
       };
       forum_replies: {
         Row: {

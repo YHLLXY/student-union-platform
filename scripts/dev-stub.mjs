@@ -177,7 +177,27 @@ const db = {
   notifications, invite_codes: inviteCodes, department_guides: departmentGuides,
   platform_guides: platformGuides, notice_reads: noticeReads, usage_events: usageEvents,
   points_ledger: pointsLedger,
+  // 第十九部分（v4.5.0）：帖子互动。用数组模拟复合主键表 —— 前端的「一人一帖一行」
+  // 由真实库的 PRIMARY KEY (post_id, user_id) 保证，stub 里靠前端自己不做重复插入即可。
+  forum_likes: [],
+  forum_bookmarks: [],
 };
+
+/* 第十九部分（v4.5.0）：users / forum_posts 的新列。
+   必须在 SEED_SNAPSHOT 之前补齐，否则 /__reset 恢复的是「没有这些列」的旧快照。 */
+for (const u of db.users) {
+  // 存量用户一律「已引导」，与迁移里的存量回填口径一致（只有注册流程新建的用户才是 false）
+  if (u.onboarded === undefined) u.onboarded = true;
+  if (u.contact_phone === undefined) u.contact_phone = null;
+  if (u.contact_email === undefined) u.contact_email = null;
+}
+for (const p of db.forum_posts) {
+  if (p.pinned_at === undefined) p.pinned_at = null;
+  // 计数列由种子数据算出：真实库是第十九部分的触发器 + 回填，这里等价地算一遍
+  p.reply_count = db.forum_replies.filter((r) => r.post_id === p.id).length;
+  p.like_count = db.forum_likes.filter((l) => l.post_id === p.id).length;
+}
+
 let seq = 9000;
 
 /* 测试隔离：启动即快照种子，POST /__reset 可整体回滚（E2E 每个用例前调用，避免用例间互相污染） */
@@ -197,10 +217,13 @@ const TABLE_DEFAULTS = {
   tasks: { status: 'pending', priority: 'normal' },
   task_submissions: { status: 'submitted' },
   task_milestones: { status: 'pending', sort_order: 0 },
-  users: { role: 'volunteer', department: '' },
+  // 第十九部分：注册流程新建的用户 onboarded = false（真实库的列默认值）→ 新人引导会弹出来
+  users: { role: 'volunteer', department: '', onboarded: false, contact_phone: null, contact_email: null },
   invite_codes: { used_count: 0, used_by: null, max_uses: 1, is_used: false, batch_id: null },
   // 第十八部分：签到的两列默认 NULL（真实库由 ALTER TABLE ADD COLUMN 得到，无默认值）
   ticket_records: { checked_in_at: null, checked_by: null },
+  // 第十九部分：计数列默认 0 / 未置顶
+  forum_posts: { pinned_at: null, reply_count: 0, like_count: 0, collaborating_departments: [], attachments: [] },
 };
 
 /* 外键嵌入：creator:users!created_by(name) / submitter:user_id(name) / ticket:ticket_id(...) */
@@ -236,7 +259,28 @@ function embedRows(out, select) {
   });
 }
 
+/** 复合主键表：真实库靠 PRIMARY KEY 拦重复行，stub 用这份声明同构地拦（见 POST 分支） */
+const COMPOSITE_PK = {
+  forum_likes: ['post_id', 'user_id'],
+  forum_bookmarks: ['post_id', 'user_id'],
+};
+
 /* ---------- 工具 ---------- */
+/**
+ * 模拟数据库触发器（第十九部分）：回复 / 点赞的增删会改 forum_posts 上的计数列。
+ * 真实库由 trg_forum_replies_count / trg_forum_likes_count 完成；
+ * stub 不模拟的话，「回复后列表计数 +1」在本地永远看不到变化，E2E 也就验不了这条链路。
+ */
+function applyStubTriggers(table, op, row) {
+  const col = table === 'forum_replies' ? 'reply_count'
+    : table === 'forum_likes' ? 'like_count'
+    : null;
+  if (!col || !row?.post_id) return;
+  const post = db.forum_posts.find((p) => p.id === row.post_id);
+  if (!post) return;
+  post[col] = Math.max(0, (post[col] ?? 0) + (op === 'insert' ? 1 : -1));
+}
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': '*',
@@ -527,14 +571,43 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       if (req.method === 'POST') {
         const created = Array.isArray(body) ? body : [body];
+
+        // 复合主键表（第十九部分）：同一 (post_id, user_id) 只能有一行。
+        // 真实库插入重复点赞会整条语句失败并返回 409 / code 23505 —— 前端依赖这个语义
+        // 把「重复点赞」当成功处理，所以这里必须同构地拒绝（而不是静默多插一行）。
+        const pk = COMPOSITE_PK[table];
+        if (pk) {
+          const seen = rows.map((r) => pk.map((c) => r[c]).join('\u0000'));
+          for (const item of created) {
+            const key = pk.map((c) => item[c]).join('\u0000');
+            if (seen.includes(key)) {
+              // 整条语句失败（与真实库的语句级原子性一致），已入列的其余行也不写入
+              return send(res, 409, {
+                code: '23505',
+                message: `duplicate key value violates unique constraint "${table}_pkey"`,
+                details: null,
+                hint: null,
+              });
+            }
+            seen.push(key);
+          }
+        }
+
+        const pushed = [];
         for (const item of created) {
           const row = { id: uid(++seq), created_at: new Date().toISOString(), ...TABLE_DEFAULTS[table], ...item };
           rows.push(row);
+          pushed.push(row);
+          applyStubTriggers(table, 'insert', row);
         }
         const prefer = String(req.headers.prefer || '');
         if (prefer.includes('representation')) {
-          const out = created.map((item) => ({ id: rows[rows.length - 1].id, created_at: rows[rows.length - 1].created_at, ...item }));
-          return send(res, 201, wantsSingle ? out[0] : out);
+          // 回传**落库后的整行**（含补上的列默认值），与 PostgREST 一致。
+          // 曾经回传的是「请求体 + id/created_at」，于是 DEFAULT 出来的列在响应里根本不存在
+          // —— 例如 users.onboarded 默认 false，前端拿到 undefined 就永远不弹新人引导，
+          // 而 E2E 只在「注册后应弹引导」这一条上暴露出来。多行插入时旧写法还会把
+          // 所有行的 id 都写成最后一行的 id。
+          return send(res, 201, wantsSingle ? pushed[0] : pushed);
         }
         return send(res, 201, '');
       }
@@ -545,7 +618,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'DELETE') {
         const targets = applyFilters([...rows], url.searchParams);
-        for (const t of targets) rows.splice(rows.indexOf(t), 1);
+        for (const t of targets) {
+          rows.splice(rows.indexOf(t), 1);
+          applyStubTriggers(table, 'delete', t);
+        }
         return send(res, 204, '');
       }
     }

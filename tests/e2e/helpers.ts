@@ -52,6 +52,37 @@ export async function stubBulkInsert(table: string, rows: Record<string, unknown
   expect(res.ok, `stub 批量插入 ${table} 失败（${res.status}）`).toBeTruthy();
 }
 
+/**
+ * 直接改 stub 里的数据（走 PostgREST 的 PATCH 接口，与前端同一条路径）。
+ * filter 用 PostgREST 语法，如 `student_id=eq.XUAN1001`。
+ */
+export async function stubUpdate(
+  table: string,
+  filter: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const res = await fetch(`${STUB_ORIGIN}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(patch),
+  });
+  expect(res.ok, `stub 更新 ${table} 失败（${res.status}）`).toBeTruthy();
+}
+
+/**
+ * 关掉新人引导（若它正弹着）。
+ *
+ * 第十九部分起 users.onboarded 默认为 false，**注册流程新建的账号**一登录就会看到引导，
+ * 而它带全屏遮罩 —— 不关掉，后续任何点击都会落在遮罩上。
+ * 种子里已有的账号都是 onboarded = true（与迁移里的存量回填口径一致），不受影响。
+ */
+export async function dismissOnboarding(page: Page): Promise<void> {
+  const title = page.getByText('欢迎加入学生会交流平台');
+  if (!(await title.isVisible().catch(() => false))) return;
+  await btn(page, '跳过引导').click();
+  await expect(title).toBeHidden();
+}
+
 /** 身份步（注册：未注册学号 + 邀请码） */
 export async function fillIdentity(
   page: Page,

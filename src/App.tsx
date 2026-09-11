@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/modules/auth';
 import type { UserProfile } from '@/modules/auth';
 import supabase from '@/supabaseClient';
-import { AuthContext } from '@/components/AuthContext';
+import { AuthContext, AuthUpdateContext } from '@/components/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ModuleErrorBoundary from '@/components/ModuleErrorBoundary';
 import { RouteSkeleton } from '@/components/SkeletonBlocks';
@@ -41,6 +41,9 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+  // 供资料回写通道读取「最新值」：回调可能在 effect 之外被调用，闭包里的 user 会过期
+  const userRef = useRef<UserProfile | null>(null);
+  userRef.current = user;
 
   useEffect(() => {
     let alive = true;
@@ -92,6 +95,19 @@ export default function App() {
     writeCachedProfile(u);
   };
 
+  /**
+   * 资料回写：内存状态 + 本地缓存一起更新。
+   * 用 ref 读基准值而不是把 user 放进闭包，回调就不必随 user 变化重建。
+   */
+  const handleProfilePatch = (patch: Partial<UserProfile>) => {
+    const base = userRef.current;
+    if (!base) return;
+    const next = { ...base, ...patch };
+    userRef.current = next;
+    writeCachedProfile(next);
+    setUser(next);
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh' }}>
@@ -107,24 +123,26 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthContext.Provider value={user}>
-        <VersionNotifier />
-        <Suspense fallback={<RouteSkeleton />}>
-          <AppLayout>
-            <Suspense fallback={<RouteSkeleton />}>
-              <Routes>
-                <Route path="/dashboard" element={<ModuleErrorBoundary moduleName="首页工作台"><DashBoardPage /></ModuleErrorBoundary>} />
-                <Route path="/tasks" element={<ModuleErrorBoundary moduleName="任务管理"><TaskListPage /></ModuleErrorBoundary>} />
-                <Route path="/notices" element={<ModuleErrorBoundary moduleName="部门公告"><NoticeList /></ModuleErrorBoundary>} />
-                <Route path="/school" element={<ModuleErrorBoundary moduleName="学校信息"><SchoolNoticeList /></ModuleErrorBoundary>} />
-                <Route path="/forum" element={<ModuleErrorBoundary moduleName="部门论坛"><PostList /></ModuleErrorBoundary>} />
-                <Route path="/tickets" element={<ModuleErrorBoundary moduleName="活动抢票"><TicketList /></ModuleErrorBoundary>} />
-                <Route path="/admin" element={<ModuleErrorBoundary moduleName="权限管理"><MemberManage /></ModuleErrorBoundary>} />
-                <Route path="/profile" element={<ModuleErrorBoundary moduleName="个人中心"><ProfilePage /></ModuleErrorBoundary>} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </Suspense>
-          </AppLayout>
-        </Suspense>
+        <AuthUpdateContext.Provider value={handleProfilePatch}>
+          <VersionNotifier />
+          <Suspense fallback={<RouteSkeleton />}>
+            <AppLayout>
+              <Suspense fallback={<RouteSkeleton />}>
+                <Routes>
+                  <Route path="/dashboard" element={<ModuleErrorBoundary moduleName="首页工作台"><DashBoardPage /></ModuleErrorBoundary>} />
+                  <Route path="/tasks" element={<ModuleErrorBoundary moduleName="任务管理"><TaskListPage /></ModuleErrorBoundary>} />
+                  <Route path="/notices" element={<ModuleErrorBoundary moduleName="部门公告"><NoticeList /></ModuleErrorBoundary>} />
+                  <Route path="/school" element={<ModuleErrorBoundary moduleName="学校信息"><SchoolNoticeList /></ModuleErrorBoundary>} />
+                  <Route path="/forum" element={<ModuleErrorBoundary moduleName="部门论坛"><PostList /></ModuleErrorBoundary>} />
+                  <Route path="/tickets" element={<ModuleErrorBoundary moduleName="活动抢票"><TicketList /></ModuleErrorBoundary>} />
+                  <Route path="/admin" element={<ModuleErrorBoundary moduleName="权限管理"><MemberManage /></ModuleErrorBoundary>} />
+                  <Route path="/profile" element={<ModuleErrorBoundary moduleName="个人中心"><ProfilePage /></ModuleErrorBoundary>} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </Suspense>
+            </AppLayout>
+          </Suspense>
+        </AuthUpdateContext.Provider>
       </AuthContext.Provider>
     </ErrorBoundary>
   );

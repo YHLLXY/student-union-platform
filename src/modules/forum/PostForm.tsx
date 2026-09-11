@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Form, Input, Select, Button, message, theme } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthContext';
 import type { Json } from '@/types/database';
 import { FORUM_CATEGORIES, DEPARTMENTS } from '@/utils/constants';
 import { hasMinRole } from '@/utils/helpers';
-import { createPost } from './forumService';
+import { createPost, fetchMentionUsers } from './forumService';
+import MentionInput from './MentionInput';
 import FileUpload, { type Attachment } from '@/components/FileUpload';
 
 const { TextArea } = Input;
@@ -65,8 +67,16 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
   const [category, setCategory] = useState('discussion');
   const [templateType, setTemplateType] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [mentionIds, setMentionIds] = useState<string[]>([]);
   const canCollab = hasMinRole(user.role, 'dept_head');
   const canPostKnowledge = hasMinRole(user.role, 'dept_head');
+
+  // 提及名册：只有从候选面板点选过的成员才会被通知（判定见 forumService.notifyMentions）
+  const mentionQuery = useQuery({
+    queryKey: ['forumMentionUsers'],
+    queryFn: fetchMentionUsers,
+    staleTime: 10 * 60 * 1000,
+  });
 
   const isKnowledge = category === 'knowledge';
 
@@ -103,6 +113,7 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
       template_type: isKnowledge ? templateType : null,
       template_data: templateData,
       attachments,
+      mentionIds,
     });
 
     setLoading(false);
@@ -187,8 +198,14 @@ export default function PostForm({ onSuccess, onClose }: PostFormProps) {
                 <Select mode="multiple" placeholder="选择可查看此帖的部门" options={deptOptions} allowClear />
               </Form.Item>
             )}
-            <Form.Item name="content" label="内容（支持 Markdown）">
-              <TextArea rows={6} placeholder="支持 Markdown 格式编写" maxLength={10000} />
+            <Form.Item name="content" label="内容（支持 Markdown，输入 @ 可提及成员）">
+              <MentionInput
+                users={mentionQuery.data ?? []}
+                rows={6}
+                placeholder="支持 Markdown 格式编写；输入 @ 可提及成员"
+                maxLength={10000}
+                onMentionsChange={setMentionIds}
+              />
             </Form.Item>
           </>
         )}

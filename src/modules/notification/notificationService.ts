@@ -11,6 +11,7 @@ export type NotificationType =
   | 'submission_approved'
   | 'submission_rejected'
   | 'forum_reply'
+  | 'mention'
   | 'new_notice'
   | 'milestone_overdue';
 
@@ -29,13 +30,13 @@ export interface Notification {
 
 /**
  * 通知类型 → 栏目。未出现在任一栏目里的类型归入「系统」——
- * 这样后续新增通知类型（如 Phase 3 的 mention）不改服务层也会自动出现在系统栏，
- * 不会像白名单硬编码那样静默丢通知。
+ * 这样后续新增通知类型不改服务层也会自动出现在系统栏，不会像白名单硬编码那样静默丢通知。
+ * （v4.5.0 的 mention 是个例外：它属于论坛语境，于是显式加进 forum 栏而非落到系统栏。）
  */
 export const NOTIFICATION_CATEGORY_TYPES = {
   tasks: ['task_assigned', 'submission_approved', 'submission_rejected', 'milestone_overdue'],
   notices: ['new_notice'],
-  forum: ['forum_reply'],
+  forum: ['forum_reply', 'mention'],
 } as const;
 
 export type NotificationCategory = 'all' | 'tasks' | 'notices' | 'forum' | 'system';

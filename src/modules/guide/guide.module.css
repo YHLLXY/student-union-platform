@@ -84,3 +84,19 @@
   margin-top: 16px;
   padding: 0 4px;
 }
+
+/* ---- 新人引导（v4.5.0 / B2） ---- */
+.onboardingBody {
+  margin-top: 24px;
+}
+
+.onboardingIcon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.onboardingFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
