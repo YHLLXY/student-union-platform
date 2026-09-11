@@ -217,7 +217,7 @@ function send(res, status, body, extra = {}) {
   res.end(payload);
 }
 
-/** 极简 PostgREST 过滤:eq / in.(...) / is.null / or.(...) / contains */
+/** 极简 PostgREST 过滤:eq / in.(...) / is.null / or.(...) / contains / not.xxx */
 function applyFilters(rows, sp) {
   for (const [key, raw] of sp) {
     if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(key)) continue;
@@ -243,11 +243,13 @@ function applyFilters(rows, sp) {
       });
       continue;
     }
-    const m = /^(eq|neq|in|is|gt|gte|lt|lte)\.(.*)$/.exec(raw);
+    // .not(col, op, value) 的线上形态：col=not.is.null / col=not.in.(a,b)
+    const negate = /^not\.(.*)$/.exec(raw);
+    const expr = negate ? negate[1] : raw;
+    const m = /^(eq|neq|in|is|gt|gte|lt|lte)\.(.*)$/.exec(expr);
     if (!m) continue;
     const [, op, val] = m;
-    rows = rows.filter((r) => {
-      const v = r[key];
+    const test = (v) => {
       switch (op) {
         case 'eq': return String(v) === val;
         case 'neq': return String(v) !== val;
@@ -257,9 +259,67 @@ function applyFilters(rows, sp) {
         case 'lt': return v < val; case 'lte': return v <= val;
         default: return true;
       }
-    });
+    };
+    rows = rows.filter((r) => (negate ? !test(r[key]) : test(r[key])));
   }
   return rows;
+}
+
+/**
+ * 排序：order=created_at.desc / deadline.asc.nullslast（可逗号分隔多列）。
+ * NULL 默认与 Postgres 一致：ASC 时在最后，DESC 时在最前；可用 nullsfirst / nullslast 覆盖。
+ */
+function applyOrder(rows, orderRaw) {
+  if (!orderRaw) return rows;
+  const specs = orderRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+    const [field, ...mods] = s.split('.');
+    return {
+      field,
+      desc: mods.includes('desc'),
+      nullsFirst: mods.includes('nullsfirst'),
+      nullsLast: mods.includes('nullslast'),
+    };
+  }).filter((s) => s.field);
+  if (!specs.length) return rows;
+
+  return [...rows].sort((a, b) => {
+    for (const s of specs) {
+      const av = a[s.field];
+      const bv = b[s.field];
+      const aNull = av === null || av === undefined;
+      const bNull = bv === null || bv === undefined;
+      if (aNull || bNull) {
+        if (aNull && bNull) continue;
+        const nullFirst = s.nullsFirst || (s.desc && !s.nullsLast);
+        // a 是 null：nullFirst 时 a 在前（-1），否则在后（1）；b 是 null 时相反
+        return aNull ? (nullFirst ? -1 : 1) : (nullFirst ? 1 : -1);
+      }
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      if (cmp !== 0) return s.desc ? -cmp : cmp;
+    }
+    return 0;
+  });
+}
+
+/**
+ * 分页：postgrest-js 的 .range(a,b) 走 Range 头，.limit(n) / .offset(n) 走查询参数。
+ * 未请求分页时原样返回（保持旧行为）。
+ */
+function paginate(rows, sp, rangeHeader) {
+  const limitP = sp.get('limit');
+  const offsetP = sp.get('offset');
+  const rm = /^(\d+)-(\d*)$/.exec(String(rangeHeader || '').trim());
+  if (!rm && limitP === null && offsetP === null) return { start: 0, rows };
+
+  let start = offsetP !== null ? Number(offsetP) : 0;
+  let end = rows.length - 1;
+  if (rm) {
+    start = Number(rm[1]);
+    end = rm[2] === '' ? rows.length - 1 : Number(rm[2]);
+  } else if (limitP !== null) {
+    end = start + Number(limitP) - 1;
+  }
+  return { start, rows: rows.slice(start, Math.max(start, end + 1)) };
 }
 
 const authUser = (id = DEV_AUTH_ID) => ({
@@ -342,15 +402,22 @@ const server = http.createServer(async (req, res) => {
     const wantsSingle = String(req.headers.accept || '').includes('vnd.pgrst.object');
 
     if (req.method === 'GET' || req.method === 'HEAD') {
-      let out = applyFilters([...rows], url.searchParams);
+      // 过滤 → 排序 → 分页 → 嵌入，与 PostgREST 的处理顺序一致
+      const filtered = applyOrder(applyFilters([...rows], url.searchParams), url.searchParams.get('order'));
+      const total = filtered.length;
+      const { start, rows: windowed } = paginate(filtered, url.searchParams, req.headers.range);
+
       // FK 嵌入（select 里的 alias:表/列(fields) 形态）
       const select = url.searchParams.get('select') || '';
-      out = embedRows(out, select);
-      // count=exact（含 head:true）→ 用 Content-Range 回传总数
+      const out = embedRows(windowed, select);
+
+      // count=exact（含 head:true）→ 用 Content-Range 回传总数（分子是本次窗口，分母是过滤后总数）
       const prefer = String(req.headers.prefer || '');
       const extra = {};
       if (prefer.includes('count=exact')) {
-        extra['Content-Range'] = out.length ? `0-${out.length - 1}/${out.length}` : '*/0';
+        extra['Content-Range'] = total
+          ? `${start}-${start + out.length - 1}/${total}`
+          : '*/0';
       }
       if (wantsSingle) {
         return out.length ? send(res, 200, out[0], extra) : send(res, 406, { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: null, hint: null });

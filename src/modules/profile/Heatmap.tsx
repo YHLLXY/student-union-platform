@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Spin, Empty, Popover, theme } from 'antd';
+import { Spin, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { fetchHeatmapData } from './profileService';
 import type { HeatmapDay } from './profileService';
 import { HEATMAP_LEVEL_COLORS } from '@/utils/themeColors';
+import { EmptyState } from '@/components/common';
 import styles from './profile.module.css';
 
 export default function Heatmap() {
@@ -53,7 +54,7 @@ export default function Heatmap() {
         </div>
       </div>
 
-      {loading ? <Spin /> : data.length === 0 ? <Empty description="本月无任务记录" /> : (
+      {loading ? <Spin /> : data.length === 0 ? <EmptyState compact title="本月无任务记录" /> : (
         <div className={styles.heatmapGrid}>
           <div className={styles.heatmapLabels}>
             {weekDayLabels.map((d) => (

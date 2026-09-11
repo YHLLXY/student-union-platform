@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Input, Tag, Avatar, Empty, Tooltip, theme } from 'antd';
+import { Card, Input, Tag, Avatar, Tooltip, theme } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchAllMembers } from './profileService';
 import type { MemberInfo } from './profileService';
 import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState } from '@/components/common';
 import { DEPARTMENTS } from '@/utils/constants';
 import styles from './profile.module.css';
 
@@ -72,7 +73,7 @@ export default function MemberDirectory() {
         ))}
       </div>
       {filtered.length === 0 ? (
-        <Empty description="无匹配成员" />
+        <EmptyState compact title="无匹配成员" description="换个关键词或清空部门筛选再试" />
       ) : (
         <div className={styles.directoryGrid}>
           {filtered.map((m) => (

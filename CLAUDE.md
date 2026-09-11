@@ -103,7 +103,7 @@ src/
 3. E2E 走 `vite.e2e.config.ts`（`envDir: false`），根本不加载指向生产的根 `.env`。
 
 **其它注意：**
-- stub 是按「真实 PostgREST 线上报文形态」仿真的（`.or()`、`.contains()` → `cs.{}`、`count=exact`、`别名:users!外键列(fields)`、列默认值 `TABLE_DEFAULTS`）。新增查询写法若在测试里静默失配，先补 `scripts/dev-stub.mjs` 的对应形态，不要绕过断言；
+- stub 是按「真实 PostgREST 线上报文形态」仿真的（`.or()`、`.contains()` → `cs.{}`、`count=exact`、`别名:users!外键列(fields)`、列默认值 `TABLE_DEFAULTS`、**`order` 排序 / `limit`·`offset`·`Range` 分页窗口 / `not.` 取反**）。新增查询写法若在测试里静默失配，先补 `scripts/dev-stub.mjs` 的对应形态，不要绕过断言；
 - E2E 必须 `serviceWorkers: 'block'`：应用注册了 PWA service worker，而 Playwright **不拦截由 SW 处理的请求**——不屏蔽 SW，`page.route` 防线会形同虚设；
 - CI：`.github/workflows/deploy.yml` 的 `test` job（oxlint + 单测 + E2E）全绿才允许 `build` → `deploy`，且该 job **不注入任何生产凭据**。
 
@@ -171,10 +171,18 @@ module/
 
 ### 数据库变更流程
 
-1. **先在 `supabase-migration.sql` 末尾追加 DDL**（新表/新列/新策略）
+1. **先在 `supabase-migration.sql` 末尾追加 DDL**（新表/新列/新策略/索引）
 2. **代码中先写好对应的 Service 函数**（查询新表/新列的代码）
 3. **提醒用户手动执行迁移**（复制 SQL → Supabase Dashboard → SQL Editor）
 4. 用户确认执行后，功能才能正常使用
+
+**需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有两份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分，纯索引/触发器/约束优化，幂等、可在部署前后任意时刻执行）。
+
+### 数据导出
+
+`src/utils/export.ts` 是全站唯一的导出通道（CSV + UTF-8 BOM + 公式注入防护）。
+
+**不要再引入 `xlsx`（SheetJS）**：npm 侧最新版停在 0.18.5（2022-03），带两个无 npm 修复路径的高危公告（原型污染、ReDoS）。需要真正的多 sheet/样式表格时，评估 `write-excel-file`（MIT）并动态 import，别进首屏包。
 
 ### Realtime 订阅登记
 
@@ -296,7 +304,16 @@ git push origin master
 **核心表：**
 `users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides`
 
-**迁移文件：** `supabase-migration.sql`（10 部分，含一期 + 二期 + Phase1-5 所有 DDL）
+**迁移文件：** `supabase-migration.sql`（17 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化）；大段独立脚本见根目录 `supabase-*.sql`
+
+**数据库优化（v4.3.0，第十七部分）：** `users.auth_id` 唯一索引（RLS 策略判定热路径）、22 条外键索引、11 条复合索引、`updated_at` 触发器、两个枚举列 CHECK（NOT VALID）。执行脚本 `supabase-optimize-v4.3.0.sql`，**由用户在 Supabase 手动执行**，不执行也不影响功能。
+
+## v4.3.0 增强（2026-09-11）
+
+1. **数据导出** — `src/utils/export.ts` + 成员名单 / 任务清单（跟随筛选）/ 数据看板汇总三处入口
+2. **通知中心升级** — 分页加载（每页 20）、任务/公告/论坛/系统分栏计数、只看未读、一键已读（按栏）、同类折叠合并
+3. **登录流优化** — 学号 debounce 即查 `check_student_registered`：已注册隐藏邀请码栏、按钮转「下一步：输入密码」
+4. **细节打磨** — 任务详情弹窗按 id 取数（审核后状态同步）、全局搜索结果按模块分组、全站空态统一走 `EmptyState`
 
 ## 三期增强功能（2026-07-08 ~ 2026-07-09）
 

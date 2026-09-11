@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Drawer, Tabs, Button, Spin, Empty, Popconfirm, message, Input, Collapse } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Drawer, Tabs, Button, Spin, Popconfirm, message, Input, Collapse } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
+import { EmptyState } from '@/components/common';
 import { hasMinRole } from '@/utils/helpers';
 import { fetchGuides, deleteGuide, seedDefaultGuides } from './guideService';
 import type { GuideEntry } from './guideService';
@@ -185,8 +186,11 @@ export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
         ) : filteredGuides.length === 0 ? (
-          <Empty
-            description={kw ? `未找到与「${kw}」相关的指南条目` : '该模块暂无指南'}
+          <EmptyState
+            compact
+            icon={kw ? <SearchOutlined /> : <ReadOutlined />}
+            title={kw ? `未找到与「${kw}」相关的指南` : '该模块暂无指南'}
+            description={kw ? '换个关键词试试' : '部长可在右上角新增本模块的使用说明'}
           />
         ) : (
           <Collapse

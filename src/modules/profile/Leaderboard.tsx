@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { Spin, Empty, Avatar } from 'antd';
+import { Spin, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { hasMinRole } from '@/utils/helpers';
 import { fetchLeaderboard } from './profileService';
 import type { LeaderboardEntry } from './profileService';
 import { PODIUM_COLORS, PODIUM_BG } from '@/utils/themeColors';
+import { EmptyState } from '@/components/common';
 import styles from './profile.module.css';
 
 const PODIUM_LABELS = ['1', '2', '3'];
@@ -39,7 +40,7 @@ export default function Leaderboard() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 30 }}><Spin /></div>
       ) : entries.length === 0 ? (
-        <Empty description="本月暂无完成记录" />
+        <EmptyState compact title="本月暂无完成记录" description="成员完成任务并通过审核后会出现在榜单上" />
       ) : (
         <>
           {/* 前三名领奖台 */}

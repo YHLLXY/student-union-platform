@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, Tag, Tabs, Button, Modal, Segmented, message, Grid, Input, Select, Row, Col, theme } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, ClockCircleOutlined, TeamOutlined, UserOutlined, FileTextOutlined, SearchOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
 import { EmptyState } from '@/components/common';
 import { hasMinRole, formatDateTime, getDepartmentLabel } from '@/utils/helpers';
+import { exportCsv } from '@/utils/export';
 import { TASK_PRIORITIES, TASK_STATUSES, DEPARTMENTS } from '@/utils/constants';
 import { fetchTasks, subscribeToTasks, fetchTaskOverdueMilestones, updateTaskStatus } from './taskService';
 import type { Task } from './taskService';
@@ -30,7 +31,9 @@ export default function TaskListPage() {
   const [searchParams] = useSearchParams();
   const memberFilter = searchParams.get('member') ?? '';
   const [filter, setFilter] = useState('all');
-  const [detailTask, setDetailTask] = useState<Task | null>(null);
+  // 只存 id、弹窗内容每次渲染从列表数据里取：审核等操作刷新列表后弹窗内状态同步更新
+  // （此前存的是点击时的任务快照，会出现「列表已完成、弹窗里还是待审核」）
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
@@ -57,6 +60,12 @@ export default function TaskListPage() {
 
   const tasks = tasksQuery.data?.tasks ?? [];
   const overdueMilestoneMap = tasksQuery.data?.overdueMap ?? {};
+
+  // 弹窗数据随列表实时取，不再持有点击时的快照（ISSUES #9）
+  const detailTask = useMemo(
+    () => (detailTaskId ? tasks.find((t) => t.id === detailTaskId) ?? null : null),
+    [tasks, detailTaskId],
+  );
 
   // Realtime：任务表变更 → 失效缓存自动重取
   useEffect(() => {
@@ -110,6 +119,28 @@ export default function TaskListPage() {
     setDeptFilter('all');
   };
 
+  // 导出范围 = 屏幕上这份：列表视图导出当前筛选结果，看板视图导出全部任务
+  const handleExport = () => {
+    const rows = viewMode === 'list' ? filteredTasks : tasks;
+    if (rows.length === 0) {
+      message.warning('当前筛选下没有可导出的任务');
+      return;
+    }
+    const count = exportCsv(rows, [
+      { title: '任务标题', value: (t) => t.title },
+      { title: '状态', value: (t) => TASK_STATUSES[t.status]?.label ?? t.status },
+      { title: '优先级', value: (t) => TASK_PRIORITIES[t.priority]?.label ?? t.priority },
+      { title: '执行部门', value: (t) => getDepartmentLabel(t.assigned_department) },
+      { title: '协同部门', value: (t) => (t.collaborating_departments ?? []).map(getDepartmentLabel).join('、') },
+      { title: '执行人', value: (t) => t.assignee_name ?? '部门全体' },
+      { title: '发布者', value: (t) => t.creator_name ?? '' },
+      { title: '截止时间', value: (t) => (t.deadline ? formatDateTime(t.deadline) : '') },
+      { title: '创建时间', value: (t) => formatDateTime(t.created_at) },
+      { title: '任务内容', value: (t) => t.content ?? '' },
+    ], '任务清单');
+    message.success(`已导出 ${count} 条任务`);
+  };
+
   if (tasksQuery.isPending) {
     return <ListSkeleton />;
   }
@@ -147,6 +178,13 @@ export default function TaskListPage() {
             value={viewMode}
             onChange={(val) => setViewMode(val as 'list' | 'kanban')}
           />
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            disabled={(viewMode === 'list' ? filteredTasks : tasks).length === 0}
+          >
+            导出
+          </Button>
           {canCreate && (
             <>
               <Button icon={<FileTextOutlined />} onClick={() => setShowTemplates(true)}>
@@ -232,7 +270,7 @@ export default function TaskListPage() {
                 <Card
                   key={task.id}
                   className={`${styles.taskCard} ${priorityBorderClass[task.priority] ?? styles.taskCardNormal}`}
-                  onClick={() => setDetailTask(task)}
+                  onClick={() => setDetailTaskId(task.id)}
                 >
                   <div className={styles.cardTitle}>{task.title}</div>
                   <div className={styles.cardMeta}>
@@ -274,16 +312,16 @@ export default function TaskListPage() {
           ) : (
             <KanbanBoard
               tasks={tasks}
-              onTaskClick={setDetailTask}
+              onTaskClick={(t) => setDetailTaskId(t.id)}
               onTaskMove={handleTaskMove}
             />
           )}
         </div>
       )}
 
-      <Modal open={!!detailTask} onCancel={() => setDetailTask(null)} footer={null} width={md ? 700 : undefined} destroyOnHidden>
+      <Modal open={!!detailTask} onCancel={() => setDetailTaskId(null)} footer={null} width={md ? 700 : undefined} destroyOnHidden>
         {detailTask && (
-          <TaskDetail task={detailTask} user={user} onUpdate={refresh} onClose={() => setDetailTask(null)} />
+          <TaskDetail task={detailTask} user={user} onUpdate={refresh} onClose={() => setDetailTaskId(null)} />
         )}
       </Modal>
 

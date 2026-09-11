@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, Tag, Empty, Spin, Grid } from 'antd';
+import { Modal, Tabs, Tag, Spin, Grid } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { fetchAllUserTasks } from './profileService';
 import type { TaskBrief } from './profileService';
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/utils/constants';
 import { getDepartmentLabel, formatDateTime } from '@/utils/helpers';
+import { EmptyState } from '@/components/common';
 import styles from './profile.module.css';
 
 interface TaskListModalProps {
@@ -95,13 +96,13 @@ export default function TaskListModal({ open, initialTab, userId, onClose }: Tas
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
       ) : currentList.length === 0 ? (
-        <Empty
-          description={
+        <EmptyState
+          compact
+          title={
             activeTab === 'completed' ? '暂无已完成任务' :
             activeTab === 'pending' ? '暂无待完成任务' :
             '暂无已逾期任务'
           }
-          style={{ padding: 40 }}
         />
       ) : (
         <div className={styles.taskModalList}>

@@ -11,7 +11,8 @@
     <link rel="manifest" href="/student-union-platform/manifest.json" />
 
     <!-- 预热 Supabase 建连（DNS+TCP+TLS），省去首个 API 请求的建连时间。
-         值由 Vite 在构建时做 HTML 常量替换（%VITE_*%）；变量缺失时字面保留、浏览器忽略该行，无副作用 -->
+         值由 Vite 在构建时做 HTML 常量替换（双百分号包裹的 VITE_ 变量名）；变量缺失时字面保留、
+         浏览器忽略该行，无副作用。注意：注释里不要写裸的通配形式，Vite 会连注释一起扫描并告警 -->
     <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
     <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
 

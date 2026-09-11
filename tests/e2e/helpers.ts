@@ -42,7 +42,17 @@ export async function stubInsert(table: string, row: Record<string, unknown>): P
   return data[0];
 }
 
-/** 身份步：姓名 + 学号 + 邀请码 */
+/** 批量写入（一次请求多行）——用于造分页 / 聚合这类需要十几条以上的场景 */
+export async function stubBulkInsert(table: string, rows: Record<string, unknown>[]): Promise<void> {
+  const res = await fetch(`${STUB_ORIGIN}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(rows),
+  });
+  expect(res.ok, `stub 批量插入 ${table} 失败（${res.status}）`).toBeTruthy();
+}
+
+/** 身份步（注册：未注册学号 + 邀请码） */
 export async function fillIdentity(
   page: Page,
   name: string,
@@ -58,16 +68,20 @@ export async function fillIdentity(
 /**
  * 走真实 UI 登录（已注册用户）。
  *
- * 注意：身份步的邀请码是 antd 表单必填项，老用户同样会被要求填写（这正是走查发现的
- * 「老用户随便填邀请码」断点，Phase 1 B1 会修）。已注册用户的邀请码不会被真正校验，
- * 因此此处传占位值即可，不会消费任何真实邀请码。
+ * Phase 1 B1 起，身份步会 debounce 即查学号：命中已注册即隐藏邀请码栏、
+ * 按钮变「下一步：输入密码」。因此这里的等待条件是「已注册」提示出现——
+ * 它同时证明了即查链路真的跑通了（而不是碰巧没被拦）。
  */
 export async function loginAs(
   page: Page,
   user: { name: string; studentId: string; password: string },
 ): Promise<void> {
   await page.goto('/');
-  await fillIdentity(page, user.name, user.studentId, 'EXISTING-USER-PLACEHOLDER');
+  await page.getByPlaceholder('姓名').fill(user.name);
+  await page.getByPlaceholder('学号').fill(user.studentId);
+  await expect(page.getByText(/已注册，无需邀请码/)).toBeVisible();
+  await expect(page.getByPlaceholder('部门邀请码')).toHaveCount(0);
+  await btn(page, '下一步：输入密码').click();
   await expect(page.getByText(`欢迎回来，${user.name}`)).toBeVisible();
   await page.getByPlaceholder('输入密码').fill(user.password);
   await btn(page, '登录').click();

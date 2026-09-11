@@ -4,6 +4,12 @@
   margin-bottom: 16px;
 }
 
+/* 放进 headerRow 的标题：行内布局，不能带下外边距 */
+.sectionTitleInline {
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .section {
   margin-bottom: 32px;
 }

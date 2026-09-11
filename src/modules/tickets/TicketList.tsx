@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Card, Tag, Button, Tabs, Modal, Empty, message, Grid } from 'antd';
-import { PlusOutlined, ClockCircleOutlined, GiftOutlined } from '@ant-design/icons';
+import { Card, Tag, Button, Tabs, Modal, message, Grid } from 'antd';
+import { PlusOutlined, ClockCircleOutlined, GiftOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState } from '@/components/common';
 import { hasMinRole, formatDateTime } from '@/utils/helpers';
 import { trackEvent } from '@/utils/analytics';
 import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from './ticketService';
@@ -71,15 +72,17 @@ export default function TicketList() {
         <CardStreamSkeleton />
       ) : ticketsQuery.isError ? (
         <div style={{ paddingTop: 40 }}>
-          <Empty
-            description="票务加载失败，请重试"
-            style={{ padding: 24 }}
-          >
-            <Button type="primary" onClick={() => ticketsQuery.refetch()}>重新加载</Button>
-          </Empty>
+          <EmptyState
+            icon={<ReloadOutlined />}
+            title="票务加载失败"
+            description="网络异常或服务暂时不可用，请稍后重试"
+            action={
+              <Button type="primary" onClick={() => ticketsQuery.refetch()}>重新加载</Button>
+            }
+          />
         </div>
       ) : tickets.length === 0 ? (
-        <Empty description="暂无可抢票务" />
+        <EmptyState compact icon={<GiftOutlined />} title="暂无可抢票务" description="有新活动上线时会出现在这里" />
       ) : (
         <div className={styles.ticketGrid}>
           {tickets.map((ticket, i) => {

@@ -8,6 +8,30 @@
 
 ## 已修复
 
+### #10 index.html 注释中的 `%VITE_*%` 触发 Vite 变量缺失警告
+
+- **日期：** 2026-09-11（发现）
+- **类型：** 构建期提示噪音
+- **严重程度：** 极低（不影响构建产物与功能）
+- **现象：** 启动 dev server 时输出 `(!) %VITE_*% is not defined in env variables found in /index.html. Is the variable mistyped?`
+- **原因：** [index.html:14](index.html#L14) 的说明性 HTML 注释里写了字面量 `%VITE_*%`，Vite 的 HTML 常量替换会扫描注释内容，找不到名为 `VITE_*` 的环境变量于是告警
+- **解决方案：** 把注释里的通配写法改成「双百分号包裹的 VITE_ 变量名」的文字描述，不再出现可被扫描的 `%...%` 字面量；并补一句「注释里不要写裸通配形式」防止复发
+- **修改位置：** [index.html](index.html)
+- **修复版本：** v4.3.0
+
+### #9 任务详情弹窗内的任务状态不随审核操作刷新
+
+- **日期：** 2026-09-11（发现）
+- **类型：** UX 瑕疵（前端状态快照）
+- **严重程度：** 低（不影响数据正确性，刷新列表后状态正确）
+- **发现方式：** Phase 0 编写 E2E 冒烟② 时暴露（原以为断言写错，实为产品行为）
+- **现象：** 部长在任务详情弹窗里点「通过」后，提交记录正确标记「已通过」，但同弹窗顶部 Descriptions 里的任务状态仍显示「待审核」，要关闭弹窗回到列表才看到「已完成」
+- **原因：** [TaskListPage.tsx:33](src/modules/tasks/TaskListPage.tsx#L33) 用 `detailTask` state 持有点击时的任务快照传给 `TaskDetail`；`refresh()` 只重取列表查询，不会更新这个快照对象
+- **解决方案：** 弹窗状态从「持有任务对象」改为「只持有 `detailTaskId`」，渲染时用 `useMemo` 从最新列表数据里按 id 取——列表刷新后弹窗内容自动同步，且不额外增加网络往返
+- **修改位置：** [TaskListPage.tsx](src/modules/tasks/TaskListPage.tsx)
+- **回归保障：** E2E 冒烟② 增加「审核通过后弹窗内也显示已完成」断言（此前只能在关闭弹窗后验证）
+- **修复版本：** v4.3.0
+
 ### #6 Supabase Realtime channel 名冲突导致全局渲染崩溃
 
 - **日期：** 2026-07-12
@@ -98,28 +122,6 @@
 
 ## 待处理
 
-### #9 任务详情弹窗内的任务状态不随审核操作刷新
-
-- **日期：** 2026-09-11
-- **类型：** UX 瑕疵（前端状态快照）
-- **严重程度：** 低（不影响数据正确性，刷新列表后状态正确）
-- **发现方式：** Phase 0 编写 E2E 冒烟② 时暴露（原以为断言写错，实为产品行为）
-- **现象：** 部长在任务详情弹窗里点「通过」后，提交记录正确标记「已通过」，但同弹窗顶部 Descriptions 里的任务状态仍显示「待审核」，要关闭弹窗回到列表才看到「已完成」
-- **原因：** [TaskListPage.tsx:33](src/modules/tasks/TaskListPage.tsx#L33) 用 `detailTask` state 持有点击时的任务快照传给 `TaskDetail`；`refresh()` 只重取列表查询，不会更新这个快照对象
-- **修复方案（择一）：**
-  1. `onUpdate` 时按 id 从新列表数据回填 `detailTask`（改动小，列表已重取）
-  2. `TaskDetail` 内部改用 `useQuery` 按 `task.id` 订阅（与其它模块一致，但要多一次往返）
-- **建议排期：** Phase 1「B5 细节打磨」一并处理
-
-### #10 index.html 注释中的 `%VITE_*%` 触发 Vite 变量缺失警告
-
-- **日期：** 2026-09-11
-- **类型：** 构建期提示噪音
-- **严重程度：** 极低（不影响构建产物与功能）
-- **现象：** 启动 dev server 时输出 `(!) %VITE_*% is not defined in env variables found in /index.html. Is the variable mistyped?`
-- **原因：** [index.html:14](index.html#L14) 的说明性 HTML 注释里写了字面量 `%VITE_*%`，Vite 的 HTML 常量替换会扫描注释内容，找不到名为 `VITE_*` 的环境变量于是告警
-- **修复方案：** 把这行注释里的 `%VITE_*%` 改写为非 `%...%` 形态（如 `%VITE_XXX%` 或 `VITE_* 占位符`）
-
 ### #2 antd Modal `destroyOnClose` 弃用警告
 
 - **日期：** 2026-07-02
@@ -129,16 +131,15 @@
 - **影响范围：** 14 个文件，14 处 `destroyOnClose`
 - **修复方案：** 全局替换 `destroyOnClose` → `destroyOnHidden`
 
-### #5 大部分数据表未启用 RLS 行级安全
+### #5 数据表 RLS 仍是「登录即全量放行」，缺细粒度策略
 
-- **日期：** 2026-07-08
+- **日期：** 2026-07-08（提出）· 2026-09-11（更新现状）
 - **类型：** 安全隐患
 - **严重程度：** 中（仅当攻击者知道 Supabase 项目 URL 且有技术能力直接调 REST API 时才可被利用）
-- **现象：** 16 张数据表中，仅 `platform_guides` 启用了 RLS。其余 15 张表（`users`、`tasks`、`task_submissions`、`notices`、`school_notices`、`forum_posts`、`forum_replies`、`tickets`、`ticket_records`、`invite_codes`、`task_templates`、`task_milestones`、`department_guides`）均未启用 RLS
-- **风险：** 前端 JS bundle 中暴露了 Supabase anon key，任何人拿到后可绕过 UI 层权限判断，直接通过 REST API 读写所有未启用 RLS 的表
-- **当前缓解措施：** 前端 `hasMinRole()` 在 UI 层做了权限控制，普通用户的操作入口已被阻挡。且攻击者需具备一定的技术能力才能利用此漏洞，对于当前学生会内部平台场景实际风险较低
-- **修复方案：** 为全部 16 张表设计完整 RLS 策略（SELECT / INSERT / UPDATE / DELETE），按角色权限逐表定义。参考 `supabase-migration.sql` Part 4 中已注释的初版策略。注意：启用 RLS 后需全功能回归测试，部分联表查询可能因 `auth.uid()` 不匹配而静默失败
-- **暂不处理原因：** 工作量较大（16 张表 × 4 种操作 = 60+ 条策略），当前阶段功能完善优先级更高。后续平台面向公网或存储敏感数据时再处理
+- **现状（2026-09-05 安全加固后）：** 原来「16 张表仅 1 张启用 RLS」的问题**已解决第一层**——`supabase-migration.sql` 第十六部分已对全部业务表启用 RLS，`anon` 一律拒绝、`authenticated` 全量放行，登录前必需的 3 条匿名查询改走 `SECURITY DEFINER` 最小暴露函数。即：**拿到 anon key 已无法匿名读写任何业务数据**。
+- **仍然存在的缺口：** 已登录用户之间没有行级隔离——任何登录用户直接调 REST API 仍可读写全部表（前端 `hasMinRole()` 只是 UI 层拦截，不构成边界）。数据库侧目前只有 `auth.role()` 粒度的策略。
+- **修复方案（Phase 4 C2 细粒度 RLS）：** 引入辅助函数 `is_admin()` / `is_dept_head_of(dept)`，逐表按 SELECT/INSERT/UPDATE/DELETE 定义策略；兼容 `created_by IS NULL` 的历史数据；分两批（先读后写）上线，每批执行后跑全量 E2E + 三角色矩阵回归。
+- **排期：** Phase 4（详见 `docs/plans/2026-09-06-全方位升级实施计划-v4.3至v4.6.md`），不在 v4.3.0 处理。
 
 ### #1 antd `message` 静态方法主题警告
 

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { resetStub, fillIdentity, logout, gotoModule, btn } from './helpers';
+import { resetStub, fillIdentity, loginAs, logout, gotoModule, btn } from './helpers';
 
 /**
  * E2E 冒烟① 注册 → 登录 → 改密
@@ -35,10 +35,7 @@ test.describe('冒烟① 注册 → 登录 → 改密', () => {
 
     // ---------- 2. 退出后用同一账号重新登录（已注册用户跳过邀请码校验） ----------
     await logout(page, NEW_MEMBER.name);
-    await fillIdentity(page, NEW_MEMBER.name, NEW_MEMBER.studentId, 'EXISTING-USER-PLACEHOLDER');
-    await expect(page.getByText(`欢迎回来，${NEW_MEMBER.name}`)).toBeVisible();
-    await page.getByPlaceholder('输入密码').fill(NEW_MEMBER.password);
-    await btn(page, '登录').click();
+    await loginAs(page, NEW_MEMBER);
     await expect(page).toHaveURL(/#\/dashboard/);
 
     // ---------- 3. 个人中心改密 ----------
@@ -52,5 +49,23 @@ test.describe('冒烟① 注册 → 登录 → 改密', () => {
     // （stub 的 auth 不校验密码，故「新密码能否登录」无法在此判别真实性）
     await expect(page.getByText('密码修改成功').first()).toBeVisible();
     await expect(btn(page, '确认修改')).toBeHidden();
+  });
+
+  // ---------- B1：学号即查决定要不要邀请码栏 ----------
+  test('未注册学号仍然要求邀请码（B1 的反向保障）', async ({ page }) => {
+    await page.goto('/');
+    await page.getByPlaceholder('姓名').fill('新同学');
+    await page.getByPlaceholder('学号').fill('BRANDNEW2026');
+
+    // 等即查防抖（500ms）跑完再断言「没有」——断言缺席只能是等一段时间；
+    // 这里等的意义是：若实现把邀请码栏一刀切隐藏，这条会红。
+    await page.waitForTimeout(1200);
+    await expect(page.getByText(/已注册，无需邀请码/)).toHaveCount(0);
+    await expect(page.getByPlaceholder('部门邀请码')).toBeVisible();
+
+    // 未注册路径仍能走通：填有效邀请码 → 进入设密步
+    await page.getByPlaceholder('部门邀请码').fill('TIYU_VOL');
+    await btn(page, '继续').click();
+    await expect(page.getByText('首次登录，请设置密码')).toBeVisible();
   });
 });

@@ -1,8 +1,9 @@
-import { Modal, Table, Tag, Descriptions, Empty, Spin, Grid, theme } from 'antd';
+import { Modal, Table, Tag, Descriptions, Spin, Grid, theme } from 'antd';
 import { TrophyOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MonthlyReport, WeeklyBrief } from './dashboardService';
 import { PODIUM_COLORS } from '@/utils/themeColors';
+import { EmptyState } from '@/components/common';
 import styles from './brief.module.css';
 
 interface ReportModalProps {
@@ -97,7 +98,7 @@ export default function ReportModal({ open, loading, data, onClose, weekBrief }:
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
       ) : !data ? (
-        <Empty description="暂无数据" style={{ padding: 48 }} />
+        <EmptyState compact title="暂无统计数据" description="本月还没有可汇总的任务记录" />
       ) : (
         <div className={styles.reportBody}>
           {/* 概览 */}

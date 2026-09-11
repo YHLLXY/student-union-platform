@@ -1,4 +1,4 @@
-import { Card, Table, Row, Col, Button, theme } from 'antd';
+import { Card, Table, Row, Col, Button, message, theme } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   EyeOutlined,
@@ -11,10 +11,12 @@ import {
   FileDoneOutlined,
   BellOutlined,
   TagsOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { fetchAnalyticsSummary } from './adminService';
 import { StatCard, EmptyState } from '@/components/common';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
+import { exportCsv } from '@/utils/export';
 import styles from './AnalyticsDashboard.module.css';
 
 const EVENT_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
@@ -53,6 +55,34 @@ export default function AnalyticsDashboard() {
 
   const data = summaryQuery.data;
 
+  // 导出汇总：长表（分类 / 项目 / 数值）——比多段拼一表的 CSV 更好读，也能直接透视
+  const handleExport = () => {
+    const flat: Array<[string, string, string | number]> = [
+      ['汇总', '近7天事件数', data.recent7d],
+      ['汇总', '近7天活跃用户数', data.activeUsers7d],
+      ['汇总', '总事件数', data.totalEvents],
+      ['汇总', '最热模块', data.topModule || '暂无数据'],
+      ...data.pageRanking.map((r): [string, string, number] =>
+        ['页面访问排名', r.module || '未知', r.count]),
+      ...data.eventStats.map((r): [string, string, number] =>
+        ['事件类型统计', EVENT_ICONS[r.event_type]?.label ?? r.event_type, r.count]),
+      ...data.recentErrors.map((r): [string, string, string] => [
+        '最近错误',
+        `${new Date(r.created_at).toLocaleString('zh-CN')} · ${r.module || '未知模块'}`,
+        (r.metadata as Record<string, string> | null)?.error
+          ?? (r.metadata as Record<string, string> | null)?.message
+          ?? JSON.stringify(r.metadata),
+      ]),
+    ];
+
+    const count = exportCsv(flat, [
+      { title: '分类', value: (r) => r[0] },
+      { title: '项目', value: (r) => r[1] },
+      { title: '数值', value: (r) => r[2] },
+    ], '数据看板汇总');
+    message.success(`已导出 ${count} 条统计记录`);
+  };
+
   const pageColumns = [
     { title: '模块', dataIndex: 'module', key: 'module', render: (m: string) => m || '未知' },
     { title: '访问次数', dataIndex: 'count', key: 'count', render: (c: number) => `${c} 次` },
@@ -73,6 +103,13 @@ export default function AnalyticsDashboard() {
 
   return (
     <div>
+      <div className={styles.headerRow}>
+        <span className={styles.headerTitle}>使用分析</span>
+        <Button icon={<DownloadOutlined />} onClick={handleExport}>
+          导出汇总
+        </Button>
+      </div>
+
       <Row gutter={[16, 16]} className={styles.statRow}>
         <Col xs={12} md={6}>
           <StatCard icon={<ThunderboltOutlined />} label="近7天事件数" value={data.recent7d} color={token.colorInfo} />

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Input, Tag } from 'antd';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Input } from 'antd';
 import type { InputRef } from 'antd';
 import { SearchOutlined, FileTextOutlined, PushpinOutlined, MessageOutlined, BookOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -16,11 +16,16 @@ const MODULE_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   guides:   { icon: <BookOutlined />,     color: MODULE_ACCENT.guides, label: '指南' },
 };
 
+/** 分组展示顺序（与侧边栏模块顺序一致，避免结果顺序随查询返回顺序漂移） */
+const MODULE_ORDER: SearchResult['module'][] = ['tasks', 'notices', 'forum', 'guides'];
+
 interface GlobalSearchProps {
   onClose?: () => void;
+  /** 指南结果的落地方式是打开指南 Drawer（而非路由），由 AppLayout 注入 */
+  onOpenGuide?: () => void;
 }
 
-export default function GlobalSearch({ onClose }: GlobalSearchProps) {
+export default function GlobalSearch({ onClose, onOpenGuide }: GlobalSearchProps) {
   const user = useAuth();
   const navigate = useNavigate();
   const [value, setValue] = useState('');
@@ -79,6 +84,26 @@ export default function GlobalSearch({ onClose }: GlobalSearchProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // 按模块分组 + 给每条结果编一个贯穿全列表的下标（键盘上下键跨组连续移动）
+  const grouped = useMemo(() => {
+    const byModule = new Map<SearchResult['module'], SearchResult[]>();
+    for (const r of results) {
+      const list = byModule.get(r.module);
+      if (list) list.push(r);
+      else byModule.set(r.module, [r]);
+    }
+    let index = 0;
+    return MODULE_ORDER
+      .filter((m) => byModule.has(m))
+      .map((m) => {
+        const items = byModule.get(m)!;
+        return {
+          module: m,
+          items: items.map((item) => ({ item, index: index++ })),
+        };
+      });
+  }, [results]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open || results.length === 0) return;
     if (e.key === 'ArrowDown') {
@@ -99,7 +124,13 @@ export default function GlobalSearch({ onClose }: GlobalSearchProps) {
     setOpen(false);
     setValue('');
     setResults([]);
-    navigate(item.link);
+    if (item.module === 'guides') {
+      // 指南是 Drawer，不占路由：直接打开指南抽屉
+      setSelectedIdx(-1);
+      onOpenGuide?.();
+    } else {
+      navigate(item.link);
+    }
     onClose?.();
   };
 
@@ -135,28 +166,39 @@ export default function GlobalSearch({ onClose }: GlobalSearchProps) {
           {results.length === 0 ? (
             <div className={styles.empty}>未找到匹配结果</div>
           ) : (
-            results.map((item, i) => {
-              const cfg = MODULE_CONFIG[item.module];
-              return (
-                <div
-                  key={`${item.module}-${item.id}`}
-                  className={`${styles.item} ${i === selectedIdx ? styles.itemSelected : ''}`}
-                  onClick={() => handleSelect(item)}
-                  onMouseEnter={() => setSelectedIdx(i)}
-                >
-                  <span className={styles.itemIcon}>{cfg.icon}</span>
-                  <div className={styles.itemBody}>
-                    <div className={styles.itemTitle}>
-                      <Tag color={cfg.color} style={{ fontSize: 10, marginRight: 6 }}>{cfg.label}</Tag>
-                      {highlight(item.title)}
+            <>
+              {grouped.map((group) => {
+                const cfg = MODULE_CONFIG[group.module];
+                return (
+                  <div key={group.module} className={styles.group}>
+                    <div className={styles.groupHeader}>
+                      <span className={styles.groupDot} style={{ background: cfg.color }} />
+                      <span className={styles.groupLabel}>{cfg.label}</span>
+                      <span className={styles.groupCount}>{group.items.length}</span>
                     </div>
-                    {item.subtitle && (
-                      <div className={styles.itemSubtitle}>{highlight(item.subtitle)}</div>
-                    )}
+                    {group.items.map(({ item, index }) => (
+                      <div
+                        key={`${item.module}-${item.id}`}
+                        className={`${styles.item} ${index === selectedIdx ? styles.itemSelected : ''}`}
+                        onClick={() => handleSelect(item)}
+                        onMouseEnter={() => setSelectedIdx(index)}
+                      >
+                        <span className={styles.itemIcon}>{cfg.icon}</span>
+                        <div className={styles.itemBody}>
+                          <div className={styles.itemTitle}>{highlight(item.title)}</div>
+                          {item.subtitle && (
+                            <div className={styles.itemSubtitle}>{highlight(item.subtitle)}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+              <div className={styles.footer}>
+                共 {results.length} 条结果 · 每类最多 5 条
+              </div>
+            </>
           )}
         </div>
       )}

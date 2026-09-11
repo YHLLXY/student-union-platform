@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Spin, Empty, Popover, theme } from 'antd';
+import { Spin, Popover, theme } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { fetchYearHeatmapData } from './profileService';
 import type { YearHeatmapDay } from './profileService';
 import { HEATMAP_LEVEL_COLORS } from '@/utils/themeColors';
+import { EmptyState } from '@/components/common';
 import styles from './profile.module.css';
 
 const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
@@ -123,7 +124,7 @@ export default function TaskCalendar() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : activeDays === 0 ? (
-        <Empty description={`${year} 年暂无任务提交记录`} />
+        <EmptyState compact title={`${year} 年暂无任务提交记录`} description="完成并提交任务后会在这里留下记录" />
       ) : (
         <div className={styles.yearHeatmapGrid}>
           {/* 月份标签 */}

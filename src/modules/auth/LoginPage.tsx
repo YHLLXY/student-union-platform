@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Alert, Tabs, Button, message } from 'antd';
 import { ToolOutlined } from '@ant-design/icons';
 import {
@@ -46,8 +46,15 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [forgotAuthId, setForgotAuthId] = useState('');
   const [devModalOpen, setDevModalOpen] = useState(false);
 
+  // 学号/工号 debounce 即查结果：记录「已确认注册」的那个号码本身，
+  // 用值比较而非布尔量——用户改了号码但查询还没回来时，判定自动失效，不会误隐藏邀请码栏
+  const [registeredId, setRegisteredId] = useState<string | null>(null);
+  const [checkingId, setCheckingId] = useState(false);
+
   const identity = tab === 'student' ? student : teacher;
   const idNumber = tab === 'student' ? student.id : teacher.id;
+  const trimmedId = idNumber.trim();
+  const isRegistered = registeredId !== null && registeredId === trimmedId;
 
   const patchIdentity = (patch: Partial<IdentityState>) =>
     tab === 'student'
@@ -56,20 +63,49 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const fail = (msg: string) => setError(msg);
 
+  // ========== 学号/工号即查（防抖 500ms）==========
+  // 目的：已注册用户不必看到邀请码栏；同时这一步与提交时的校验共用结果，省掉一次往返。
+  useEffect(() => {
+    if (trimmedId.length < 3) {
+      setRegisteredId(null);
+      setCheckingId(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingId(true);
+    const timer = setTimeout(async () => {
+      // 查询失败按「未注册」处理：不阻断老流程，用户仍可凭邀请码走注册
+      const exists = await checkStudentId(trimmedId).catch(() => false);
+      if (cancelled) return;
+      setRegisteredId(exists ? trimmedId : null);
+      setCheckingId(false);
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmedId]);
+
   // ========== 第一步：身份 + 邀请码校验 ==========
 
   const handleIdentityCheck = async () => {
     setError(null);
-    if (!identity.name.trim() || !identity.id.trim() || !identity.inviteCode.trim()) {
-      setError('请填写所有字段');
+    if (!identity.name.trim() || !trimmedId) {
+      setError(`请填写姓名和${tab === 'student' ? '学号' : '工号'}`);
       return;
     }
     setLoading(true);
     try {
-      // 已注册用户跳过邀请码校验直接进入登录步
-      const exists = await checkStudentId(identity.id.trim());
+      // 已注册用户跳过邀请码校验直接进入登录步（即查结果命中时省一次查询）
+      const exists = isRegistered || await checkStudentId(trimmedId);
       if (exists) {
         setStep('login');
+        return;
+      }
+      if (!identity.inviteCode.trim()) {
+        setError('请填写邀请码');
         return;
       }
       const codeData = tab === 'student'
@@ -231,6 +267,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           onChange={patchIdentity}
           loading={loading}
           onFinish={handleIdentityCheck}
+          registered={isRegistered}
+          checking={checkingId}
         />
       )}
 

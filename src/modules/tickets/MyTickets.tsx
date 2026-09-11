@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Tag, Empty, Button, Popconfirm, message, theme } from 'antd';
+import { Tag, Button, Popconfirm, message, theme } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState } from '@/components/common';
 import { formatDateTime } from '@/utils/helpers';
 import { trackEvent } from '@/utils/analytics';
 import { fetchMyTickets, refundTicket } from './ticketService';
@@ -53,7 +54,17 @@ export default function MyTickets() {
   if (myTicketsQuery.isPending) return <CardStreamSkeleton />;
 
   if (tickets.length === 0) {
-    return <Empty description={myTicketsQuery.isError ? '票券加载失败，请重试' : '你还没有抢到票'} />;
+    return (
+      <EmptyState
+        compact
+        title={myTicketsQuery.isError ? '票券加载失败' : '你还没有抢到票'}
+        description={
+          myTicketsQuery.isError
+            ? '网络异常或服务暂时不可用，请稍后重试'
+            : '在「可抢票务」里抢到的票会出现在这里'
+        }
+      />
+    );
   }
 
   return (

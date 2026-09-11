@@ -1,10 +1,12 @@
 ﻿import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, Select, Button, Popconfirm, message, Tabs, Grid } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { RouteSkeleton } from '@/components/SkeletonBlocks';
-import { getDepartmentLabel, getRoleLabel, isAdmin } from '@/utils/helpers';
+import { getDepartmentLabel, getRoleLabel, isAdmin, formatDateTime } from '@/utils/helpers';
 import { ROLES, DEPARTMENTS } from '@/utils/constants';
+import { exportCsv } from '@/utils/export';
 import { fetchAllMembers, updateMemberRole, removeMember, transferMember, resetMemberPassword } from './adminService';
 import type { UserProfile } from '@/modules/auth';
 import InviteCodeManage from './InviteCodeManage';
@@ -69,6 +71,22 @@ export default function MemberManage() {
   };
 
   const adminAccess = isAdmin(user.role); // 主席、老师或开发者
+
+  // 导出当前可见的成员名单（权限过滤在 fetchAllMembers 内完成，导出的就是屏幕上这份）
+  const handleExport = () => {
+    if (members.length === 0) {
+      message.warning('暂无可导出的成员');
+      return;
+    }
+    const count = exportCsv(members, [
+      { title: '姓名', value: (m) => m.name },
+      { title: '学号/工号', value: (m) => m.student_id },
+      { title: '部门', value: (m) => getDepartmentLabel(m.department) },
+      { title: '角色', value: (m) => getRoleLabel(m.role) },
+      { title: '加入时间', value: (m) => formatDateTime(m.created_at) },
+    ], '成员名单');
+    message.success(`已导出 ${count} 条成员记录`);
+  };
 
   const columns = [
     { title: '姓名', dataIndex: 'name', key: 'name' },
@@ -140,7 +158,16 @@ export default function MemberManage() {
   const memberContent = (
     <div>
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>成员管理</div>
+        <div className={styles.headerRow}>
+          <div className={styles.sectionTitleInline}>成员管理</div>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            disabled={members.length === 0}
+          >
+            导出名单
+          </Button>
+        </div>
         <Table
           dataSource={members}
           columns={columns}

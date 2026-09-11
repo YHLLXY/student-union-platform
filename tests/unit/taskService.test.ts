@@ -89,7 +89,7 @@ describe('createTask → submitTask → reviewSubmission 闭环', () => {
     // 审核结果通知（fire-and-forget，稍等写入）
     await new Promise((r) => setTimeout(r, 300));
     const { fetchNotifications } = await import('@/modules/notification/notificationService');
-    const notes = await fetchNotifications(U_SUN);
+    const notes = (await fetchNotifications(U_SUN)).items;
     expect(notes.some((n) => n.type === 'submission_approved' && n.title.includes('通过'))).toBe(true);
   });
 

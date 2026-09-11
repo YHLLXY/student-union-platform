@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Modal, Form, Input, Popconfirm, message, Empty, Spin, theme } from 'antd';
+import { Card, Button, Modal, Form, Input, Popconfirm, message, Spin, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
+import { EmptyState } from '@/components/common';
 import { logger } from '@/diagnostics';
 import { fetchTemplates, createTemplate, updateTemplate, deleteTemplate } from './taskService';
 import type { TaskTemplate, TemplateStep } from './taskService';
@@ -116,7 +117,7 @@ export default function TaskTemplateManage({ open, onClose }: Props) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
       ) : templates.length === 0 ? (
-        <Empty description="暂无模板，点击上方按钮创建" />
+        <EmptyState compact title="暂无模板" description="点击上方「新建模板」创建第一个模板" />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
           {templates.map((tmpl) => (

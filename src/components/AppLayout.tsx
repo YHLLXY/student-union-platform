@@ -194,7 +194,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <Header className={styles.header}>
         {!md && <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ color: '#fff', fontSize: 16 }} />}
         <div className={styles.logo}>学生会</div>
-        {md && <GlobalSearch />}
+        {md && <GlobalSearch onOpenGuide={() => setGuideOpen(true)} />}
         {!md && (
           <Button
             type="text"
@@ -320,7 +320,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           height="auto"
           styles={{ body: { padding: '12px 16px' } }}
         >
-          <GlobalSearch onClose={() => setSearchOpen(false)} />
+          <GlobalSearch onClose={() => setSearchOpen(false)} onOpenGuide={() => { setSearchOpen(false); setGuideOpen(true); }} />
         </Drawer>
       )}
     </Layout>

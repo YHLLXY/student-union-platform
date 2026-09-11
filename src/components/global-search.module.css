@@ -54,11 +54,38 @@
   font-size: 13px;
 }
 
+/* ---- 结果分组（标题 + 条数，替代原来每条重复的模块 Tag）---- */
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 4px;
+}
+
+.groupDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.groupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+}
+
+.groupCount {
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
 .item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 9px 14px;
   cursor: pointer;
   transition: background 0.12s;
 }
@@ -80,13 +107,14 @@
   min-width: 0;
 }
 
+/* 标题单行截断：长标题不再换行把面板撑乱 */
 .itemTitle {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .itemSubtitle {
@@ -96,6 +124,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.footer {
+  margin-top: 4px;
+  padding: 6px 14px 4px;
+  border-top: 1px solid var(--border-light);
+  font-size: 11px;
+  color: var(--text-disabled);
 }
 
 .highlight {

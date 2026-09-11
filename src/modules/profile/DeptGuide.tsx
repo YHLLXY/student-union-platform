@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, List, Collapse, Empty, Spin, Typography, Button, theme } from 'antd';
+import { Descriptions, List, Collapse, Spin, Typography, Button, theme } from 'antd';
 import { LinkOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { fetchDeptGuide } from './profileService';
 import type { DeptGuide } from './profileService';
 import { getDepartmentLabel } from '@/utils/helpers';
+import { EmptyState } from '@/components/common';
 import styles from './profile.module.css';
 
 const { Text, Paragraph } = Typography;
@@ -32,9 +33,10 @@ export default function DeptGuidePanel() {
 
   if (!guide) {
     return (
-      <Empty
-        description={`暂无${getDepartmentLabel(user.department)}的新人指南`}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
+      <EmptyState
+        compact
+        title={`暂无${getDepartmentLabel(user.department)}的新人指南`}
+        description="部长补充部门基本信息与常用模板后会显示在这里"
       />
     );
   }

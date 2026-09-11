@@ -42,7 +42,7 @@
 .panel {
   width: 360px;
   max-width: calc(100vw - 48px);
-  max-height: 420px;
+  max-height: 460px;
   display: flex;
   flex-direction: column;
 }
@@ -54,6 +54,29 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
+}
+
+/* 分栏 Tab + 只看未读：夹在标题与列表之间，不参与列表滚动 */
+.panelFilters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 0;
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.unreadSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding-bottom: 6px;
+  cursor: pointer;
 }
 
 .panelTitle {
@@ -78,6 +101,8 @@
 .panelList {
   overflow-y: auto;
   flex: 1;
+  /* flex 子项默认 min-height:auto，会把父容器撑高导致内部滚动失效 */
+  min-height: 0;
 }
 
 /* 通知条目 */
@@ -93,6 +118,35 @@
 
 .notifItem:hover {
   background: var(--border-light);
+}
+
+/* 展开后的同类通知：左缩进 + 底色淡化，视觉上从属于上一条 */
+.notifItemNested {
+  padding-left: 40px;
+  background: var(--bg-subtle);
+}
+
+/* 同类聚合的展开 / 收起开关 */
+.groupToggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 12px 5px 42px;
+  font-size: 12px;
+  color: var(--color-info);
+  background: var(--bg-subtle);
+  border: none;
+  border-bottom: 1px solid var(--bg-card-hover);
+  cursor: pointer;
+}
+
+.groupToggle:hover {
+  background: var(--bg-info);
+}
+
+.loadMore {
+  text-align: center;
+  padding: 4px 0 8px;
 }
 
 .notifUnread {
@@ -143,20 +197,6 @@
   font-size: 11px;
   color: var(--text-disabled);
   margin-top: 2px;
-}
-
-.panelEmpty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-disabled);
-  font-size: 13px;
-}
-
-.panelLoading {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-disabled);
-  font-size: 13px;
 }
 
 /* 通知类型图标 */

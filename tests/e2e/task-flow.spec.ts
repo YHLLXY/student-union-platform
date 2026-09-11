@@ -60,8 +60,9 @@ test.describe('冒烟② 发布任务 → 志愿者提交 → 审核通过', () 
     // 提交记录标记「已通过」
     await expect(reviewDetail.getByText('已通过').first()).toBeVisible();
 
-    // 任务状态转「已完成」——注意详情弹窗持有的是打开时的任务快照，不会随审核刷新，
-    // 所以状态变化要在关闭弹窗后的列表卡片上验证
+    // 任务状态转「已完成」，且**弹窗内同步刷新**——Phase 1 B5 修掉 ISSUES #9：
+    // 弹窗改为按 id 从列表数据取（原先持打开时的快照，列表已更新而弹窗还显示「待审核」）
+    await expect(reviewDetail.getByText('已完成').first()).toBeVisible();
     await btn(reviewDetail, '关闭').click();
     const card = page.locator('.ant-card').filter({ hasText: TASK_TITLE });
     await expect(card.getByText('已完成')).toBeVisible();

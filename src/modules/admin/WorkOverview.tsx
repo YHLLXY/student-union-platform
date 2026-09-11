@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, Select, Empty, Tag, Avatar, Progress, theme } from 'antd';
+import { Card, Select, Tag, Avatar, Progress, theme } from 'antd';
 import { UserOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
+import { EmptyState } from '@/components/common';
 import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
 import { fetchMemberWorkSummaries } from './adminService';
 import type { MemberWorkSummary } from './adminService';
@@ -37,7 +38,7 @@ export default function WorkOverview() {
   };
 
   if (loading) return <ListSkeleton />;
-  if (data.length === 0) return <Empty description="暂无成员数据" />;
+  if (data.length === 0) return <EmptyState title="暂无成员数据" description="当前权限范围内没有可查看的成员" />;
 
   return (
     <div>

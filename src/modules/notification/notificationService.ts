@@ -25,16 +25,115 @@ export interface Notification {
   created_at: string;
 }
 
+// ========== 分类（通知中心分栏 / 侧边栏角标共用同一套口径） ==========
+
+/**
+ * 通知类型 → 栏目。未出现在任一栏目里的类型归入「系统」——
+ * 这样后续新增通知类型（如 Phase 3 的 mention）不改服务层也会自动出现在系统栏，
+ * 不会像白名单硬编码那样静默丢通知。
+ */
+export const NOTIFICATION_CATEGORY_TYPES = {
+  tasks: ['task_assigned', 'submission_approved', 'submission_rejected', 'milestone_overdue'],
+  notices: ['new_notice'],
+  forum: ['forum_reply'],
+} as const;
+
+export type NotificationCategory = 'all' | 'tasks' | 'notices' | 'forum' | 'system';
+
+/** 栏目 → 类型过滤（all / system 不过滤，system 由调用方用「总数 − 已知栏」得出） */
+const CATEGORY_TYPE_INDEX: Partial<Record<NotificationCategory, readonly NotificationType[]>> =
+  NOTIFICATION_CATEGORY_TYPES;
+
+function categoryTypes(category: NotificationCategory): readonly NotificationType[] | null {
+  if (category === 'all') return null;
+  return CATEGORY_TYPE_INDEX[category] ?? null;
+}
+
+/** 分页步长：一次 20 条，「加载更多」再取下一页 */
+export const NOTIFICATION_PAGE_SIZE = 20;
+
 // ========== 查询 ==========
 
-/** 获取用户最近通知（最多 20 条） */
-export async function fetchNotifications(userId: string): Promise<Notification[]> {
-  return (await unwrap('fetchNotifications', supabase
+export interface NotificationPage {
+  items: Notification[];
+  /** 是否还有下一页（多取一条探测，避免额外 count 往返） */
+  hasMore: boolean;
+}
+
+/**
+ * 分页获取通知（默认第一页 20 条，时间倒序）。
+ * 用「多取一条」判断 hasMore：比 count=exact 少一次往返，且不受并发写入影响。
+ */
+export async function fetchNotifications(
+  userId: string,
+  opts: {
+    limit?: number;
+    offset?: number;
+    category?: NotificationCategory;
+    unreadOnly?: boolean;
+  } = {},
+): Promise<NotificationPage> {
+  const { limit = NOTIFICATION_PAGE_SIZE, offset = 0, category = 'all', unreadOnly = false } = opts;
+  const types = categoryTypes(category);
+
+  let query = supabase
     .from('notifications')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+
+  if (unreadOnly) query = query.eq('is_read', false);
+  if (types) query = query.in('type', types);
+
+  const rows = (await unwrap('fetchNotifications', query
     .order('created_at', { ascending: false })
-    .limit(20))) as Notification[];
+    .range(offset, offset + limit))) as Notification[];
+
+  return { items: rows.slice(0, limit), hasMore: rows.length > limit };
+}
+
+/** 计数查询基座（head + count=exact：只回 Content-Range，不传行数据） */
+function notificationsCountQuery(userId: string) {
+  return supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+}
+
+type CountQuery = ReturnType<typeof notificationsCountQuery>;
+
+export interface NotificationCounts {
+  all: number;
+  tasks: number;
+  notices: number;
+  forum: number;
+  system: number;
+  unread: number;
+}
+
+/** 各栏目条数（供 Tab 角标 / 「全部已读」按钮显隐）；系统栏 = 总数 − 已知三栏 */
+export async function fetchNotificationCounts(userId: string): Promise<NotificationCounts> {
+  const countOf = (label: string, extra?: (q: CountQuery) => CountQuery) => {
+    const base = notificationsCountQuery(userId);
+    return unwrapCount(label, extra ? extra(base) : base);
+  };
+
+  const [all, tasks, notices, forum, unread] = await Promise.all([
+    countOf('notifCountAll'),
+    countOf('notifCountTasks', (q) => q.in('type', NOTIFICATION_CATEGORY_TYPES.tasks)),
+    countOf('notifCountNotices', (q) => q.in('type', NOTIFICATION_CATEGORY_TYPES.notices)),
+    countOf('notifCountForum', (q) => q.in('type', NOTIFICATION_CATEGORY_TYPES.forum)),
+    countOf('notifCountUnread', (q) => q.eq('is_read', false)),
+  ]);
+
+  return {
+    all,
+    tasks,
+    notices,
+    forum,
+    // 兜底不为负：类型统计与总数是两次查询，中间可能有并发写入
+    system: Math.max(0, all - tasks - notices - forum),
+    unread,
+  };
 }
 
 /** 获取未读通知数量 */
@@ -62,13 +161,21 @@ export async function markAsRead(notificationId: string): Promise<boolean> {
   return true;
 }
 
-/** 标记所有通知为已读 */
-export async function markAllAsRead(userId: string): Promise<boolean> {
-  const { error } = await supabase
+/** 标记所有通知为已读；传 category 时只清该栏目（通知中心「全部已读」按当前栏生效） */
+export async function markAllAsRead(
+  userId: string,
+  category: NotificationCategory = 'all',
+): Promise<boolean> {
+  let query = supabase
     .from('notifications')
     .update({ is_read: true })
     .eq('user_id', userId)
     .eq('is_read', false);
+
+  const types = categoryTypes(category);
+  if (types) query = query.in('type', types);
+
+  const { error } = await query;
 
   if (error) {
     log.error('markAllAsRead 失败', error);
