@@ -94,6 +94,8 @@ src/
 | `npm run test:watch` | 单测 watch 模式 |
 | `npm run test:e2e` | 端到端冒烟（Playwright，`tests/e2e/`，真实浏览器走真实 UI） |
 
+**Node 版本下限 `>=22.22.2`**（见 `package.json` engines）：vitest 5 要求 `^22.12 \|\| ^24`，jsdom 30 要求 `^22.22.2 \|\| ^24.15`，**Node 20 会在启动阶段直接崩**（现象是 vitest 无任何输出、exit code 1）。CI 两个 job 均用 Node 24，与本地开发一致。
+
 **隔离铁律：测试永远不连生产 Supabase。** 三层保障，改测试基建时不要绕过——
 
 1. 全部测试只打本地 stub（`scripts/dev-stub.mjs`）：单测 9911（vitest globalSetup 自动拉起回收）、E2E 9913（Playwright webServer 拉起），与开发用 9999 完全隔离；
