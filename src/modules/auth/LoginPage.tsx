@@ -233,7 +233,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <AuthShell>
       {error && (
         <Alert
-          message={error}
+          title={error}
           type="error"
           showIcon
           closable

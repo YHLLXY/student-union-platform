@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, Select, message, Tag, Popconfirm, InputNumber } from 'antd';
-import { PlusOutlined, CopyOutlined } from '@ant-design/icons';
+import { Table, Button, Select, message, Tag, Popconfirm, InputNumber, Modal, Alert, Space, theme } from 'antd';
+import { PlusOutlined, CopyOutlined, DownloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { DEPARTMENTS, ROLES } from '@/utils/constants';
 import { getDepartmentLabel, getRoleLabel, hasMinRole } from '@/utils/helpers';
-import { fetchInviteCodes, generateInviteCode, deactivateInviteCode, deleteInviteCode } from './adminService';
+import { exportCsv } from '@/utils/export';
+import { fetchInviteCodes, generateInviteCode, generateInviteCodeBatch, deactivateInviteCode, deleteInviteCode } from './adminService';
 import type { InviteCode } from './adminService';
 
 const deptOptions = Object.entries(DEPARTMENTS).map(([key, label]) => ({ value: key, label }));
@@ -16,12 +17,18 @@ interface InviteCodeManageProps {
 }
 
 export default function InviteCodeManage({ userRole, userDept }: InviteCodeManageProps) {
+  const { token } = theme.useToken();
   const queryClient = useQueryClient();
   const [genDept, setGenDept] = useState(userDept);
   const [genRole, setGenRole] = useState('volunteer');
   const [genLoading, setGenLoading] = useState(false);
   const [genMaxUses, setGenMaxUses] = useState(1);
   const [genExpiresDays, setGenExpiresDays] = useState<number | null>(null);
+  // 批量生成：数量 + 本批结果（生成后同框展示，便于复制/导出）
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchCount, setBatchCount] = useState(10);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchCodes, setBatchCodes] = useState<string[]>([]);
 
   // 部门负责人只看本部门（hasMinRole 替代硬编码字符串比较）
   const isDeptHead = hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium');
@@ -76,6 +83,52 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
     navigator.clipboard.writeText(code).then(
       () => message.success('已复制到剪贴板'),
     );
+  };
+
+  /** 批量生成：按当前头部这组参数（部门/角色/次数/有效期）一次生成 N 个，同批共用 batch_id */
+  const handleBatchGenerate = async () => {
+    setBatchLoading(true);
+    const result = await generateInviteCodeBatch({
+      count: batchCount,
+      department: genDept,
+      role: isDeptHead ? 'volunteer' : genRole,
+      maxUses: genMaxUses,
+      expiresInDays: genExpiresDays,
+    });
+    setBatchLoading(false);
+
+    if (!result) {
+      message.error('批量生成失败，请重试');
+      return;
+    }
+    setBatchCodes(result.codes);
+    message.success(`已生成 ${result.codes.length} 个邀请码`);
+    loadCodes();
+  };
+
+  const handleCopyBatch = () => {
+    navigator.clipboard.writeText(batchCodes.join('\n')).then(
+      () => message.success(`已复制 ${batchCodes.length} 个邀请码`),
+    );
+  };
+
+  const handleExportBatch = () => {
+    if (batchCodes.length === 0) return;
+    const rows = batchCodes.map((code, i) => ({
+      index: i + 1,
+      code,
+      department: getDepartmentLabel(genDept),
+      role: getRoleLabel(isDeptHead ? 'volunteer' : genRole),
+      expires: genExpiresDays ? `${genExpiresDays} 天后` : '永不过期',
+    }));
+    const n = exportCsv(rows, [
+      { title: '序号', value: (r) => r.index },
+      { title: '邀请码', value: (r) => r.code },
+      { title: '部门', value: (r) => r.department },
+      { title: '角色', value: (r) => r.role },
+      { title: '有效期', value: (r) => r.expires },
+    ], `邀请码批次_${new Date().toISOString().slice(0, 10)}`);
+    if (n > 0) message.success(`已导出 ${n} 条`);
   };
 
   // 部门负责人只能生成本部门志愿者邀请码（isDeptHead 已在组件顶部定义）
@@ -168,6 +221,13 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
           >
             生成邀请码
           </Button>
+          <Button
+            size="small"
+            icon={<ThunderboltOutlined />}
+            onClick={() => { setBatchCodes([]); setBatchOpen(true); }}
+          >
+            批量生成
+          </Button>
         </div>
       </div>
 
@@ -218,6 +278,76 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
         loading={loading}
         pagination={{ pageSize: 10 }}
       />
+
+      <Modal
+        open={batchOpen}
+        onCancel={() => setBatchOpen(false)}
+        title="批量生成邀请码"
+        footer={null}
+        width={520}
+        destroyOnHidden
+      >
+        {/* 参数取自页面顶部那一排控件，此处只回显——避免同一组参数出现两份可编辑副本 */}
+        <div style={{ marginBottom: 12, fontSize: 13, color: token.colorTextSecondary }}>
+          按当前参数生成：
+          <Tag>{getDepartmentLabel(genDept)}</Tag>
+          <Tag>{getRoleLabel(isDeptHead ? 'volunteer' : genRole)}</Tag>
+          <Tag>可用 {genMaxUses} 次</Tag>
+          <Tag>{genExpiresDays ? `${genExpiresDays} 天后过期` : '永不过期'}</Tag>
+          <span>（要改参数请关掉本窗口，改上面那一排）</span>
+        </div>
+
+        {batchCodes.length === 0 ? (
+          <>
+            <Space style={{ marginBottom: 12 }}>
+              <span>生成数量</span>
+              <InputNumber
+                min={1}
+                max={50}
+                value={batchCount}
+                onChange={(v) => setBatchCount(v ?? 10)}
+                style={{ width: 90 }}
+              />
+              <span style={{ fontSize: 12, color: token.colorTextTertiary }}>一次最多 50 个</span>
+            </Space>
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 12 }}
+              title="同一批生成会记同一个批次号，便于整批导出、整批作废。"
+              description="生成结果可一键复制或导出 CSV，适合打印后线下分发。"
+            />
+            <Button type="primary" block loading={batchLoading} onClick={handleBatchGenerate}>
+              生成 {batchCount} 个邀请码
+            </Button>
+          </>
+        ) : (
+          <>
+            <Alert
+              type="success"
+              showIcon
+              style={{ marginBottom: 12 }}
+              title={`已生成 ${batchCodes.length} 个邀请码（部门/角色/有效期同上方回显）`}
+            />
+            <div style={{ maxHeight: 300, overflowY: 'auto', border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: 8 }}>
+              {batchCodes.map((code, i) => (
+                <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <span style={{ width: 32, color: token.colorTextTertiary, fontSize: 12 }}>{i + 1}</span>
+                  <span style={{ flex: 1, fontFamily: 'monospace', letterSpacing: 1 }}>{code}</span>
+                  <Button size="small" type="text" icon={<CopyOutlined />} onClick={() => handleCopy(code)}>
+                    复制
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Space style={{ marginTop: 12 }}>
+              <Button icon={<CopyOutlined />} onClick={handleCopyBatch}>复制全部</Button>
+              <Button icon={<DownloadOutlined />} onClick={handleExportBatch}>导出 CSV</Button>
+              <Button type="primary" onClick={() => setBatchOpen(false)}>完成</Button>
+            </Space>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

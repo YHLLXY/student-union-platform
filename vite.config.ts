@@ -62,6 +62,14 @@ export default defineConfig({
               priority: 7,
             },
             {
+              // 二维码：仅票务用到，且只在「看签到码 / 开扫码」时才需要。
+              // 必须独立成组——否则会被下面 priority 1 的 vendor 兜底分组吸进去，
+              // 而 vendor 是首屏急加载的，等于每次进站都白付这份体积（v4.4.0 实测踩到）。
+              name: 'qrcode',
+              test: /node_modules[\\/](qrcode|html5-qrcode|dijkstrajs|encode-utf8)[\\/]/,
+              priority: 7,
+            },
+            {
               // 其余零散第三方（dayjs/@babel/runtime/tslib 等）
               name: 'vendor',
               test: /node_modules[\\/]/,

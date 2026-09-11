@@ -30,6 +30,36 @@ export interface DeptBasicInfo {
   group_chat?: string;
 }
 
+/** 积分流水的原因（points_ledger.reason）。四个自动计分点见 supabase-migration.sql 第十八部分；
+ *  保留 (string & {}) 分支是因为手工冲销时可写任意原因，不把类型写死。 */
+export type PointsReason =
+  | 'task_approved'
+  | 'submission_on_time'
+  | 'submission_late'
+  | 'ticket_checkin'
+  | (string & {});
+
+/** check_in_ticket RPC 的返回结构（code 用于前端分流提示，不要按 message 做判断） */
+export interface CheckInResult {
+  ok: boolean;
+  code:
+    | 'forbidden'
+    | 'invalid_token'
+    | 'not_found'
+    | 'already_checked_in'
+    | 'ticket_missing'
+    | 'out_of_window'
+    | 'checked_in'
+    /** 前端侧补充：RPC 网络/传输失败（不是业务拒绝） */
+    | 'rpc_error';
+  message: string;
+  name?: string;
+  student_id?: string;
+  ticket?: string;
+  checked_in_at?: string;
+  event_time?: string;
+}
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export interface Relationship {
@@ -105,6 +135,8 @@ export interface Database {
           revoked_at: string | null;
           created_by: string | null;
           created_at: string;
+          /** 批次号：一次「批量生成」写入同一个值，便于整批导出/作废（第十八部分新增） */
+          batch_id: string | null;
         };
         Insert: {
           id?: string;
@@ -119,6 +151,7 @@ export interface Database {
           revoked_at?: string | null;
           created_by?: string | null;
           created_at?: string;
+          batch_id?: string | null;
         };
         Update: {
           id?: string;
@@ -133,6 +166,7 @@ export interface Database {
           revoked_at?: string | null;
           created_by?: string | null;
           created_at?: string;
+          batch_id?: string | null;
         };
         Relationships: [FkUsers<['used_by'], 'invite_codes_used_by_fkey'>];
       };
@@ -422,6 +456,10 @@ export interface Database {
           student_id: string;
           name: string;
           grabbed_at: string;
+          /** 签到时间；NULL = 未签到（第十八部分新增，由 check_in_ticket RPC 写入） */
+          checked_in_at: string | null;
+          /** 签到操作人（组织者）的 users.id */
+          checked_by: string | null;
         };
         Insert: {
           id?: string;
@@ -430,6 +468,8 @@ export interface Database {
           student_id: string;
           name: string;
           grabbed_at?: string;
+          checked_in_at?: string | null;
+          checked_by?: string | null;
         };
         Update: {
           id?: string;
@@ -438,10 +478,13 @@ export interface Database {
           student_id?: string;
           name?: string;
           grabbed_at?: string;
+          checked_in_at?: string | null;
+          checked_by?: string | null;
         };
         Relationships: [
           Rel<'ticket_records_ticket_id_fkey', ['ticket_id'], 'tickets'>,
           FkUsers<['user_id'], 'ticket_records_user_id_fkey'>,
+          FkUsers<['checked_by'], 'ticket_records_checked_by_fkey'>,
         ];
       };
       task_templates: {
@@ -675,6 +718,43 @@ export interface Database {
         };
         Relationships: [];
       };
+      /** 考核积分流水（第十八部分新增）。只增不改：前端只有读权限，
+          写入由数据库触发器与 award_points 函数完成（审核通过 +2 / 按时提交 +1 /
+          逾期提交 -1 / 活动签到 +1）。 */
+      points_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          delta: number;
+          reason: PointsReason;
+          ref_type: string | null;
+          ref_id: string | null;
+          /** 学期键，形如 2026-2027-1（数据库按学期自动落值） */
+          semester: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          delta: number;
+          reason: string;
+          ref_type?: string | null;
+          ref_id?: string | null;
+          semester?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          delta?: number;
+          reason?: string;
+          ref_type?: string | null;
+          ref_id?: string | null;
+          semester?: string;
+          created_at?: string;
+        };
+        Relationships: [FkUsers<['user_id'], 'points_ledger_user_id_fkey'>];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -702,6 +782,16 @@ export interface Database {
       verify_user_identity: {
         Args: { name_input: string; student_id_input: string };
         Returns: Json;
+      };
+      /** 签发签到二维码令牌（非组织者只能为自己的票券签发） */
+      ticket_qr_token: {
+        Args: { p_record: string; p_ttl_minutes?: number };
+        Returns: string;
+      };
+      /** 扫码签到：服务端完成令牌校验/权限/时间窗/防重复/计分，返回结构化结果 */
+      check_in_ticket: {
+        Args: { p_token: string };
+        Returns: CheckInResult;
       };
     };
     Enums: Record<string, never>;

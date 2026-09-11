@@ -1,6 +1,7 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
 import { unwrap, unwrapCount } from '@/lib/sb';
+import { currentSemester } from '@/utils/semester';
 
 const log = logger.for('profile/profileService');
 
@@ -425,4 +426,51 @@ export async function fetchAllUserTasks(userId: string): Promise<{
     pending: tasks.filter((t) => t.status !== 'completed' && (!t.deadline || t.deadline >= now)),
     overdue: tasks.filter((t) => t.status !== 'completed' && t.deadline && t.deadline < now),
   };
+}
+
+// ========== 考核积分（第十八部分 / v4.4.0） ==========
+
+export interface PointsEntry {
+  id: string;
+  delta: number;
+  reason: string;
+  ref_type: string | null;
+  ref_id: string | null;
+  semester: string;
+  created_at: string;
+}
+
+export interface MyPoints {
+  semester: string;
+  total: number;
+  entries: PointsEntry[];
+}
+
+/** 计分原因 → 中文说明（未知原因原样回显，手工冲销用得到） */
+export const POINTS_REASON_LABEL: Record<string, string> = {
+  task_approved: '任务审核通过',
+  submission_on_time: '按时提交',
+  submission_late: '逾期提交',
+  ticket_checkin: '活动签到',
+};
+
+export function getPointsReasonLabel(reason: string): string {
+  return POINTS_REASON_LABEL[reason] ?? reason;
+}
+
+/**
+ * 我的本学期积分与明细（一次查询客户端汇总，学期内明细量级很小）
+ * 学期口径与数据库 public.semester_of() 一致，见 src/utils/semester.ts
+ */
+export async function fetchMyPoints(userId: string, semester: string = currentSemester()): Promise<MyPoints> {
+  const entries = await unwrap('myPoints', supabase
+    .from('points_ledger')
+    .select('id, delta, reason, ref_type, ref_id, semester, created_at')
+    .eq('user_id', userId)
+    .eq('semester', semester)
+    .order('created_at', { ascending: false })
+    .limit(200));
+
+  const total = entries.reduce((sum, e) => sum + e.delta, 0);
+  return { semester, total, entries: entries as PointsEntry[] };
 }

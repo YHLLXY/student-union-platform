@@ -104,6 +104,7 @@ src/
 
 **其它注意：**
 - stub 是按「真实 PostgREST 线上报文形态」仿真的（`.or()`、`.contains()` → `cs.{}`、`count=exact`、`别名:users!外键列(fields)`、列默认值 `TABLE_DEFAULTS`、**`order` 排序 / `limit`·`offset`·`Range` 分页窗口 / `not.` 取反**）。新增查询写法若在测试里静默失配，先补 `scripts/dev-stub.mjs` 的对应形态，不要绕过断言；
+- **stub 的响应体必须按真实协议序列化**：`send()` 早先对字符串原样输出，而真实 PostgREST 对标量 RPC（如返回 `text` 的 `ticket_qr_token`）返回的是**带引号的 JSON 字符串**。后果不是断言失败，而是 `unwrap` 解析失败后把令牌原文当 `error.message` 抛出来（v4.4.0 排查耗时最久的一项）。**遇到「解析失败」类错误先查 stub 的报文形态，别急着改业务代码**；
 - E2E 必须 `serviceWorkers: 'block'`：应用注册了 PWA service worker，而 Playwright **不拦截由 SW 处理的请求**——不屏蔽 SW，`page.route` 防线会形同虚设；
 - CI：`.github/workflows/deploy.yml` 的 `test` job（oxlint + 单测 + E2E）全绿才允许 `build` → `deploy`，且该 job **不注入任何生产凭据**。
 
@@ -320,11 +321,26 @@ git push origin master
 - **Auth：** 邮箱 = `学号@stuunion.org`，`users` 表通过 `auth_id` 关联 `auth.users`
 
 **核心表：**
-`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides`
+`users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides` | `points_ledger`（v4.4.0）
 
-**迁移文件：** `supabase-migration.sql`（17 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化）；大段独立脚本见根目录 `supabase-*.sql`
+**迁移文件：** `supabase-migration.sql`（18 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化、Phase 2 数据层）；大段独立脚本见根目录 `supabase-*.sql`（另有只读验收脚本 `supabase-verify-v4.3.0.sql`）
 
 **数据库优化（v4.3.0，第十七部分）：** `users.auth_id` 唯一索引（RLS 策略判定热路径）、22 条外键索引、11 条复合索引、`updated_at` 触发器、两个枚举列 CHECK（NOT VALID）。执行脚本 `supabase-optimize-v4.3.0.sql`，**由用户在 Supabase 手动执行**，不执行也不影响功能。
+
+**Phase 2 数据层（v4.4.0，第十八部分）：** 执行脚本 `supabase-phase2-v4.4.0.sql`（**用户已执行**）。三条与「前端直觉」相反的设计，改动前务必先读：
+
+1. **积分是数据库算的，前端只读**。`points_ledger` 是唯一不套 `authenticated_full_access` 的业务表（只有 SELECT 策略，INSERT/UPDATE/DELETE 全部 `REVOKE`）。四个计分点由触发器写入：`task_submissions` 转为 `approved` 时 +2，并按「提交时间 vs `tasks.deadline`」再判按时 +1 / 逾期 -1；`ticket_records.checked_in_at` 由空变非空时 +1。幂等由 `uq_points_event(ref_type, ref_id, reason)` 唯一索引 + `ON CONFLICT DO NOTHING` 保证——**重复点审核、重复签到都不会重复加分**。
+2. **签到是 RPC，前端不需要写权限**。`ticket_qr_token(record_id, ttl)` 签发 15 分钟有效的 MAC 令牌（密钥在库内 `app_secrets`，不进仓库，签名用内置 `md5` 做 keyed hash、不依赖 pgcrypto）；`check_in_ticket(token)` 在服务端依次做 令牌校验 → 组织者权限 → 时间窗（活动前 2 小时至后 6 小时）→ 防重复 → 计分，返回 `{ ok, code, message }`，**按 `code` 分流提示，不要拿 `message` 做判断**。
+3. **两条防伪触发器**：`task_submissions.status` 进入 `approved`/`rejected`、`ticket_records` 的两个签到列，都必须「部门负责人及以上」（放行 `service_role` 供运维）。不加固的话任何志愿者都能给自己加分，积分排行就失去意义。
+
+**学期键：** 形如 `2026-2027-1`（9 月~次年 1 月为第 1 学期）。数据库侧是 `public.semester_of()`，前端侧是 `src/utils/semester.ts` 的 `currentSemester()`——**两边必须同口径**，改一处要改两处。
+
+## v4.4.0 增强（2026-09-11）
+
+1. **考核积分** — 个人中心「我的积分」（数字滚动总分 + 明细 + 导出）；权限管理·工作看板「本学期积分排行」（部门内/全校、构成 Tag、导出）。积分由数据库触发器记账，**前端只读**
+2. **票务闭环** — 票务详情 Drawer（活动说明 / 组织者签到名单 + 导出）；「我的票券」生成 15 分钟有效的签到二维码 + 原文可复制；组织者「扫码签到」（`html5-qrcode` 动态 import 调摄像头，失败降级手输，走同一个 `check_in_ticket` RPC）
+3. **批量邀请码** — 权限管理·成员管理「批量生成」（数量/角色/部门/有效期，同批共享 `batch_id`）→ 结果表 + 复制全部 + 导出 CSV
+4. **依赖新增** — `qrcode`（MIT）/ `html5-qrcode`（Apache-2.0），**均动态 import**，不进首屏包
 
 ## v4.3.0 增强（2026-09-11）
 

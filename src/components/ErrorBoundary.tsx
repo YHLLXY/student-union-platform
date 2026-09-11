@@ -52,7 +52,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <Alert
             type="error"
             showIcon
-            message={this.props.message ?? '页面发生错误'}
+            title={this.props.message ?? '页面发生错误'}
             description={
               <div style={{ marginTop: 8 }}>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>

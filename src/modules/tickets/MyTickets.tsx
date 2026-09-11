@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tag, Button, Popconfirm, message, theme } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QrcodeOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
 import { EmptyState } from '@/components/common';
@@ -8,6 +9,7 @@ import { formatDateTime } from '@/utils/helpers';
 import { trackEvent } from '@/utils/analytics';
 import { fetchMyTickets, refundTicket } from './ticketService';
 import type { MyTicket } from './ticketService';
+import TicketQrModal from './TicketQrModal';
 import styles from './tickets.module.css';
 
 export default function MyTickets() {
@@ -15,6 +17,8 @@ export default function MyTickets() {
   const user = useAuth();
   const queryClient = useQueryClient();
   const [refunding, setRefunding] = useState<string | null>(null);
+  // 当前展示签到码的那张票（null = 不展示）
+  const [qrTicket, setQrTicket] = useState<MyTicket | null>(null);
 
   const myTicketsQuery = useQuery({
     queryKey: ['myTickets', user.id],
@@ -71,6 +75,7 @@ export default function MyTickets() {
     <div>
       {tickets.map((t) => {
         const refundable = canRefund(t.event_time);
+        const checkedIn = !!t.checked_in_at;
         return (
           <div key={t.id} className={styles.myTicketItem}>
             <div>
@@ -78,11 +83,26 @@ export default function MyTickets() {
               <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
                 {t.event_time && `活动时间：${formatDateTime(t.event_time)} · `}
                 抢票时间：{formatDateTime(t.grabbed_at)}
+                {checkedIn && ` · 签到时间：${formatDateTime(t.checked_in_at!)}`}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Tag color="green">已抢到</Tag>
-              {refundable ? (
+              {checkedIn ? (
+                <Tag color="green" icon={<CheckCircleOutlined />}>已签到</Tag>
+              ) : (
+                <>
+                  <Tag color="green">已抢到</Tag>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<QrcodeOutlined />}
+                    onClick={() => setQrTicket(t)}
+                  >
+                    签到码
+                  </Button>
+                </>
+              )}
+              {refundable && !checkedIn ? (
                 <Popconfirm
                   title="确认退票？"
                   onConfirm={() => handleRefund(t)}
@@ -93,13 +113,25 @@ export default function MyTickets() {
                     退票
                   </Button>
                 </Popconfirm>
-              ) : (
+              ) : !checkedIn ? (
                 <Tag color="default" title="距活动开始不足 5 小时，无法退票">不可退</Tag>
-              )}
+              ) : null}
             </div>
           </div>
         );
       })}
+
+      <TicketQrModal
+        open={!!qrTicket}
+        recordId={qrTicket?.id ?? ''}
+        ticketTitle={qrTicket?.ticket_title ?? ''}
+        eventTime={qrTicket?.event_time ?? ''}
+        onClose={() => {
+          setQrTicket(null);
+          // 关窗时重取一次：若刚被现场扫码签到，状态要立刻反映成「已签到」
+          loadMyTickets();
+        }}
+      />
     </div>
   );
 }

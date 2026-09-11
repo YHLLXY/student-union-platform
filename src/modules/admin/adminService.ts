@@ -3,6 +3,7 @@ import type { UserProfile } from '@/modules/auth';
 import { logger } from '@/diagnostics';
 import { unwrap } from '@/lib/sb';
 import { hasMinRole } from '@/utils/helpers';
+import { currentSemester } from '@/utils/semester';
 
 const log = logger.for('admin/adminService');
 
@@ -313,4 +314,146 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
     eventStats,
     recentErrors: (errorRes.data ?? []) as AnalyticsSummary['recentErrors'],
   };
+}
+
+// ========== 考核积分排行（第十八部分 / v4.4.0） ==========
+
+export interface PointsStanding {
+  user_id: string;
+  name: string;
+  department: string;
+  role: string;
+  /** 本学期净积分 */
+  total: number;
+  /** 审核通过次数（每次 +2） */
+  approved: number;
+  /** 按时提交次数（每次 +1） */
+  onTime: number;
+  /** 逾期提交次数（每次 -1） */
+  late: number;
+  /** 活动签到次数（每次 +1） */
+  checkins: number;
+  rank: number;
+}
+
+/**
+ * 本学期积分排行。
+ * 范围：部门负责人只能看本部门（即使传 all 也会被收窄，与其它管理页一致）；
+ *       presidium 及以上可切「部门内 / 全校」。
+ * 实现：2 次查询 + 客户端聚合（成员表 + 本学期流水），不做 N+1。
+ */
+export async function fetchPointsStandings(
+  scope: 'department' | 'all',
+  userRole: string,
+  userDept: string,
+  semester: string = currentSemester(),
+): Promise<PointsStanding[]> {
+  const forcedDept = hasMinRole(userRole, 'dept_head') && !hasMinRole(userRole, 'presidium');
+  const useDept = forcedDept || scope === 'department';
+
+  let memberQuery = supabase
+    .from('users')
+    .select('id, name, department, role')
+    .neq('role', 'removed');
+  if (useDept) memberQuery = memberQuery.eq('department', userDept);
+
+  const members = await unwrap('pointsStandingsMembers', memberQuery);
+  if (members.length === 0) return [];
+
+  const rows = await unwrap('pointsStandingsLedger', supabase
+    .from('points_ledger')
+    .select('user_id, delta, reason')
+    .in('user_id', members.map((m) => m.id))
+    .eq('semester', semester)
+    .limit(2000));
+
+  const map = new Map<string, Omit<PointsStanding, 'name' | 'department' | 'role' | 'rank'>>();
+  for (const m of members) {
+    map.set(m.id, { user_id: m.id, total: 0, approved: 0, onTime: 0, late: 0, checkins: 0 });
+  }
+
+  for (const r of rows) {
+    const c = map.get(r.user_id);
+    if (!c) continue;
+    c.total += r.delta;
+    if (r.reason === 'task_approved') c.approved += 1;
+    else if (r.reason === 'submission_on_time') c.onTime += 1;
+    else if (r.reason === 'submission_late') c.late += 1;
+    else if (r.reason === 'ticket_checkin') c.checkins += 1;
+  }
+
+  const standings: PointsStanding[] = members.map((m) => ({
+    ...map.get(m.id)!,
+    name: m.name,
+    department: m.department,
+    role: m.role,
+    rank: 0,
+  }));
+
+  standings.sort((a, b) => (b.total - a.total) || a.name.localeCompare(b.name, 'zh-CN'));
+  standings.forEach((s, i) => { s.rank = i + 1; });
+  return standings;
+}
+
+// ========== 批量邀请码（第十八部分 / v4.4.0） ==========
+
+export interface InviteBatchResult {
+  batchId: string;
+  codes: string[];
+}
+
+/** 生成 v4 形状的批次号。用 Math.random 而非 crypto.randomUUID：
+ *  jsdom 测试环境不保证有后者，而批次号只是分组用的内部标识，不参与安全判断。 */
+function newBatchId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = Math.floor(Math.random() * 16);
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+/** 生成 count 个互不重复的邀请码（与服务端 code UNIQUE 约束配合，避免整批插入失败） */
+function uniqueCodes(count: number): string[] {
+  const set = new Set<string>();
+  while (set.size < count) {
+    set.add(Math.random().toString(36).substring(2, 8).toUpperCase());
+  }
+  return [...set];
+}
+
+/**
+ * 批量生成邀请码：一次 insert 写入整批（共享 batch_id，便于按批导出/作废）。
+ * 返回本批邀请码；失败返回 null（错误已记日志，UI 只需提示）。
+ */
+export async function generateInviteCodeBatch(opts: {
+  count: number;
+  department: string;
+  role: string;
+  maxUses?: number;
+  expiresInDays?: number | null;
+  createdBy?: string | null;
+}): Promise<InviteBatchResult | null> {
+  const count = Math.min(Math.max(Math.floor(opts.count), 1), 50);
+  const maxUses = opts.maxUses ?? 1;
+  const expiresAt = opts.expiresInDays
+    ? new Date(Date.now() + opts.expiresInDays * 864e5).toISOString()
+    : null;
+
+  const batchId = newBatchId();
+  const codes = uniqueCodes(count);
+
+  const { error } = await supabase
+    .from('invite_codes')
+    .insert(codes.map((code) => ({
+      code,
+      department: opts.department,
+      role: opts.role,
+      max_uses: maxUses,
+      used_count: 0,
+      expires_at: expiresAt,
+      created_by: opts.createdBy ?? null,
+      batch_id: batchId,
+    })));
+
+  if (error) { log.error('generateInviteCodeBatch 批量生成失败', error); return null; }
+  return { batchId, codes };
 }

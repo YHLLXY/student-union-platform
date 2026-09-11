@@ -12,6 +12,7 @@ import Heatmap from './Heatmap';
 import Leaderboard from './Leaderboard';
 import MemberDirectory from './MemberDirectory';
 import DeptGuide from './DeptGuide';
+import PointsPanel from './PointsPanel';
 import TaskListModal from './TaskListModal';
 import styles from './profile.module.css';
 
@@ -88,6 +89,8 @@ export default function ProfilePage() {
           )}
         </div>
       )}
+
+      <PointsPanel />
 
       <Card style={{ marginBottom: 16 }}>
         <Heatmap />

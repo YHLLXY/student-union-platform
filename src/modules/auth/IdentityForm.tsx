@@ -58,7 +58,7 @@ export default function IdentityForm({
         <Alert
           type="info"
           showIcon
-          message={`该${idLabel}已注册，无需邀请码`}
+          title={`该${idLabel}已注册，无需邀请码`}
           description="下一步输入密码即可登录；忘记密码可在密码页重置。"
           style={{ marginBottom: 24 }}
         />

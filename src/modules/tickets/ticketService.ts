@@ -1,7 +1,7 @@
 import supabase from '@/supabaseClient';
 import { logger } from '@/diagnostics';
-import { unwrap } from '@/lib/sb';
-import type { TableRow } from '@/types/database';
+import { unwrap, unwrapCount } from '@/lib/sb';
+import type { TableRow, CheckInResult } from '@/types/database';
 
 type TicketRowWithCreator = TableRow<'tickets'> & { creator: { name: string } | null };
 
@@ -111,6 +111,8 @@ export interface MyTicket {
   grabbed_at: string;
   ticket_title: string;
   event_time: string;
+  /** 签到时间；非空即已签到（此时不再展示签到码） */
+  checked_in_at: string | null;
 }
 
 /** 获取我的票券 */
@@ -132,6 +134,7 @@ export async function fetchMyTickets(userId: string): Promise<MyTicket[]> {
       grabbed_at: r.grabbed_at,
       ticket_title: ticket?.title ?? '未知',
       event_time: ticket?.event_time ?? '',
+      checked_in_at: r.checked_in_at,
     };
   });
 }
@@ -201,4 +204,76 @@ export function subscribeToTickets(callback: () => void): () => void {
     .subscribe();
 
   return () => { supabase.removeChannel(channel); };
+}
+
+// ========== 票务闭环：签到名单 / 二维码 / 扫码签到（第十八部分 / v4.4.0） ==========
+
+export interface TicketRosterEntry {
+  id: string;
+  ticket_id: string;
+  user_id: string | null;
+  student_id: string;
+  name: string;
+  grabbed_at: string;
+  checked_in_at: string | null;
+  checked_by: string | null;
+}
+
+export interface TicketCheckInStats {
+  /** 已领票数 */
+  issued: number;
+  /** 已签到数 */
+  checkedIn: number;
+}
+
+/** 某活动的领票名单（组织者视角，按抢票时间正序） */
+export async function fetchTicketRoster(ticketId: string): Promise<TicketRosterEntry[]> {
+  return unwrap('fetchTicketRoster', supabase
+    .from('ticket_records')
+    .select('*')
+    .eq('ticket_id', ticketId)
+    .order('grabbed_at', { ascending: true })
+    .limit(500)) as Promise<TicketRosterEntry[]>;
+}
+
+/** 领票数 / 已签到数（两条 head 计数并行，走 ticket_id 与 checked_in_at 索引） */
+export async function fetchTicketCheckInStats(ticketId: string): Promise<TicketCheckInStats> {
+  const [issued, checkedIn] = await Promise.all([
+    unwrapCount('ticketStatsIssued', supabase
+      .from('ticket_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('ticket_id', ticketId)),
+    unwrapCount('ticketStatsCheckedIn', supabase
+      .from('ticket_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('ticket_id', ticketId)
+      .not('checked_in_at', 'is', null)),
+  ]);
+
+  return { issued, checkedIn };
+}
+
+/**
+ * 签发签到二维码令牌（服务端 15 分钟有效，非组织者只能为自己的票券签发）。
+ * 令牌形如 SUP1.<record_id>.<过期秒>.<MAC>，二维码内容就是这串文本。
+ */
+export async function issueCheckInToken(recordId: string, ttlMinutes = 15): Promise<string> {
+  return unwrap('issueCheckInToken', supabase.rpc('ticket_qr_token', {
+    p_record: recordId,
+    p_ttl_minutes: ttlMinutes,
+  })) as Promise<string>;
+}
+
+/**
+ * 组织者扫码签到：令牌校验/权限/时间窗/防重复/计分全在服务端完成。
+ * 这里**不抛错**——业务拒绝（过期、重复、越权）是正常分支，交给 UI 按 code 分流提示。
+ */
+export async function checkInTicket(token: string): Promise<CheckInResult> {
+  const { data, error } = await supabase.rpc('check_in_ticket', { p_token: token });
+
+  if (error) {
+    log.error('check_in_ticket RPC 失败', error);
+    return { ok: false, code: 'rpc_error', message: '签到失败：网络或服务异常，请重试' };
+  }
+  return data as CheckInResult;
 }

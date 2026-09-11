@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, Tag, Button, Tabs, Modal, message, Grid } from 'antd';
-import { PlusOutlined, ClockCircleOutlined, GiftOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, ClockCircleOutlined, GiftOutlined, ReloadOutlined, QrcodeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useAuth } from '@/components/AuthContext';
 import { CardStreamSkeleton } from '@/components/SkeletonBlocks';
 import { EmptyState } from '@/components/common';
@@ -11,6 +11,8 @@ import { fetchTickets, grabTicket, subscribeToTickets, fetchMyGrabbedIds } from 
 import type { Ticket } from './ticketService';
 import TicketForm from './TicketForm';
 import MyTickets from './MyTickets';
+import TicketDetailDrawer from './TicketDetailDrawer';
+import CheckInScanner from './CheckInScanner';
 import styles from './tickets.module.css';
 
 export default function TicketList() {
@@ -19,6 +21,9 @@ export default function TicketList() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('available');
+  // 详情用 Drawer（不改路由）；签到码由「我的票券」自己弹出，这里只负责切 Tab
+  const [detailTicketId, setDetailTicketId] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   // 票务列表 + 已抢 ID 一次拉齐
   const ticketsQuery = useQuery({
@@ -63,6 +68,18 @@ export default function TicketList() {
   }, [user.id, user.student_id, user.name, loadTickets]);
 
   const canCreate = hasMinRole(user.role, 'dept_head');
+
+  const detailTicket = useMemo(
+    () => (detailTicketId ? tickets.find((t) => t.id === detailTicketId) ?? null : null),
+    [tickets, detailTicketId],
+  );
+
+  /** 签到成功后刷新名单/统计与我的票券（扫码窗口可连续签多人） */
+  const handleCheckedIn = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['ticketRoster'] });
+    queryClient.invalidateQueries({ queryKey: ['ticketCheckInStats'] });
+    queryClient.invalidateQueries({ queryKey: ['myTickets'] });
+  }, [queryClient]);
 
   const tabItems = useMemo(() => [
     {
@@ -111,22 +128,27 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
                   <span className={`${styles.remaining} ${soldOut ? styles.remainingZero : ''}`}>
                     {soldOut ? '已售罄' : `剩余 ${ticket.remaining_count}/${ticket.total_count}`}
                   </span>
-                  {isOpen ? (
-                    alreadyGrabbed ? (
-                      <Tag color="blue">已抢票</Tag>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <Button size="small" type="text" icon={<FileTextOutlined />} onClick={() => setDetailTicketId(ticket.id)}>
+                      详情
+                    </Button>
+                    {isOpen ? (
+                      alreadyGrabbed ? (
+                        <Tag color="blue">已抢票</Tag>
+                      ) : (
+                        <Button
+                          type="primary"
+                          size="small"
+                          disabled={!canGrab}
+                          onClick={() => handleGrab(ticket)}
+                        >
+                          {soldOut ? '已售罄' : '抢票'}
+                        </Button>
+                      )
                     ) : (
-                      <Button
-                        type="primary"
-                        size="small"
-                        disabled={!canGrab}
-                        onClick={() => handleGrab(ticket)}
-                      >
-                        {soldOut ? '已售罄' : '抢票'}
-                      </Button>
-                    )
-                  ) : (
-                    <Tag icon={<ClockCircleOutlined />} color="default">未开抢</Tag>
-                  )}
+                      <Tag icon={<ClockCircleOutlined />} color="default">未开抢</Tag>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
@@ -145,14 +167,45 @@ const canGrab = isOpen && !soldOut && !alreadyGrabbed;
     <div>
       <div className={styles.pageHeader}>
         <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>活动抢票</h2>
-        {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
-            发布票务
-          </Button>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {canCreate && (
+            <Button icon={<QrcodeOutlined />} onClick={() => setScanOpen(true)}>
+              扫码签到
+            </Button>
+          )}
+          {canCreate && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
+              发布票务
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+
+      <TicketDetailDrawer
+        open={!!detailTicket}
+        ticket={detailTicket}
+        canManage={canCreate}
+        grabbed={detailTicket ? grabbedIds.has(detailTicket.id) : false}
+        canGrab={
+          !!detailTicket
+          && new Date(detailTicket.open_time) <= new Date()
+          && (detailTicket.remaining_count ?? 0) > 0
+          && !grabbedIds.has(detailTicket.id)
+        }
+        onGrab={handleGrab}
+        onOpenMyTickets={() => { setDetailTicketId(null); setActiveTab('my'); }}
+        onClose={() => setDetailTicketId(null)}
+      />
+
+      {canCreate && (
+        <CheckInScanner
+          open={scanOpen}
+          onCheckedIn={handleCheckedIn}
+          onClose={() => setScanOpen(false)}
+        />
+      )}
 
       <Modal
         open={showForm}

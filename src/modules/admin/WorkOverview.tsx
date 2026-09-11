@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Card, Select, Tag, Avatar, Progress, theme } from 'antd';
-import { UserOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Select, Tag, Avatar, Progress, theme, Segmented, Table, Button, Space, message } from 'antd';
+import { UserOutlined, ExclamationCircleOutlined, DownloadOutlined, TrophyOutlined } from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { ListSkeleton } from '@/components/SkeletonBlocks';
 import { EmptyState } from '@/components/common';
-import { getDepartmentLabel, getRoleLabel } from '@/utils/helpers';
-import { fetchMemberWorkSummaries } from './adminService';
-import type { MemberWorkSummary } from './adminService';
+import { getDepartmentLabel, getRoleLabel, hasMinRole, currentSemester, formatSemester } from '@/utils/helpers';
+import { exportCsv } from '@/utils/export';
+import { PODIUM_COLORS } from '@/utils/themeColors';
+import { fetchMemberWorkSummaries, fetchPointsStandings } from './adminService';
+import type { MemberWorkSummary, PointsStanding } from './adminService';
 import styles from './admin.module.css';
 
 type SortKey = 'overdue' | 'completed' | 'department';
@@ -19,6 +22,33 @@ export default function WorkOverview() {
   const [data, setData] = useState<MemberWorkSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('overdue');
+
+  // 积分排行：范围切换（部门负责人只能看本部门，服务端也会再收窄一次）
+  const canSwitchScope = hasMinRole(user.role, 'presidium');
+  const [scope, setScope] = useState<'department' | 'all'>('department');
+  const semester = currentSemester();
+
+  const standingsQuery = useQuery({
+    queryKey: ['pointsStandings', scope, user.role, user.department],
+    queryFn: () => fetchPointsStandings(scope, user.role, user.department),
+  });
+  const standings: PointsStanding[] = standingsQuery.data ?? [];
+
+  const handleExportStandings = useCallback(() => {
+    if (standings.length === 0) return;
+    const count = exportCsv(standings, [
+      { title: '排名', value: (s) => s.rank },
+      { title: '姓名', value: (s) => s.name },
+      { title: '部门', value: (s) => getDepartmentLabel(s.department) },
+      { title: '角色', value: (s) => getRoleLabel(s.role) },
+      { title: '本学期积分', value: (s) => s.total },
+      { title: '审核通过次数', value: (s) => s.approved },
+      { title: '按时提交次数', value: (s) => s.onTime },
+      { title: '逾期提交次数', value: (s) => s.late },
+      { title: '签到次数', value: (s) => s.checkins },
+    ], `积分排行_${scope === 'all' ? '全校' : '部门内'}_${semester}`);
+    if (count > 0) message.success(`已导出 ${count} 条`);
+  }, [standings, scope, semester]);
 
   useEffect(() => {
     setLoading(true);
@@ -42,6 +72,96 @@ export default function WorkOverview() {
 
   return (
     <div>
+      {/* 本学期积分排行（A3 考核积分，v4.4.0）：积分由数据库触发器记账，这里只读 */}
+      <Card
+        size="small"
+        style={{ marginBottom: 16 }}
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <TrophyOutlined style={{ color: token.colorWarning }} />
+            本学期积分排行
+            <Tag color="blue">{formatSemester(semester)}</Tag>
+          </span>
+        }
+        extra={
+          <Space>
+            {canSwitchScope && (
+              <Segmented
+                size="small"
+                value={scope}
+                onChange={(v) => setScope(v as 'department' | 'all')}
+                options={[
+                  { label: '部门内', value: 'department' },
+                  { label: '全校', value: 'all' },
+                ]}
+              />
+            )}
+            <Button
+              size="small"
+              icon={<DownloadOutlined />}
+              disabled={standings.length === 0}
+              onClick={handleExportStandings}
+            >
+              导出排行
+            </Button>
+          </Space>
+        }
+      >
+        {standingsQuery.isPending ? (
+          <ListSkeleton count={3} avatar />
+        ) : standingsQuery.isError ? (
+          <EmptyState
+            compact
+            title="积分排行加载失败"
+            description="网络异常或服务暂时不可用，请稍后重试"
+            action={<Button type="primary" onClick={() => standingsQuery.refetch()}>重新加载</Button>}
+          />
+        ) : standings.length === 0 ? (
+          <EmptyState compact title="权限范围内没有成员" description="换一个范围试试，或确认成员是否已加入部门" />
+        ) : (
+          <Table<PointsStanding>
+            dataSource={standings}
+            rowKey="user_id"
+            size="small"
+            pagination={{ pageSize: 10, size: 'small', hideOnSinglePage: true }}
+            columns={[
+              {
+                title: '排名', dataIndex: 'rank', width: 70,
+                render: (rank: number) =>
+                  rank <= 3 ? (
+                    <span style={{ color: PODIUM_COLORS[rank - 1], fontWeight: 700 }}>{rank}</span>
+                  ) : (
+                    <span style={{ color: token.colorTextTertiary }}>{rank}</span>
+                  ),
+              },
+              { title: '姓名', dataIndex: 'name' },
+              {
+                title: '部门', dataIndex: 'department',
+                render: (d: string) => getDepartmentLabel(d),
+              },
+              {
+                title: '积分', dataIndex: 'total', width: 80,
+                sorter: (a: PointsStanding, b: PointsStanding) => a.total - b.total,
+                render: (t: number) => (
+                  <span style={{ fontWeight: 600, color: t >= 0 ? token.colorSuccess : token.colorError }}>{t}</span>
+                ),
+              },
+              {
+                title: '构成', key: 'breakdown',
+                render: (_: unknown, s: PointsStanding) => (
+                  <span style={{ fontSize: 12 }}>
+                    <Tag color="green">通过 {s.approved}</Tag>
+                    <Tag color="blue">按时 {s.onTime}</Tag>
+                    {s.late > 0 && <Tag color="red">逾期 {s.late}</Tag>}
+                    {s.checkins > 0 && <Tag color="purple">签到 {s.checkins}</Tag>}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Card>
+
       <div className={styles.overviewHeader}>
         <span className={styles.overviewTitle}>
           成员工作看板

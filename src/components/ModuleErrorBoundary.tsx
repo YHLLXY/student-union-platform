@@ -38,7 +38,7 @@ export default class ModuleErrorBoundary extends Component<Props, State> {
           <Alert
             type="warning"
             showIcon
-            message={`「${this.props.moduleName}」模块加载失败`}
+            title={`「${this.props.moduleName}」模块加载失败`}
             description={
               <div style={{ marginTop: 8 }}>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>

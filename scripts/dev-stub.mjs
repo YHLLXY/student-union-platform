@@ -106,11 +106,40 @@ const tickets = [
   { id: uid(702), title: '校园歌手大赛决赛入场券', description: '决赛设大众评审环节,持票观众可现场扫码报名。', cover_url: null, total_count: 300, per_user_limit: 2, open_time: days(1, 12), event_time: days(14, 19), created_by: uid(8), created_at: days(-2) },
   { id: uid(703), title: '名家讲坛:人工智能与未来学习', description: '主讲人信息详见海报。提问环节有机会获得签名书籍。', cover_url: null, total_count: 200, per_user_limit: 1, open_time: days(-10, 12), event_time: days(-2, 15), created_by: uid(11), created_at: days(-12) },
   { id: uid(704), title: '秋季越野赛观赛补给券', description: '可在终点补给站兑换热饮与能量棒。', cover_url: null, total_count: 500, per_user_limit: 1, open_time: days(0, 8), event_time: days(10, 9), created_by: uid(6), created_at: days(-1) },
+  // 705 的活动时间刻意落在「现在 +1 小时」= 签到时间窗内（活动前 2 小时 ~ 后 6 小时），
+  // 供 E2E 走通「扫码签到成功」；其余票据的活动时间都在窗外，用于验证拒绝分支。
+  { id: uid(705), title: '校运会志愿者现场签到凭证', description: '入场凭本凭证扫码签到，签到计入本学期考核积分。', cover_url: null, total_count: 120, per_user_limit: 1, open_time: days(-2, 12), event_time: days(0, 1), created_by: uid(6), created_at: days(-2) },
 ];
 
 const ticketRecords = [
-  { id: uid(711), ticket_id: uid(701), user_id: uid(1), student_id: 'DEV0001', name: '王开发', grabbed_at: days(-1, 13) },
-  { id: uid(712), ticket_id: uid(703), user_id: uid(1), student_id: 'DEV0001', name: '王开发', grabbed_at: days(-10, 13) },
+  { id: uid(711), ticket_id: uid(701), user_id: uid(1), student_id: 'DEV0001', name: '王开发', grabbed_at: days(-1, 13), checked_in_at: null, checked_by: null },
+  { id: uid(712), ticket_id: uid(703), user_id: uid(1), student_id: 'DEV0001', name: '王开发', grabbed_at: days(-10, 13), checked_in_at: null, checked_by: null },
+  // 705 的两条：一条未签到（供签到成功用例），一条已签到（供幂等分支与名单统计用例）
+  { id: uid(713), ticket_id: uid(705), user_id: uid(1), student_id: 'DEV0001', name: '王开发', grabbed_at: days(-1, 14), checked_in_at: null, checked_by: null },
+  { id: uid(714), ticket_id: uid(705), user_id: uid(5), student_id: 'XUAN1001', name: '孙晓雨', grabbed_at: days(-1, 15), checked_in_at: days(0, 0), checked_by: uid(6) },
+];
+
+/* 考核积分流水种子（第十八部分）。semester 用运行时的当前学期，
+   口径与数据库 public.semester_of() 一致——写死会让用例跨学期后突然查不到。 */
+function currentSemester(date = new Date()) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  if (m >= 9) return `${y}-${y + 1}-1`;
+  if (m === 1) return `${y - 1}-${y}-1`;
+  return `${y - 1}-${y}-2`;
+}
+const SEMESTER = currentSemester();
+
+const pointsLedger = [
+  { id: uid(901), user_id: uid(1), delta: 2, reason: 'task_approved', ref_type: 'submission', ref_id: uid(302), semester: SEMESTER, created_at: days(-2, 10) },
+  { id: uid(902), user_id: uid(1), delta: 1, reason: 'submission_on_time', ref_type: 'submission', ref_id: uid(302), semester: SEMESTER, created_at: days(-2, 10) },
+  { id: uid(903), user_id: uid(1), delta: 1, reason: 'ticket_checkin', ref_type: 'ticket_record', ref_id: uid(714), semester: SEMESTER, created_at: days(0, 0) },
+  { id: uid(904), user_id: uid(5), delta: 2, reason: 'task_approved', ref_type: 'submission', ref_id: uid(311), semester: SEMESTER, created_at: days(-1, 9) },
+  { id: uid(905), user_id: uid(5), delta: 1, reason: 'submission_on_time', ref_type: 'submission', ref_id: uid(311), semester: SEMESTER, created_at: days(-1, 9) },
+  { id: uid(906), user_id: uid(5), delta: 1, reason: 'ticket_checkin', ref_type: 'ticket_record', ref_id: uid(714), semester: SEMESTER, created_at: days(0, 0) },
+  { id: uid(907), user_id: uid(7), delta: 2, reason: 'task_approved', ref_type: 'submission', ref_id: uid(302), semester: SEMESTER, created_at: days(-1, 10) },
+  { id: uid(908), user_id: uid(7), delta: 1, reason: 'submission_on_time', ref_type: 'submission', ref_id: uid(302), semester: SEMESTER, created_at: days(-1, 10) },
+  { id: uid(909), user_id: uid(7), delta: -1, reason: 'submission_late', ref_type: 'submission', ref_id: uid(303), semester: SEMESTER, created_at: days(0, 9) },
 ];
 
 const notifications = [
@@ -121,9 +150,9 @@ const notifications = [
 ];
 
 const inviteCodes = [
-  { id: uid(811), code: 'ZHUZI_ADM', department: 'presidium', role: 'presidium', is_used: false, used_by: null, created_at: days(-100) },
-  { id: uid(812), code: 'XUAN_ADM', department: 'publicity', role: 'dept_head', is_used: false, used_by: null, created_at: days(-100) },
-  { id: uid(813), code: 'TIYU_VOL', department: 'sports', role: 'volunteer', is_used: false, used_by: null, created_at: days(-100) },
+  { id: uid(811), code: 'ZHUZI_ADM', department: 'presidium', role: 'presidium', is_used: false, used_by: null, created_at: days(-100), batch_id: null },
+  { id: uid(812), code: 'XUAN_ADM', department: 'publicity', role: 'dept_head', is_used: false, used_by: null, created_at: days(-100), batch_id: null },
+  { id: uid(813), code: 'TIYU_VOL', department: 'sports', role: 'volunteer', is_used: false, used_by: null, created_at: days(-100), batch_id: null },
 ];
 
 const departmentGuides = [
@@ -147,6 +176,7 @@ const db = {
   forum_posts: forumPosts, forum_replies: forumReplies, tickets, ticket_records: ticketRecords,
   notifications, invite_codes: inviteCodes, department_guides: departmentGuides,
   platform_guides: platformGuides, notice_reads: noticeReads, usage_events: usageEvents,
+  points_ledger: pointsLedger,
 };
 let seq = 9000;
 
@@ -168,7 +198,9 @@ const TABLE_DEFAULTS = {
   task_submissions: { status: 'submitted' },
   task_milestones: { status: 'pending', sort_order: 0 },
   users: { role: 'volunteer', department: '' },
-  invite_codes: { used_count: 0, used_by: null, max_uses: 1, is_used: false },
+  invite_codes: { used_count: 0, used_by: null, max_uses: 1, is_used: false, batch_id: null },
+  // 第十八部分：签到的两列默认 NULL（真实库由 ALTER TABLE ADD COLUMN 得到，无默认值）
+  ticket_records: { checked_in_at: null, checked_by: null },
 };
 
 /* 外键嵌入：creator:users!created_by(name) / submitter:user_id(name) / ticket:ticket_id(...) */
@@ -212,7 +244,11 @@ const CORS = {
   'Access-Control-Expose-Headers': '*',
 };
 function send(res, status, body, extra = {}) {
-  const payload = typeof body === 'string' ? body : JSON.stringify(body);
+  // 真实 PostgREST 的标量返回（如 text 型 RPC 函数）是**带引号的 JSON 字符串**，
+  // 所以这里一律 JSON 序列化——曾经对字符串原样输出，导致前端把令牌原文当成 error.message
+  // （`unwrap` 看到解析失败的响应就抛出，报错信息里赫然是那串令牌）。
+  // 例外：空串用于 201/204 的「无内容」响应，按空体直接结束。
+  const payload = body === '' ? '' : JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', ...CORS, ...extra });
   res.end(payload);
 }
@@ -378,6 +414,65 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { success: true, message: '抢票成功' });
     }
     if (fn === 'reset_user_password') return send(res, 200, true);
+
+    // ---- 票务闭环（第十八部分）：令牌签发与扫码签到 ----
+    // 真实实现是「库内随机密钥 + md5 MAC + 15 分钟有效期」，stub 只保证**形状与分支一致**：
+    // 令牌 4 段、能过期、已签到幂等、时间窗外拒绝——E2E 依赖的是这些分支，而不是签名强度。
+    if (fn === 'ticket_qr_token') {
+      const body = await readBody(req);
+      const ttl = Number(body?.p_ttl_minutes) || 15;
+      const exp = Math.floor(Date.now() / 1000) + ttl * 60;
+      return send(res, 200, `SUP1.${body.p_record}.${exp}.stub`);
+    }
+    if (fn === 'check_in_ticket') {
+      const body = await readBody(req);
+      const parts = String(body?.p_token || '').split('.');
+      const invalid = { ok: false, code: 'invalid_token', message: '签到码无效或已过期——请让持票人刷新二维码后重扫' };
+
+      if (parts.length !== 4 || parts[0] !== 'SUP1' || parts[3] !== 'stub') return send(res, 200, invalid);
+      const exp = Number(parts[2]);
+      if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return send(res, 200, invalid);
+
+      const rec = db.ticket_records.find((r) => r.id === parts[1]);
+      if (!rec) return send(res, 200, { ok: false, code: 'not_found', message: '票券记录不存在（可能已退票）' });
+
+      if (rec.checked_in_at) {
+        return send(res, 200, {
+          ok: true, code: 'already_checked_in',
+          message: `${rec.name} 已于 ${rec.checked_in_at.slice(5, 16).replace('T', ' ')} 签到过`,
+          name: rec.name, student_id: rec.student_id, checked_in_at: rec.checked_in_at,
+        });
+      }
+
+      const ticket = db.tickets.find((t) => t.id === rec.ticket_id);
+      if (!ticket) return send(res, 200, { ok: false, code: 'ticket_missing', message: '该票券对应的活动已不存在' });
+
+      // 时间窗与数据库一致：活动开始前 2 小时 ~ 开始后 6 小时
+      const ev = new Date(ticket.event_time).getTime();
+      if (Date.now() < ev - 2 * 3600e3 || Date.now() > ev + 6 * 3600e3) {
+        return send(res, 200, {
+          ok: false, code: 'out_of_window',
+          message: `不在签到时间窗内（活动 ${ticket.event_time.slice(5, 16).replace('T', ' ')} 前 2 小时至后 6 小时）`,
+          event_time: ticket.event_time,
+        });
+      }
+
+      rec.checked_in_at = new Date().toISOString();
+      rec.checked_by = uid(1); // stub 里登录者恒为开发账号
+      // 同步模拟 trg_ticket_records_award 触发器：签到 +1 分（否则「签到后积分变化」无法端到端验证）
+      db.points_ledger.push({
+        id: uid(++seq), user_id: rec.user_id, delta: 1, reason: 'ticket_checkin',
+        ref_type: 'ticket_record', ref_id: rec.id, semester: currentSemester(),
+        created_at: rec.checked_in_at,
+      });
+      return send(res, 200, {
+        ok: true, code: 'checked_in',
+        message: `${rec.name} 签到成功（积分 +1）`,
+        name: rec.name, student_id: rec.student_id, ticket: ticket.title,
+        checked_in_at: rec.checked_in_at,
+      });
+    }
+
     if (fn === 'validate_invite_code') {
       const body = await readBody(req);
       return send(res, 200, db.invite_codes.find((c) => c.code === body.code_input) || null);

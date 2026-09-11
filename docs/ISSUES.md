@@ -8,6 +8,16 @@
 
 ## 已修复
 
+### #2 antd `destroyOnClose` / `Alert message` 弃用警告（已清）
+
+- **日期：** 2026-07-02（提出）· 2026-09-11（修复）
+- **类型：** 弃用警告
+- **严重程度：** 低（仅控制台警告，不影响功能）
+- **修复：** 两批实操——
+  - `destroyOnClose` → `destroyOnHidden`：Phase 1 B5 全量替换（现 `grep -rc destroyOnClose src/` 为 0）；
+  - `Alert message` → `Alert title`：v4.4.0 全量替换（IdentityForm / LoginPage / ErrorBoundary / ModuleErrorBoundary 共 4 处，均为新代码触发警告时顺手清掉的存量）。
+- **备注：** 同族的 `Drawer width/height` 弃用见 #11，尚未清理。
+
 ### #10 index.html 注释中的 `%VITE_*%` 触发 Vite 变量缺失警告
 
 - **日期：** 2026-09-11（发现）
@@ -122,14 +132,15 @@
 
 ## 待处理
 
-### #2 antd Modal `destroyOnClose` 弃用警告
+### #11 antd Drawer `width` / `height` 弃用警告
 
-- **日期：** 2026-07-02
+- **日期：** 2026-09-11（v4.4.0 开发中实测发现）
 - **类型：** 弃用警告
 - **严重程度：** 低（仅控制台警告，不影响功能）
-- **现象：** 控制台输出 `[antd: Modal] destroyOnClose is deprecated. Please use destroyOnHidden instead.`
-- **影响范围：** 14 个文件，14 处 `destroyOnClose`
-- **修复方案：** 全局替换 `destroyOnClose` → `destroyOnHidden`
+- **现象：** 控制台输出 `[antd: Drawer] width is deprecated. Please use size instead.`（`height` 同理）
+- **影响范围：** 存量各处 `<Drawer width={n}>`（GuideDrawer、NotificationBell、AppLayout 等）；**v4.4.0 新增的票务详情 Drawer 已直接用 `size={480}`**，未新增该警告
+- **修复方案：** 存量的 `width` / `height` → `size`（antd 6 的 `size` 接受 `number | string`，语义等价）
+- **排期：** 与其余 antd 6 清理（#1）合并做一轮，不影响功能
 
 ### #5 数据表 RLS 仍是「登录即全量放行」，缺细粒度策略
 
