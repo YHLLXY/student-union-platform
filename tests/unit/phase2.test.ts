@@ -134,14 +134,16 @@ describe('fetchPointsStandings 积分排行', () => {
   });
 
   it('部门负责人即使请求全校范围，也只拿到本部门', async () => {
-    const mine = await seedUser('volunteer', 'publicity');
-    const outsider = await seedUser('volunteer', 'sports');
+    // 部门名必须用纯合成值：adminService.test.ts 断言 publicity 恰好 2 人（种子），
+    // vitest 并发跑文件时往种子部门塞人会让它变成 3 —— 这正是本文件首次进 CI 时挂掉的原因。
+    const mine = await seedUser('volunteer', 'scopeddept');
+    const outsider = await seedUser('volunteer', 'outsidedept');
 
-    const standings = await fetchPointsStandings('all', 'dept_head', 'publicity');
+    const standings = await fetchPointsStandings('all', 'dept_head', 'scopeddept');
     const ids = standings.map((s) => s.user_id);
     expect(ids).toContain(mine.id);
     expect(ids).not.toContain(outsider.id);
-    expect(standings.every((s) => s.department === 'publicity')).toBe(true);
+    expect(standings.every((s) => s.department === 'scopeddept')).toBe(true);
   });
 });
 
