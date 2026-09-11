@@ -176,6 +176,8 @@ module/
 3. **提醒用户手动执行迁移**（复制 SQL → Supabase Dashboard → SQL Editor）
 4. 用户确认执行后，功能才能正常使用
 
+**写 SQL 的铁律：表名一律带  前缀。** Supabase SQL Editor 会话的  不一定包含 ，写裸表名会报 （2026-09-11 实测踩过）。函数同理写 ，并在脚本开头  兜底。
+
 **需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有两份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分，纯索引/触发器/约束优化，幂等、可在部署前后任意时刻执行）。
 
 ### 数据导出
