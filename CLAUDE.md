@@ -166,6 +166,11 @@ module/
   - 所有列表查询必须 `LIMIT`（通知 20，活动流 5，搜索 5）
   - 禁止在 `.map()` / `for` 循环内调用 `supabase.from()`（N+1 反模式）
   - 非关键操作（通知、日志）使用 fire-and-forget：`.catch(() => {})`
+  - **新依赖先看包体积、且能懒加载的一律懒加载**：新增 `import` 后必须量一次首屏体积（见下）。v4.4.0 的二维码链就是这样发现的——`qrcode`/`html5-qrcode` 被 `priority: 1` 的 vendor 兜底分组吸走，而 vendor 是入口静态 import 的，等于每次进站白付 100+ KB gz
+- **首屏体积的量法与预算（改动分包 / 加依赖后必跑）：**
+  - `npm run build && node scripts/measure-eager.mjs` —— 口径是 `dist/index.html` 引用的**全部 .js** 的 gzip 之和；`<link rel="modulepreload">` 也要算（入口会**静态 import** 它们，是真会阻塞首屏的），只有动态 `import()` 的 chunk 不算
+  - 预算 **≤340 KB gz**；历史基线：v4.3.0 = 319.5，v4.4.0 = 325.2
+  - `entriesAwareMergeThreshold`（当前 8KB）是这套分包里最敏感的旋钮：调高会把次要页面的 antd 块并进入口共享块（200KB → 首屏 535 KB gz），调低到 8KB 各入口各自成块（325 KB gz）
 - **乐观更新：** 拖拽/标记已读等操作先改本地 state → 后台同步 → 失败回滚。**必须用 `setState(prev => prev.map(...))` 而非对象 mutation。**
 - **组件受控模式：** 可复用组件使用标准 `value` + `onChange` 接口，与 antd Form 无缝集成
 - **类型导入：** 跨模块引用类型用 `import type`，避免循环依赖

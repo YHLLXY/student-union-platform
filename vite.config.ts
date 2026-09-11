@@ -39,9 +39,17 @@ export default defineConfig({
               test: /node_modules[\\/](antd|@ant-design|@rc-component|rc-)[\\/]/,
               priority: 8,
               // 按引用入口聚合：只有部分页面用到的重型组件（Table/Tree/DatePicker 等）
-              // 拆进独立子块，避免全站为它们买单；小子组按阈值回并
+              // 拆进独立子块，避免全站为它们买单；小子组按阈值回并。
+              //
+              // ⚠️ 这个阈值直接决定「首屏要不要替次要页面买单」，改动前先测：
+              // v4.4.0 加入积分/签到/二维码组件后，40KB 阈值下 rolldown 把带新组件名的 antd 块
+              // 并进了「与入口共享」的块，而入口是静态 import 它们的 → 急加载 JS 从 319.5 KB gz
+              // 涨到 380.3（破 340KB 预算）。阈值降到 8KB 后各入口保住自己的小块，回到 325.2。
+              // 实测数据：16KB→329.5 / 8KB→327.3(含懒加载) / 0KB→329.3 / 200KB→535.4（更糟）。
+              // 量法：dist/index.html 引用的全部 .js 的 gzip 之和（modulepreload 也要算，
+              // 入口会静态 import 它们，是真会阻塞的）。
               entriesAware: true,
-              entriesAwareMergeThreshold: 40 * 1024,
+              entriesAwareMergeThreshold: 8 * 1024,
             },
             {
               name: 'motion',
