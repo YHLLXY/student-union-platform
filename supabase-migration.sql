@@ -907,7 +907,19 @@ ANALYZE public.notifications;
 
 SET search_path = public;
 
--- ---- 0. 角色判定辅助函数（Phase 4 的细粒度 RLS 会直接复用这三个） ----
+-- ---- 0. 前置：票券签到的两个新列（**必须最先执行**）----
+-- ⚠️ 顺序踩过坑（2026-09-11 用户执行报 `42703 column "checked_in_at" of relation
+--    "ticket_records" does not exist`）：CREATE TRIGGER ... AFTER UPDATE OF <列> 会在
+--    **创建触发器那一刻**校验该列是否存在，而最初把「加列」排在建触发器之后，
+--    于是整份脚本在 5.2 处中断。CREATE INDEX 引用新列同理。
+--    铁律：**先加列，再挂约束 / 触发器 / 索引**——这条顺序不能动。
+ALTER TABLE public.ticket_records ADD COLUMN IF NOT EXISTS checked_in_at timestamptz;
+ALTER TABLE public.ticket_records ADD COLUMN IF NOT EXISTS checked_by    uuid REFERENCES public.users(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.ticket_records.checked_in_at IS '签到时间；NULL = 未签到。由 check_in_ticket RPC 写入。';
+COMMENT ON COLUMN public.ticket_records.checked_by    IS '签到操作人（组织者）的 users.id；票券持有人自己扫码时即其本人。';
+
+-- ---- 1. 角色判定辅助函数（Phase 4 的细粒度 RLS 会直接复用这三个） ----
 -- 层级与前端 src/utils/constants.ts 的 ROLE_LEVEL 保持一致，改一处要两处同步。
 CREATE OR REPLACE FUNCTION public.role_level(p_role text)
 RETURNS integer
@@ -956,7 +968,7 @@ GRANT EXECUTE ON FUNCTION public.current_app_user_id()     TO authenticated;
 GRANT EXECUTE ON FUNCTION public.current_app_role()        TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_organizer()            TO authenticated;
 
--- ---- 1. 学期工具 ----
+-- ---- 2. 学期工具 ----
 -- 学期键形如 2026-2027-1：9 月 ~ 次年 1 月为第 1 学期，2 月 ~ 8 月为第 2 学期。
 -- 由数据库计算而非前端传参，避免各调用点跨年后口径不一。
 CREATE OR REPLACE FUNCTION public.semester_of(p_ts timestamptz DEFAULT now())
@@ -974,7 +986,7 @@ AS $$
   ) s
 $$;
 
--- ---- 2. 考核积分流水表 ----
+-- ---- 3. 考核积分流水表 ----
 -- 只增不改：没有 UPDATE / DELETE 通路，纠错靠再记一笔冲销（保持可审计）。
 CREATE TABLE IF NOT EXISTS public.points_ledger (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1012,7 +1024,7 @@ CREATE POLICY points_ledger_read_all ON public.points_ledger
 -- （这是本项目唯一不套用 authenticated_full_access 的业务表，理由：流水账一旦可写就失去意义。）
 REVOKE INSERT, UPDATE, DELETE ON public.points_ledger FROM anon, authenticated;
 
--- ---- 3. 计分唯一入口 ----
+-- ---- 4. 计分唯一入口 ----
 CREATE OR REPLACE FUNCTION public.award_points(
   p_user     uuid,
   p_delta    integer,
@@ -1043,8 +1055,8 @@ END $$;
 -- 关键：新函数默认对 PUBLIC 开放 EXECUTE，不收回的话任何登录用户都能给自己加分。
 REVOKE ALL ON FUNCTION public.award_points(uuid, integer, text, text, uuid) FROM PUBLIC, anon, authenticated;
 
--- ---- 4. 计分触发器 ----
--- 4.1 任务提交被审核通过：+2，并按「提交时间 vs 截止时间」再判 按时 +1 / 逾期 -1
+-- ---- 5. 计分触发器 ----
+-- 5.1 任务提交被审核通过：+2，并按「提交时间 vs 截止时间」再判 按时 +1 / 逾期 -1
 CREATE OR REPLACE FUNCTION public.trg_award_submission_review()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
@@ -1095,7 +1107,7 @@ CREATE TRIGGER trg_task_submissions_award
   AFTER INSERT OR UPDATE OF status ON public.task_submissions
   FOR EACH ROW EXECUTE FUNCTION public.trg_award_submission_review();
 
--- 4.2 活动签到：+1（UPDATE 票券行的 checked_in_at 时自动触发）
+-- 5.2 活动签到：+1（UPDATE 票券行的 checked_in_at 时自动触发）
 CREATE OR REPLACE FUNCTION public.trg_award_ticket_checkin()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
@@ -1116,8 +1128,8 @@ CREATE TRIGGER trg_ticket_records_award
 REVOKE ALL ON FUNCTION public.trg_award_submission_review() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.trg_award_ticket_checkin()    FROM PUBLIC, anon, authenticated;
 
--- ---- 5. 防伪加固：让上面的积分真正「不可自刷」----
--- 5.1 审核权：状态改成 approved / rejected 必须是组织者（与前端 TaskDetail 的
+-- ---- 6. 防伪加固：让上面的积分真正「不可自刷」----
+-- 6.1 审核权：状态改成 approved / rejected 必须是组织者（与前端 TaskDetail 的
 --     `hasMinRole(user.role,'dept_head')` 判定一致）。
 CREATE OR REPLACE FUNCTION public.trg_guard_submission_review()
 RETURNS trigger
@@ -1146,7 +1158,7 @@ CREATE TRIGGER trg_task_submissions_guard
   BEFORE INSERT OR UPDATE OF status ON public.task_submissions
   FOR EACH ROW EXECUTE FUNCTION public.trg_guard_submission_review();
 
--- 5.2 签到权：checked_in_at / checked_by 两个列只能由组织者写。
+-- 6.2 签到权：checked_in_at / checked_by 两个列只能由组织者写。
 --     RLS 策略按行不按列，光靠策略挡不住「我自己那行我自己改」，故用触发器兜住这两列。
 CREATE OR REPLACE FUNCTION public.trg_guard_ticket_checkin()
 RETURNS trigger
@@ -1182,18 +1194,12 @@ CREATE TRIGGER trg_ticket_records_guard
 REVOKE ALL ON FUNCTION public.trg_guard_submission_review() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.trg_guard_ticket_checkin()    FROM PUBLIC, anon, authenticated;
 
--- ---- 6. 票务签到：新增列 ----
-ALTER TABLE public.ticket_records ADD COLUMN IF NOT EXISTS checked_in_at timestamptz;
-ALTER TABLE public.ticket_records ADD COLUMN IF NOT EXISTS checked_by    uuid REFERENCES public.users(id) ON DELETE SET NULL;
-
-COMMENT ON COLUMN public.ticket_records.checked_in_at IS '签到时间；NULL = 未签到。由 check_in_ticket RPC 写入。';
-COMMENT ON COLUMN public.ticket_records.checked_by    IS '签到操作人（组织者）的 users.id；票券持有人自己扫码时即其本人。';
-
+-- ---- 7. 票务签到索引（列已在本部分开头加好）----
 -- 主办方名单视图：按活动统计已签到人数
 CREATE INDEX IF NOT EXISTS idx_ticket_records_ticket_checked
   ON public.ticket_records(ticket_id, checked_in_at DESC);
 
--- ---- 7. 二维码令牌：库内随机密钥 + MAC 签名 ----
+-- ---- 8. 二维码令牌：库内随机密钥 + MAC 签名 ----
 CREATE TABLE IF NOT EXISTS public.app_secrets (
   key        text PRIMARY KEY,
   value      text NOT NULL,
@@ -1301,7 +1307,7 @@ GRANT  EXECUTE ON FUNCTION public.ticket_qr_token(uuid, integer) TO authenticate
 REVOKE ALL     ON FUNCTION public.ticket_qr_secret()             FROM PUBLIC, anon, authenticated;
 REVOKE ALL     ON FUNCTION public.verify_ticket_qr_token(text)   FROM PUBLIC, anon, authenticated;
 
--- ---- 8. 签到 RPC：五步全在服务端完成 ----
+-- ---- 9. 签到 RPC：五步全在服务端完成 ----
 -- 返回 { ok, code, message, ... }，code 取值：forbidden / invalid_token / not_found /
 -- already_checked_in / ticket_missing / out_of_window / checked_in
 CREATE OR REPLACE FUNCTION public.check_in_ticket(p_token text)
@@ -1381,7 +1387,7 @@ END $$;
 
 GRANT EXECUTE ON FUNCTION public.check_in_ticket(text) TO authenticated;
 
--- ---- 9. A4 批量邀请码：加批次号 ----
+-- ---- 10. A4 批量邀请码：加批次号 ----
 -- 一次「批量生成」写入同一个 batch_id，便于整批导出、整批作废（配合已有 revoked_at）。
 ALTER TABLE public.invite_codes ADD COLUMN IF NOT EXISTS batch_id uuid;
 CREATE INDEX IF NOT EXISTS idx_invite_codes_batch
@@ -1389,12 +1395,12 @@ CREATE INDEX IF NOT EXISTS idx_invite_codes_batch
 CREATE INDEX IF NOT EXISTS idx_invite_codes_expires
   ON public.invite_codes(expires_at) WHERE expires_at IS NOT NULL;
 
--- ---- 10. 刷新统计信息 ----
+-- ---- 11. 刷新统计信息 ----
 ANALYZE public.points_ledger;
 ANALYZE public.ticket_records;
 ANALYZE public.invite_codes;
 
--- ---- 11. 验收：执行完直接看这张表（「结果」列全为 [OK] 即通过）----
+-- ---- 12. 验收：执行完直接看这张表（「结果」列全为 [OK] 即通过）----
 -- 这条查询是**只读**的，故意留在脚本里当「反馈」——DDL 成功时 SQL Editor 只显示
 -- 「Success. No rows returned」，不给这张表就又要靠猜。
 WITH expected AS (

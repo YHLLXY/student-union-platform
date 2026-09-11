@@ -199,6 +199,67 @@ console.log(`语句：${stmts.length} 条`);
 console.log(`结构自检：${structural.length === 0 ? '通过' : `${structural.length} 项异常`}`);
 for (const s of structural) console.log(`  [结构] ${s}`);
 
+// ---- 关卡 ③：DDL 顺序检查（新增列必须先于引用它的一切）----
+// 来自真实事故：CREATE TRIGGER ... AFTER UPDATE OF checked_in_at 排在
+// ALTER TABLE ... ADD COLUMN checked_in_at 之前 → 执行到建触发器时报
+// 42703 column "checked_in_at" of relation "ticket_records" does not exist。
+// Postgres 在「创建触发器」与「创建索引」时就会校验列是否存在，所以顺序是真会炸的。
+const normTable = (t) => t.replace(/"/g, '').replace(/^public\./i, '').toLowerCase();
+const addedAt = new Map(); // "表.列" → 首次被 ADD COLUMN 的语句序号
+
+stmts.forEach((s, i) => {
+  const flat = s.text.replace(/^--.*$/gm, '').replace(/\s+/g, ' ');
+  const m = /^ALTER TABLE\s+([\w".]+)[\s\S]*?\bADD COLUMN\b/i.exec(flat);
+  if (!m) return;
+  const table = normTable(m[1]);
+  for (const c of flat.matchAll(/\bADD COLUMN(?:\s+IF NOT EXISTS)?\s+"?([A-Za-z_]\w*)"?/gi)) {
+    const key = `${table}.${c[1].toLowerCase()}`;
+    if (!addedAt.has(key)) addedAt.set(key, i);
+  }
+});
+
+const orderIssues = [];
+const colsIn = (list) =>
+  list
+    .split(',')
+    .map((x) => x.trim().split(/\s+/)[0].replace(/"/g, '').toLowerCase())
+    .filter((x) => /^[a-z_]\w*$/.test(x));
+
+stmts.forEach((s, i) => {
+  const flat = s.text.replace(/^--.*$/gm, '').replace(/\s+/g, ' ');
+  const refs = []; // { table, col, what }
+
+  const trg = /^CREATE TRIGGER[\s\S]*?\bON\s+([\w".]+)/i.exec(flat);
+  if (trg) {
+    const table = normTable(trg[1]);
+    const of = /UPDATE\s+OF\s+([\w",\s]+?)\s+ON\b/i.exec(flat);
+    if (of) for (const c of colsIn(of[1])) refs.push({ table, col: c, what: '触发器 UPDATE OF' });
+  }
+
+  const idx = /^CREATE (?:UNIQUE )?INDEX[\s\S]*?\bON\s+([\w".]+)\s*\(([^)]*)\)/i.exec(flat);
+  if (idx) {
+    const table = normTable(idx[1]);
+    const cols = idx[2].split(',').map((x) => x.trim().split(/\s+/)[0]);
+    for (const c of colsIn(cols.join(','))) {
+      // 表达式索引（含括号/函数）跳过，只查纯列名
+      if (/^[a-z_]\w*$/.test(c)) refs.push({ table, col: c, what: '索引列' });
+    }
+  }
+
+  for (const r of refs) {
+    const at = addedAt.get(`${r.table}.${r.col}`);
+    if (at !== undefined && at > i) {
+      orderIssues.push(
+        `第 ${i + 1} 条语句（L${lineOf(s.offset)}）${r.what}引用了 ${r.table}.${r.col}，` +
+          `但该列到第 ${at + 1} 条语句（L${lineOf(stmts[at].offset)}）才 ADD COLUMN——顺序反了，执行必报 42703`,
+      );
+    }
+  }
+});
+
+console.log(`DDL 顺序检查：${orderIssues.length === 0 ? '通过' : `${orderIssues.length} 项异常`}`);
+for (const s of orderIssues) console.log(`  [顺序] ${s}`);
+
 // ---- 关卡 ②：语法解析（只解析解析器真正支持的语句类型）----
 // pgsql-ast-parser 覆盖的是查询与部分 DDL；SECURITY DEFINER / SET search_path / GRANT /
 // REVOKE / CREATE POLICY / CREATE TRIGGER / ENABLE ROW LEVEL SECURITY / ANALYZE / DO 一律不认。
@@ -248,6 +309,6 @@ if (parser) {
   console.log('语法解析：跳过（未找到 pgsql-ast-parser，见文件头安装说明）');
 }
 
-const bad = structural.length + parseFailed;
+const bad = structural.length + orderIssues.length + parseFailed;
 console.log(`\n结论：${bad === 0 ? '未发现语法问题' : `${bad} 项待处理`}`);
 process.exit(bad ? 1 : 0);

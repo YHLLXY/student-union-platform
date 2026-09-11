@@ -186,10 +186,12 @@ module/
 
 **DDL 脚本必须自带「反馈」**：建索引/建触发器成功时 SQL Editor 只显示 `Success. No rows returned`，用户会以为没生效。故每个一次性脚本**结尾都要留一条只读的验收查询**（`WITH expected AS (SELECT * FROM (VALUES …) AS e(…)) SELECT … '[OK]'/'[缺失]' …`），把「建了什么、成没成」直接打成表。
 
+**先加列，再挂约束 / 触发器 / 索引（2026-09-11 踩过）**：`CREATE TRIGGER … AFTER UPDATE OF <列>` 与 `CREATE INDEX … (<新列>)` 会在**创建对象那一刻**就校验列是否存在，把「加列」排在它们之后，整份脚本会在半途炸掉：`42703 column "checked_in_at" of relation "ticket_records" does not exist`。新列一律提到脚本最前面加。`scripts/check-sql.mjs` 已加这条顺序检查（引用早于 `ADD COLUMN` 即报错）。
+
 **脚本工具（别再手抄 SQL，两份内容必须逐字一致）：**
 
 - `node scripts/extract-sql-section.mjs <第N部分> <输出文件名>` —— 从 `supabase-migration.sql` 抽取某章节生成独立执行脚本（自动识别章节边界，抬头标注勿手改）。
-- `node scripts/check-sql.mjs <sql 文件>` —— 静态体检：语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点（零依赖）；另可选装 `pgsql-ast-parser` 做真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
+- `node scripts/check-sql.mjs <sql 文件>` —— 静态体检三关：① 结构自检（语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点，零依赖）；② **DDL 顺序检查**（触发器 `UPDATE OF 列` / 索引列引用了本文件后面才 `ADD COLUMN` 的列即报错——42703 就是这么来的）；③ 可选 `pgsql-ast-parser` 真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
 - 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
 
 **需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有四份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
