@@ -7,7 +7,8 @@
  */
 import http from 'node:http';
 
-const PORT = 9999;
+// STUB_PORT 允许测试框架（vitest globalSetup / e2e runner）用独立端口拉起隔离实例
+const PORT = Number(process.env.STUB_PORT) || 9999;
 const DEV_AUTH_ID = '11111111-1111-4111-8111-111111111111';
 const uid = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const days = (d, h = 10) => new Date(Date.now() + d * 864e5 + h * 36e5).toISOString();
@@ -149,6 +150,60 @@ const db = {
 };
 let seq = 9000;
 
+/* 测试隔离：启动即快照种子，POST /__reset 可整体回滚（E2E 每个用例前调用，避免用例间互相污染） */
+const SEED_SNAPSHOT = JSON.parse(JSON.stringify(db));
+const SEED_SEQ = seq;
+
+function resetDb() {
+  for (const k of Object.keys(db)) {
+    db[k] = k in SEED_SNAPSHOT ? JSON.parse(JSON.stringify(SEED_SNAPSHOT[k])) : [];
+  }
+  seq = SEED_SEQ;
+}
+
+/* 数据库列默认值（真实库有 DEFAULT，插入缺列时补齐，避免 eq 过滤静默失配） */
+const TABLE_DEFAULTS = {
+  notifications: { is_read: false, content: '' },
+  tasks: { status: 'pending', priority: 'normal' },
+  task_submissions: { status: 'submitted' },
+  task_milestones: { status: 'pending', sort_order: 0 },
+  users: { role: 'volunteer', department: '' },
+  invite_codes: { used_count: 0, used_by: null, max_uses: 1, is_used: false },
+};
+
+/* 外键嵌入：creator:users!created_by(name) / submitter:user_id(name) / ticket:ticket_id(...) */
+const FK_COL_TABLE = {
+  user_id: 'users', created_by: 'users', assigned_to: 'users',
+  completed_by: 'users', used_by: 'users', ticket_id: 'tickets', task_id: 'tasks',
+};
+const TABLE_FK = { tasks: 'task_id', tickets: 'ticket_id' };
+
+function embedRows(out, select) {
+  const specRe = /(\w+):(\w+)(?:!([\w]+))?\(([^)]*)\)/g;
+  const specs = [];
+  let m;
+  while ((m = specRe.exec(select))) {
+    const fields = m[4].split(',').map((s) => s.trim()).filter(Boolean);
+    if (!fields.length) continue;
+    let col = m[3];
+    if (col === 'inner' || col === 'left') col = null; // join 强度提示符，非列名
+    specs.push({ alias: m[1], ref: m[2], col, fields });
+  }
+  if (!specs.length || !out.length) return out;
+  return out.map((r) => {
+    const row = { ...r };
+    for (const s of specs) {
+      const knownTable = s.ref in db;
+      const colName = knownTable ? (s.col || TABLE_FK[s.ref]) : s.ref;
+      if (!colName || !(colName in row)) continue;
+      const tname = knownTable ? s.ref : (FK_COL_TABLE[colName] || 'users');
+      const target = (db[tname] || []).find((x) => x.id === row[colName]);
+      row[s.alias] = target ? Object.fromEntries(s.fields.map((f) => [f, target[f]])) : null;
+    }
+    return row;
+  });
+}
+
 /* ---------- 工具 ---------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -162,10 +217,32 @@ function send(res, status, body, extra = {}) {
   res.end(payload);
 }
 
-/** 极简 PostgREST 过滤:eq / in.(...) / is.null */
+/** 极简 PostgREST 过滤:eq / in.(...) / is.null / or.(...) / contains */
 function applyFilters(rows, sp) {
   for (const [key, raw] of sp) {
     if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(key)) continue;
+    if (key === 'or') {
+      // or=(cond1,cond2) —— cond 形如 field.op.value（平台仅用 eq 级简单条件）
+      const conds = raw.replace(/^\(|\)$/g, '').split(',');
+      rows = rows.filter((r) => conds.some((c) => {
+        const m = /^([\w.]+)\.(eq|neq)\.(.*)$/.exec(c);
+        if (!m) return false;
+        const [, field, op, val] = m;
+        const v = r[field];
+        return op === 'eq' ? String(v) === val : String(v) !== val;
+      }));
+      continue;
+    }
+    // .contains(column, [..]) 的线上形态：column=cs.{a,b}（数组需包含全部元素）
+    const cs = /^cs\.(?:\{(.*)\}|\(?(.*?)\)?)$/.exec(raw);
+    if (cs) {
+      const wanted = (cs[1] ?? cs[2] ?? '').split(',').filter(Boolean);
+      rows = rows.filter((r) => {
+        const v = r[key];
+        return Array.isArray(v) && wanted.every((w) => v.map(String).includes(w));
+      });
+      continue;
+    }
     const m = /^(eq|neq|in|is|gt|gte|lt|lte)\.(.*)$/.exec(raw);
     if (!m) continue;
     const [, op, val] = m;
@@ -202,12 +279,27 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname;
   if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
 
+  // ---- 测试辅助（仅本地 stub）：恢复种子数据，供 E2E 用例间隔离 ----
+  if (path === '/__reset' && req.method === 'POST') {
+    resetDb();
+    return send(res, 200, { ok: true });
+  }
+
   // ---- Auth ----
   if (path === '/auth/v1/token' && req.method === 'POST') {
-    return send(res, 200, sessionFor());
+    // 按邮箱前缀（学号）定位已注册用户 → 返回其 session；未找到回落开发者身份
+    const body = await readBody(req);
+    const sid = typeof body.email === 'string' ? body.email.split('@')[0] : '';
+    const u = db.users.find((x) => x.student_id === sid);
+    return send(res, 200, sessionFor(u ? u.auth_id : DEV_AUTH_ID));
   }
   if (path === '/auth/v1/user' && req.method === 'GET') {
     return send(res, 200, authUser());
+  }
+  if (path === '/auth/v1/user' && req.method === 'PUT') {
+    // updateUser（改密等）：回传当前用户即可
+    await readBody(req);
+    return send(res, 200, authUser(DEV_AUTH_ID));
   }
   if (path === '/auth/v1/signup' && req.method === 'POST') {
     return send(res, 200, sessionFor(uid(++seq)));
@@ -249,24 +341,32 @@ const server = http.createServer(async (req, res) => {
     const rows = db[table] || (db[table] = []);
     const wantsSingle = String(req.headers.accept || '').includes('vnd.pgrst.object');
 
-    if (req.method === 'GET') {
+    if (req.method === 'GET' || req.method === 'HEAD') {
       let out = applyFilters([...rows], url.searchParams);
-      // 简易嵌入:ticket_records 的 ticket:ticket_id(...)
+      // FK 嵌入（select 里的 alias:表/列(fields) 形态）
       const select = url.searchParams.get('select') || '';
-      if (table === 'ticket_records' && select.includes('ticket:ticket_id')) {
-        out = out.map((r) => ({ ...r, ticket: db.tickets.find((t) => t.id === r.ticket_id) || null }));
+      out = embedRows(out, select);
+      // count=exact（含 head:true）→ 用 Content-Range 回传总数
+      const prefer = String(req.headers.prefer || '');
+      const extra = {};
+      if (prefer.includes('count=exact')) {
+        extra['Content-Range'] = out.length ? `0-${out.length - 1}/${out.length}` : '*/0';
       }
       if (wantsSingle) {
-        return out.length ? send(res, 200, out[0]) : send(res, 406, { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: null, hint: null });
+        return out.length ? send(res, 200, out[0], extra) : send(res, 406, { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: null, hint: null });
       }
-      return send(res, 200, out);
+      if (req.method === 'HEAD') {
+        res.writeHead(200, { ...CORS, ...extra });
+        return res.end();
+      }
+      return send(res, 200, out, extra);
     }
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
       const body = await readBody(req);
       if (req.method === 'POST') {
         const created = Array.isArray(body) ? body : [body];
         for (const item of created) {
-          const row = { id: uid(++seq), created_at: new Date().toISOString(), ...item };
+          const row = { id: uid(++seq), created_at: new Date().toISOString(), ...TABLE_DEFAULTS[table], ...item };
           rows.push(row);
         }
         const prefer = String(req.headers.prefer || '');

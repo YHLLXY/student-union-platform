@@ -1,0 +1,109 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+
+/**
+ * E2E 公共操作封装。
+ *
+ * 端口常量与 playwright.config.ts 保持一致（9913 = E2E 专用 stub，
+ * 与开发 9999 / 单测 9911 隔离）。
+ */
+export const STUB_ORIGIN = 'http://127.0.0.1:9913';
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * 按中文文案定位按钮。
+ *
+ * 需要兼容 antd 的两处渲染细节：
+ *   1. 「恰好两个汉字」的按钮会被自动插入一个空格（继续 → "继 续"、发布 → "发 布"）；
+ *   2. 带图标的按钮，其可访问名会带上图标名（`lock 修改密码`、`plus 发布任务`）。
+ * 因此用「允许前导图标名 + 允许字间空白」的正则匹配。
+ */
+export function btn(scope: Page | Locator, label: string): Locator {
+  const chars = [...label].map(escapeRegExp).join('\\s*');
+  const pattern = new RegExp(`^(?:[a-z][a-z-]*\\s+)*${chars}$`);
+  return scope.getByRole('button', { name: pattern });
+}
+
+/** 恢复 stub 种子数据。每个用例开头调用，保证用例之间互不污染（也保证可重复运行）。 */
+export async function resetStub(): Promise<void> {
+  const res = await fetch(`${STUB_ORIGIN}/__reset`, { method: 'POST' });
+  expect(res.ok, `stub /__reset 调用失败（${res.status}）——dev-stub 需支持该端点`).toBeTruthy();
+}
+
+/** 直接向 stub 写数据（走 PostgREST 插入接口，与前端同一条路径） */
+export async function stubInsert(table: string, row: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(`${STUB_ORIGIN}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(row),
+  });
+  expect(res.ok, `stub 插入 ${table} 失败（${res.status}）`).toBeTruthy();
+  const data = (await res.json()) as Record<string, unknown>[];
+  return data[0];
+}
+
+/** 身份步：姓名 + 学号 + 邀请码 */
+export async function fillIdentity(
+  page: Page,
+  name: string,
+  studentId: string,
+  inviteCode: string,
+): Promise<void> {
+  await page.getByPlaceholder('姓名').fill(name);
+  await page.getByPlaceholder('学号').fill(studentId);
+  await page.getByPlaceholder('部门邀请码').fill(inviteCode);
+  await btn(page, '继续').click();
+}
+
+/**
+ * 走真实 UI 登录（已注册用户）。
+ *
+ * 注意：身份步的邀请码是 antd 表单必填项，老用户同样会被要求填写（这正是走查发现的
+ * 「老用户随便填邀请码」断点，Phase 1 B1 会修）。已注册用户的邀请码不会被真正校验，
+ * 因此此处传占位值即可，不会消费任何真实邀请码。
+ */
+export async function loginAs(
+  page: Page,
+  user: { name: string; studentId: string; password: string },
+): Promise<void> {
+  await page.goto('/');
+  await fillIdentity(page, user.name, user.studentId, 'EXISTING-USER-PLACEHOLDER');
+  await expect(page.getByText(`欢迎回来，${user.name}`)).toBeVisible();
+  await page.getByPlaceholder('输入密码').fill(user.password);
+  await btn(page, '登录').click();
+  await expect(page).toHaveURL(/#\/dashboard/);
+  await expect(page.getByRole('menuitem', { name: '任务管理' })).toBeVisible();
+}
+
+/** 退出登录（顶部用户下拉 → 退出登录，会整页 reload 回登录页） */
+export async function logout(page: Page, userName: string): Promise<void> {
+  await page.locator('header').getByText(userName, { exact: true }).click();
+  await page.getByText('退出登录').click();
+  await expect(page.getByPlaceholder('姓名')).toBeVisible();
+}
+
+/** 通过侧边栏菜单切换模块（不整页刷新，走真实 react-router 导航） */
+export async function gotoModule(page: Page, label: string): Promise<void> {
+  await page.getByRole('menuitem', { name: label }).click();
+}
+
+/**
+ * 给 antd DatePicker（showTime）填值：打开面板 → 键盘输入 → 失焦提交。
+ *
+ * 刻意不按 Enter：输入框在 antd Form 里回车会触发表单隐式提交（发布按钮 htmlType=submit），
+ * 弹窗会在点击「发布」之前就关闭，导致点击悬空超时。失焦同样会提交解析结果。
+ */
+export async function setDateTimePicker(page: Page, placeholder: string, value: string): Promise<void> {
+  const input = page.getByPlaceholder(placeholder);
+  await input.click();
+  await input.fill(value);
+  await input.evaluate((el) => (el as HTMLInputElement).blur());
+  await expect(input).toHaveValue(value);
+}
+
+/** 点击 Popconfirm 的确认按钮（作用域限定在弹出层内，避免误点触发按钮） */
+export async function confirmPopconfirm(page: Page, title: string, okText: string): Promise<void> {
+  const pop = page.locator('.ant-popover').filter({ hasText: title });
+  await expect(pop).toBeVisible();
+  await btn(pop, okText).click();
+}

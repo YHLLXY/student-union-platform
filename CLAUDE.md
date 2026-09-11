@@ -86,6 +86,25 @@ src/
 
 **关键原则：** No completion claims without fresh verification evidence.
 
+### 测试护栏（Phase 0 起，改动前先跑）
+
+| 命令 | 内容 |
+|------|------|
+| `npm test` | Service 层单测（vitest + jsdom，`tests/unit/`） |
+| `npm run test:watch` | 单测 watch 模式 |
+| `npm run test:e2e` | 端到端冒烟（Playwright，`tests/e2e/`，真实浏览器走真实 UI） |
+
+**隔离铁律：测试永远不连生产 Supabase。** 三层保障，改测试基建时不要绕过——
+
+1. 全部测试只打本地 stub（`scripts/dev-stub.mjs`）：单测 9911（vitest globalSetup 自动拉起回收）、E2E 9913（Playwright webServer 拉起），与开发用 9999 完全隔离；
+2. `tests/setup.ts` 与 `tests/e2e/fixtures.ts` 各有一道硬拦截：前者校验 `VITE_SUPABASE_URL` 必须是本地 stub，后者把任何非 127.0.0.1/localhost 请求直接 abort。E2E 另有 `tests/e2e/safety.spec.ts` 专门自证这道防线有效；
+3. E2E 走 `vite.e2e.config.ts`（`envDir: false`），根本不加载指向生产的根 `.env`。
+
+**其它注意：**
+- stub 是按「真实 PostgREST 线上报文形态」仿真的（`.or()`、`.contains()` → `cs.{}`、`count=exact`、`别名:users!外键列(fields)`、列默认值 `TABLE_DEFAULTS`）。新增查询写法若在测试里静默失配，先补 `scripts/dev-stub.mjs` 的对应形态，不要绕过断言；
+- E2E 必须 `serviceWorkers: 'block'`：应用注册了 PWA service worker，而 Playwright **不拦截由 SW 处理的请求**——不屏蔽 SW，`page.route` 防线会形同虚设；
+- CI：`.github/workflows/deploy.yml` 的 `test` job（oxlint + 单测 + E2E）全绿才允许 `build` → `deploy`，且该 job **不注入任何生产凭据**。
+
 ### 代码审查（推送前必须执行）
 
 > 引用 Skill：`superpowers:receiving-code-review`、`/code-review`
@@ -307,6 +326,9 @@ git push origin master
 npm run dev      # 开发服务器 → http://localhost:5173/student-union-platform/
 npm run build    # 生产构建（tsc -b && vite build）
 npm run preview  # 预览生产构建
+npm test         # Service 层单测（vitest + 本地 stub）
+npm run test:e2e # E2E 冒烟（Playwright + 本地 stub）
+npm run lint     # oxlint
 ```
 
 ---

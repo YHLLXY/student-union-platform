@@ -98,6 +98,28 @@
 
 ## 待处理
 
+### #9 任务详情弹窗内的任务状态不随审核操作刷新
+
+- **日期：** 2026-09-11
+- **类型：** UX 瑕疵（前端状态快照）
+- **严重程度：** 低（不影响数据正确性，刷新列表后状态正确）
+- **发现方式：** Phase 0 编写 E2E 冒烟② 时暴露（原以为断言写错，实为产品行为）
+- **现象：** 部长在任务详情弹窗里点「通过」后，提交记录正确标记「已通过」，但同弹窗顶部 Descriptions 里的任务状态仍显示「待审核」，要关闭弹窗回到列表才看到「已完成」
+- **原因：** [TaskListPage.tsx:33](src/modules/tasks/TaskListPage.tsx#L33) 用 `detailTask` state 持有点击时的任务快照传给 `TaskDetail`；`refresh()` 只重取列表查询，不会更新这个快照对象
+- **修复方案（择一）：**
+  1. `onUpdate` 时按 id 从新列表数据回填 `detailTask`（改动小，列表已重取）
+  2. `TaskDetail` 内部改用 `useQuery` 按 `task.id` 订阅（与其它模块一致，但要多一次往返）
+- **建议排期：** Phase 1「B5 细节打磨」一并处理
+
+### #10 index.html 注释中的 `%VITE_*%` 触发 Vite 变量缺失警告
+
+- **日期：** 2026-09-11
+- **类型：** 构建期提示噪音
+- **严重程度：** 极低（不影响构建产物与功能）
+- **现象：** 启动 dev server 时输出 `(!) %VITE_*% is not defined in env variables found in /index.html. Is the variable mistyped?`
+- **原因：** [index.html:14](index.html#L14) 的说明性 HTML 注释里写了字面量 `%VITE_*%`，Vite 的 HTML 常量替换会扫描注释内容，找不到名为 `VITE_*` 的环境变量于是告警
+- **修复方案：** 把这行注释里的 `%VITE_*%` 改写为非 `%...%` 形态（如 `%VITE_XXX%` 或 `VITE_* 占位符`）
+
 ### #2 antd Modal `destroyOnClose` 弃用警告
 
 - **日期：** 2026-07-02
