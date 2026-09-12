@@ -396,6 +396,8 @@ git push origin master
 | 设计文档 | `docs/superpowers/specs/` |
 | 实施计划 | `docs/superpowers/plans/` |
 | 数据库迁移 | `supabase-migration.sql` |
+| 逐轮总结（交付 + 经验） | `docs/<日期>-<版本>迭代总结.md`（最近的：`2026-09-12-v4.5.0迭代总结.md`） |
+| 跨轮经验教训 | `docs/lessons-learned-phase1-5.md` |
 
 ## 启动命令
 

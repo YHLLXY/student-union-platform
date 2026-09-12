@@ -86,7 +86,7 @@ test.describe('Phase 3 论坛互动（A5）', () => {
     await expect(modal.locator('[class*="mention"]').filter({ hasText: '@陈主席' })).toBeVisible();
 
     // ---- 关闭详情：列表里该帖带上置顶标签并排到最前 ----
-    await btn(modal, '关 闭').click();
+    await btn(modal, '关闭').click();
     await expect(modal).toBeHidden();
     const card = postCard(page);
     await expect(card.getByText('置顶')).toBeVisible();
