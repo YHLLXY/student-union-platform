@@ -170,6 +170,7 @@ export default function WorkOverview() {
           </span>
         </span>
         <Select
+          aria-label="成员排序方式"
           size="small"
           value={sortBy}
           onChange={setSortBy}

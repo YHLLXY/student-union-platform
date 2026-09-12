@@ -1,0 +1,85 @@
+name: Supabase 每周备份
+
+# 为什么需要它（2026-09-12，Phase 4 D1）：
+#   免费版 Supabase 曾经被自动暂停过一次（见 supabase-keepalive.yml 的事故复盘），
+#   而「暂停」之外还有更糟的可能——误删数据、误改策略、磁盘故障。平台数据一旦丢了
+#   没有第二个副本可回。此工作流每周把 public 全表导出成 gzip JSON，提交进**专用私有仓库**，
+#   git 历史本身即版本化备份（每次提交 = 一个时点快照）。
+#
+# 依赖的仓库 Secrets（配置步骤见 docs/backup-restore.md）：
+#   SUPABASE_SERVICE_ROLE_KEY  导出全表必须用 service_role（anon 会被 RLS 拦成空数组）
+#   BACKUP_REPO                形如 YHLLXY/student-union-platform-backup（**必须私有**）
+#   BACKUP_REPO_TOKEN          对该仓库有 contents:write 的细粒度 PAT
+#
+# 失败会怎样：脚本以非 0 退出 → 本 job 失败 → GitHub 给仓库管理员发失败邮件
+#（scheduled workflow 默认开启 Action 失败通知）+ 下方 ::error:: 注解。
+# 注意：仓库 60 天无提交时 GitHub 会停用 scheduled workflow——正常迭代即可避免。
+
+on:
+  schedule:
+    - cron: '30 2 * * 0' # 每周日 02:30 UTC = 北京时间 10:30
+  workflow_dispatch: # 支持手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 不需要 npm ci：备份脚本只用 node 内置模块（fs / zlib / crypto / fetch）
+      - name: 导出全库（分页 + 行数自检）
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-supabase.mjs backup
+
+      # 第二份副本：即使备份仓库推送失败（token 过期等），CI 产物里仍有 30 天可下载
+      - name: 留存 CI 产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_number }}
+          path: backup/
+          retention-days: 30
+
+      - name: 推送到私有备份仓库
+        env:
+          TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          REPO: ${{ secrets.BACKUP_REPO }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ] || [ -z "${REPO:-}" ]; then
+            echo "::error::未配置 BACKUP_REPO / BACKUP_REPO_TOKEN，本次备份没有落进备份仓库。配置步骤见 docs/backup-restore.md"
+            exit 1
+          fi
+
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${REPO}.git" _backup_repo
+
+          # 固定写到 latest/：每周覆盖同一批文件名，git 里看到的才是「哪些表变了」的逐文件 diff
+          rm -rf _backup_repo/latest
+          mkdir -p _backup_repo/latest
+          cp -r backup/*/. _backup_repo/latest/
+
+          cd _backup_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "数据与上周一致，无需提交"
+            exit 0
+          fi
+          git commit -m "backup: $(date -u +%Y-%m-%d) 全库快照"
+          git push origin HEAD
+
+      - name: 失败时给出明确指引
+        if: failure()
+        run: |
+          echo "::error::备份失败。常见原因：① SUPABASE_SERVICE_ROLE_KEY 未配置或已轮换；② BACKUP_REPO_TOKEN 过期；③ Supabase 项目处于 Paused（先看 Supabase Keepalive 工作流）。手工核对步骤见 docs/backup-restore.md"

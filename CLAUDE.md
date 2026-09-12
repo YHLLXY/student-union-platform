@@ -110,6 +110,11 @@ src/
 - E2E 必须 `serviceWorkers: 'block'`：应用注册了 PWA service worker，而 Playwright **不拦截由 SW 处理的请求**——不屏蔽 SW，`page.route` 防线会形同虚设；
 - CI：`.github/workflows/deploy.yml` 的 `test` job（oxlint + 单测 + E2E）全绿才允许 `build` → `deploy`，且该 job **不注入任何生产凭据**。
 
+**测试测不到什么（2026-09-12 明确划界，别再白费力气）：**
+
+- **RLS 策略的正确性测不到**。单测与 E2E 打的都是 dev-stub，而 stub **不实现 RLS**——它保证的是报文形态。策略写错（该放行的拒了、该拒的放行了）在 `npm test` / `npm run test:e2e` 里**不会有任何反应**。唯一有效的验证是拿真实角色去撞真实策略：跑 `supabase-verify-v4.6.0.sql`（事务内 `SET ROLE authenticated` 冒充三种角色逐条断言，末尾 `ROLLBACK`）。
+- **无障碍的 critical 级有门禁**：`tests/e2e/a11y.spec.ts` 用 axe-core 扫 8 个页面，critical 必须为 0，并**顺带生成** `docs/a11y-audit.md`（报告是交付物，每次运行覆盖）；另有一条「登录页 Tab 顺序」用例，补 axe 查不到的焦点顺序（顺带记一笔：`继 续` 这类两字按钮被 antd 插了空格，比对前要去空白）。写这条用例时踩过一个坑：模块是懒加载的，点侧边栏后 URL 立刻变、新页面 JS 还在下载，此时 DOM 里仍是上一页 —— 不等就扫会把问题记到错误的页面名下。故每个页面都用 `page.goto('/#/xxx')` 整页加载 + 该页独有标题作为就绪锚点（**不要**用「发布任务」这类文案当锚点，工作台快捷入口里也有）。
+
 ### 代码审查（推送前必须执行）
 
 > 引用 Skill：`superpowers:receiving-code-review`、`/code-review`
@@ -201,6 +206,9 @@ module/
 - `node scripts/extract-sql-section.mjs <第N部分> <输出文件名>` —— 从 `supabase-migration.sql` 抽取某章节生成独立执行脚本（自动识别章节边界，抬头标注勿手改）。
 - `node scripts/check-sql.mjs <sql 文件>` —— 静态体检三关：① 结构自检（语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点，零依赖）；② **DDL 顺序检查**（触发器 `UPDATE OF 列` / 索引列引用了本文件后面才 `ADD COLUMN` 的列即报错——42703 就是这么来的）；③ 可选 `pgsql-ast-parser` 真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
 - 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
+- `node scripts/backup-supabase.mjs [输出目录]` —— 全库导出（需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` 两个环境变量，**service_role key 绝不进仓库**）；
+- `node scripts/restore-backup.mjs <备份目录> [--yes]` —— 恢复（不带 `--yes` 只校验不写入）。两者用法与边界见 `docs/backup-restore.md`。
+- `npx playwright test tests/e2e/a11y.spec.ts` —— 无障碍扫描（同时是 critical 门禁），跑完刷新 `docs/a11y-audit.md`。
 
 **需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有五份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-phase3-v4.5.0.sql`（第十九部分，含新表/新列/触发器/策略）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
 
@@ -330,7 +338,7 @@ git push origin master
 **核心表：**
 `users` | `tasks` | `task_templates` | `task_milestones` | `task_submissions` | `notices` | `notice_reads` | `school_notices` | `forum_posts` | `forum_replies` | `tickets` | `ticket_records` | `invite_codes` | `department_guides` | `notifications` | `platform_guides` | `points_ledger`（v4.4.0）| `forum_likes` | `forum_bookmarks`（v4.5.0）
 
-**迁移文件：** `supabase-migration.sql`（19 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化、Phase 2/3 数据层）；大段独立脚本见根目录 `supabase-*.sql`（另有只读验收脚本 `supabase-verify-v4.3.0.sql`）
+**迁移文件：** `supabase-migration.sql`（20 部分，含一期 + 二期 + Phase1-5 全部 DDL 与安全收口、性能优化、Phase 2/3/4 数据层）；大段独立脚本见根目录 `supabase-*.sql`（另有只读验收/自证脚本 `supabase-verify-v4.3.0.sql`、`supabase-verify-v4.6.0.sql`）
 
 **数据库优化（v4.3.0，第十七部分）：** `users.auth_id` 唯一索引（RLS 策略判定热路径）、22 条外键索引、11 条复合索引、`updated_at` 触发器、两个枚举列 CHECK（NOT VALID）。执行脚本 `supabase-optimize-v4.3.0.sql`，**由用户在 Supabase 手动执行**，不执行也不影响功能。
 
@@ -350,6 +358,46 @@ git push origin master
 4. **`users.onboarded` 的存量回填用固定时间字面量**（`created_at < '2026-09-12 00:00:00+08'`）而不是 `now()`：脚本要能重复执行，用 `now()` 会把「上次执行之后新注册的人」误标成已引导。前端读取一律用 `onboarded === false` 判断——v4.4.0 之前的本地缓存里没有这个字段，用 `!user.onboarded` 会让全体老用户升级瞬间被弹一次引导。
 
 **@提及（v4.5.0）不占任何 DDL**：`notifications.type` 在第十七部分特意没加 CHECK，就是为了今天能直接写 `'mention'`（当时已把原因写在注释里）。提及对象由**前端**在正文里解析——只有从成员候选面板点选过的人才会进 `mentionIds`，数据库不解析 Markdown 正文。这是有意的取舍：通知不是权限，「正文里恰好出现了某个姓名」不该误通知，而漏发的最坏后果只是少一条提醒。
+
+**Phase 4 数据层（v4.6.0，第二十部分）：** 执行脚本 `supabase-phase4-v4.6.0.sql`（**需用户执行**），
+自证脚本 `supabase-verify-v4.6.0.sql`（**改完必须跑，这是唯一能验证 RLS 的手段**，见上文「测试测不到什么」）。
+六条不变量，动数据库前先读：
+
+1. **写侧收口、读侧有意留宽**。14 张原本挂着 `authenticated_full_access FOR ALL USING(true)` 的表
+   改成逐操作策略。写侧是重点：改前任何登录用户直接打 REST 就能 `PATCH users` 把自己写成 president、
+   删光 tasks/notices。**读侧有 5 张表刻意保持「登录即可全量读」**——`users`（通讯录要读全员）、
+   `tasks`（通讯录里的「他人任务计数」要读全校）、`tickets`/`ticket_records`（人人都要算剩余票数）、
+   `school_notices`。按部门收紧它们会让页面**静默少数据而不是报错**，比不收紧更危险；
+   真要收得先把那几处改成聚合 RPC（见 `docs/ISSUES.md` #14）。
+2. **策略辅助函数一律 SECURITY DEFINER**（`my_department` / `is_admin` / `is_presidium` /
+   `is_dept_head_of` / `can_view_post` / `can_manage_post` / `can_view_task` / `can_review_task`）。
+   策略表达式以**当前用户**身份求值，直接写子查询会连带触发被引用表的 RLS，变成「策略依赖策略」，
+   症状是「本该放行的行被判拒绝」。函数只给 `authenticated` EXECUTE——收回了它，**所有**策略会报 42501。
+3. **`users` 没有 INSERT 策略，这是刻意的**。注册只能走 `register_user()`（SECURITY DEFINER）：
+   它复核邀请码、**由邀请码推导 role 与 department**、建号、核销，全在一个事务里。
+   留一条 `WITH CHECK (auth_id = auth.uid())` 看似只允许「写自己」，但 `role` 是请求体带来的
+   ——那等于允许任何人把自己注册成 president。
+4. **`role` / `department` 的变更由守卫触发器兜底**（`trg_guard_users_privilege`）：
+   只有管理员能改，`auth_id` 与 `student_id` 一律不可变（可改＝可劫持）。
+   策略表达不了「这次更新动了哪些列」，所以必须用 `BEFORE UPDATE OF <列>` 触发器。
+5. **anon 的本事比你以为的大**。Supabase 建库时对 public schema 有
+   `ALTER DEFAULT PRIVILEGES … GRANT ALL ON FUNCTIONS TO anon`——**后建的函数默认 anon 也能调**。
+   2026-09-12 实测：`role_level` / `is_organizer` / `semester_of` / `check_in_ticket` / `ticket_qr_token`
+   全部 anon 可调（前三个直接返回数据）。新增函数一律显式 `REVOKE … FROM PUBLIC, anon` 再 `GRANT`；
+   第二十部分已对 `anon` 收回全部表级权限并取消了这条默认授权。
+6. **顺序：先建新策略，后拆旧的全量放行**。策略之间是并集，两套并存时权限仍是旧的宽松状态；
+   反过来先拆后建，中间会出现「一条策略都没有」的真空期，线上请求会被拒。
+
+## v4.6.0 增强（2026-09-12）
+
+本版**没有用户可见的新功能**，全是安全与运维（如实写在 version.json 的 changelog 里）：
+
+1. **细粒度 RLS 收口**（C2）——14 张表的写权限逐操作收口、`users` 提权路径封死、
+   RPC 的 anon 授权收回、注册搬进 `register_user()`（角色由邀请码推导、顺带修掉并发核销的竞态）
+2. **每周自动备份**（D1）——全库导出 gzip JSON 提交进私有备份仓库，附恢复脚本（`docs/backup-restore.md`）
+3. **外部拨测**（D2）——UptimeRobot 监控首页与 version.json 的配置步骤（`docs/uptime-monitor.md`）
+4. **无障碍**（C3）——首份审计报告 `docs/a11y-audit.md`；critical 级清零（8 个 antd Select 补 `aria-label`），
+   并加 axe 回归门禁
 
 ## v4.5.0 增强（2026-09-12）
 
@@ -396,7 +444,10 @@ git push origin master
 | 设计文档 | `docs/superpowers/specs/` |
 | 实施计划 | `docs/superpowers/plans/` |
 | 数据库迁移 | `supabase-migration.sql` |
-| 逐轮总结（交付 + 经验） | `docs/<日期>-<版本>迭代总结.md`（最近的：`2026-09-12-v4.5.0迭代总结.md`） |
+| 逐轮总结（交付 + 经验） | `docs/<日期>-<版本>迭代总结.md`（最近的：`2026-09-12-v4.6.0迭代总结.md`） |
+| 备份与恢复 | `docs/backup-restore.md` |
+| 外部拨测 | `docs/uptime-monitor.md` |
+| 无障碍审计报告（自动生成） | `docs/a11y-audit.md` |
 | 跨轮经验教训 | `docs/lessons-learned-phase1-5.md` |
 
 ## 启动命令

@@ -109,6 +109,81 @@ export async function checkInviteCode(code: string) {
   return row ? pickValidInvite(row, code) : null;
 }
 
+/**
+ * 建号 —— 注册流程唯一的落库入口（signUp / signUpTeacher 共用）。
+ *
+ * 首选 rpc `register_user`：v4.6.0（第二十部分）起 users 表**没有 INSERT 策略**，
+ * 角色与部门改由数据库从邀请码推导（客户端传什么都不算数），邀请码核销与建号
+ * 在同一事务、同一行锁内完成。
+ *
+ * 函数尚未创建时（PGRST202，第二十部分未执行）回退旧的「直插 users + 直写邀请码」，
+ * 两种执行顺序都能把注册走完。回退路径的 `department` / `role` 参数只服务于这条老路径，
+ * 走 rpc 时它们被数据库忽略。
+ */
+async function createAppUser(
+  authId: string,
+  name: string,
+  studentId: string,
+  inviteCode: string,
+  department: string,
+  role: string,
+): Promise<{ user: UserProfile | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('register_user', {
+    p_auth_id: authId,
+    p_name: name,
+    p_student_id: studentId,
+    p_invite_code: inviteCode,
+  });
+
+  if (!error) {
+    const result = data as { ok?: boolean; error?: string; user?: UserProfile } | null;
+    if (result?.ok && result.user) return { user: result.user, error: null };
+    log.error('register_user 未通过', result?.error);
+    return { user: null, error: result?.error ?? '注册失败，请重试' };
+  }
+  if (error.code !== 'PGRST202') {
+    log.error('register_user 调用失败', error);
+    return { user: null, error: error.message };
+  }
+
+  // ---- 回退路径（第二十部分执行前的旧写法）----
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .insert({
+      auth_id: authId,
+      name,
+      student_id: studentId,
+      department,
+      role,
+    })
+    .select('*')
+    .single();
+
+  if (userError) return { user: null, error: userError.message };
+
+  const { data: currentCode } = await supabase
+    .from('invite_codes')
+    .select('used_count, max_uses')
+    .eq('code', inviteCode)
+    .single();
+
+  const newCount = (currentCode?.used_count ?? 0) + 1;
+  const maxUses = currentCode?.max_uses ?? 1;
+
+  const { error: legacyError } = await supabase
+    .from('invite_codes')
+    .update({
+      used_count: newCount,
+      is_used: newCount >= maxUses,
+      used_by: userData.id,
+    })
+    .eq('code', inviteCode);
+
+  if (legacyError) log.error('邀请码回写失败（回退路径）', legacyError);
+
+  return { user: userData as UserProfile, error: null };
+}
+
 /** 检查学号是否已注册（rpc 只返回布尔，不暴露用户数据） */
 export async function checkStudentId(studentId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('check_student_registered', { student_id_input: studentId });
@@ -153,43 +228,8 @@ export async function signUp(
     return { user: null, error: authError?.message ?? '注册失败，请重试' };
   }
 
-  // 2. 写入 users 表（角色从邀请码获取，不再硬编码）
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .insert({
-      auth_id: authData.user.id,
-      name,
-      student_id: studentId,
-      department,
-      role,
-    })
-    .select('*')
-    .single();
-
-  if (userError) {
-    return { user: null, error: userError.message };
-  }
-
-  // 3. 标记邀请码使用（used_count + 1）
-  const { data: currentCode } = await supabase
-    .from('invite_codes')
-    .select('used_count, max_uses')
-    .eq('code', inviteCode)
-    .single();
-
-  const newCount = (currentCode?.used_count ?? 0) + 1;
-  const maxUses = currentCode?.max_uses ?? 1;
-
-  await supabase
-    .from('invite_codes')
-    .update({
-      used_count: newCount,
-      is_used: newCount >= maxUses,
-      used_by: userData.id,
-    })
-    .eq('code', inviteCode);
-
-  return { user: userData as UserProfile, error: null };
+  // 2. 建号（角色从邀请码获取，v4.6.0 起由数据库推导）+ 核销邀请码
+  return createAppUser(authData.user.id, name, studentId, inviteCode, department, role);
 }
 
 /** 教师注册：使用教师邀请码注册 */
@@ -216,42 +256,8 @@ export async function signUpTeacher(
     return { user: null, error: authError?.message ?? '注册失败，请重试' };
   }
 
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .insert({
-      auth_id: authData.user.id,
-      name,
-      student_id: teacherId,
-      department: '', // 教师无部门
-      role: 'teacher',
-    })
-    .select('*')
-    .single();
-
-  if (userError) {
-    return { user: null, error: userError.message };
-  }
-
-  // 3. 标记邀请码使用（used_count + 1）
-  const { data: currentCode } = await supabase
-    .from('invite_codes')
-    .select('used_count, max_uses')
-    .eq('code', inviteCode)
-    .single();
-
-  const newCount = (currentCode?.used_count ?? 0) + 1;
-  const maxUses = currentCode?.max_uses ?? 1;
-
-  await supabase
-    .from('invite_codes')
-    .update({
-      used_count: newCount,
-      is_used: newCount >= maxUses,
-      used_by: userData.id,
-    })
-    .eq('code', inviteCode);
-
-  return { user: userData as UserProfile, error: null };
+  // 2. 建号 + 核销（教师无部门：这条规则在 register_user 里同样成立）
+  return createAppUser(authData.user.id, name, teacherId, inviteCode, '', 'teacher');
 }
 
 /** 检查教师邀请码是否有效（role=teacher） */

@@ -41,3 +41,6 @@ supabase/.temp/
 /2026-*.md
 /lessons-learned-phase1-5.md
 .perf-baseline/
+
+# 备份脚本的本地输出（真实数据，绝不提交）
+backup/

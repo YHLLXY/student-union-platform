@@ -8,6 +8,28 @@ import supabase from '@/supabaseClient';
 
 const uniq = (p: string) => `${p}${Date.now().toString(36).slice(-6)}${Math.floor(Math.random() * 1e4)}`;
 
+/** 造一张指定上限的邀请码，返回 code。
+ *  v4.6.0 起注册走 register_user，邀请码在数据库侧被复核「未撤销/未过期/还有余量」，
+ *  用种子里的固定码会与其他测试文件抢同一张码，故每个用例都现造一张。 */
+async function makeInviteCode(maxUses: number): Promise<string> {
+  const code = uniq('CODE_');
+  await supabase.from('invite_codes').insert({
+    code, department: 'sports', role: 'volunteer', is_used: false,
+    used_count: 0, max_uses: maxUses, revoked_at: null,
+  });
+  return code;
+}
+
+/** 读回邀请码行的当前状态 */
+async function readInviteCode(code: string) {
+  const { data } = await supabase
+    .from('invite_codes')
+    .select('used_count, max_uses, is_used, used_by')
+    .eq('code', code)
+    .single();
+  return data as { used_count: number; max_uses: number; is_used: boolean; used_by: string | null } | null;
+}
+
 describe('validatePasswordStrength', () => {
   it('少于 8 位拒绝', () => {
     const r = validatePasswordStrength('Ab1');
@@ -120,14 +142,73 @@ describe('signUp', () => {
 
   it('正常注册写入 users 表', async () => {
     const sid = uniq('REG_');
-    const r = await signUp('测试志愿者', sid, 'TIYU_VOL', 'Passw0rd123', 'sports', 'volunteer');
+    const code = await makeInviteCode(5);
+    const r = await signUp('测试志愿者', sid, code, 'Passw0rd123', 'sports', 'volunteer');
     expect(r.error).toBeNull();
     expect(r.user).not.toBeNull();
     expect(r.user!.student_id).toBe(sid);
-    expect(r.user!.role).toBe('volunteer');
+    expect(r.user!.role).toBe('volunteer');   // 角色由邀请码推导
+    expect(r.user!.onboarded).toBe(false);    // 新账号应弹新人引导（落库整行必须带默认列）
     expect(await checkStudentId(sid)).toBe(true);
   });
 });
+
+describe('register_user（v4.6.0：注册的唯一入口，角色由邀请码推导）', () => {
+  it('注册成功后 used_count 自增，used_by 指向新用户', async () => {
+    const code = await makeInviteCode(3);
+    const r = await signUp('核销测试', uniq('RDM_'), code, 'Passw0rd123', 'sports', 'volunteer');
+
+    expect(r.error).toBeNull();
+    const row = await readInviteCode(code);
+    expect(row!.used_count).toBe(1);
+    expect(row!.is_used).toBe(false);          // 上限 3，还没用完
+    expect(row!.used_by).toBe(r.user!.id);     // 记的是本库 users.id，不是 auth_id
+  });
+
+  it('用满上限的那一次会把 is_used 置为 true', async () => {
+    const code = await makeInviteCode(1);
+    await signUp('核销测试A', uniq('RDM_'), code, 'Passw0rd123', 'sports', 'volunteer');
+
+    const row = await readInviteCode(code);
+    expect(row!.used_count).toBe(1);
+    expect(row!.is_used).toBe(true);
+  });
+
+  it('角色以邀请码为准，请求里传的角色不作数', async () => {
+    // 第二十部分的核心意图：客户端不能自己挑角色。这里传 'president'，落库必须是码里的 volunteer。
+    const code = await makeInviteCode(1);
+    const r = await signUp('想提权的人', uniq('ESC_'), code, 'Passw0rd123', 'sports', 'president');
+    expect(r.error).toBeNull();
+    expect(r.user!.role).toBe('volunteer');
+  });
+
+  it('已用完的码：注册被明确拒绝，不再建号（v4.6.0 行为变更，见迁移注释）', async () => {
+    const code = await makeInviteCode(1);
+    await signUp('核销测试B', uniq('RDM_'), code, 'Passw0rd123', 'sports', 'volunteer'); // 用掉
+    const before = await readInviteCode(code);
+
+    const sid = uniq('RDM_');
+    const r = await signUp('核销测试C', sid, code, 'Passw0rd123', 'sports', 'volunteer');
+
+    expect(r.user).toBeNull();                        // 不再「码废了但人建出来了」
+    expect(r.error).toContain('邀请码已用完');
+    expect(await checkStudentId(sid)).toBe(false);    // 确认没落库
+    const after = await readInviteCode(code);
+    expect(after!.used_count).toBe(before!.used_count); // 码也不会再涨
+  });
+
+  it('已撤销的码：注册被拒绝', async () => {
+    const code = await makeInviteCode(5);
+    await supabase.from('invite_codes')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('code', code);
+
+    const r = await signUp('撤销码测试', uniq('REV_'), code, 'Passw0rd123', 'sports', 'volunteer');
+    expect(r.user).toBeNull();
+    expect(r.error).toContain('撤销');
+  });
+});
+
 
 describe('verifyUser（忘记密码身份验证）', () => {
   it('姓名+学号匹配返回 authId', async () => {

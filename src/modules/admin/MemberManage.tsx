@@ -98,6 +98,7 @@ export default function MemberManage() {
         if (adminAccess) {
           return (
             <Select
+              aria-label={`调整 ${record.name} 的所属部门`}
               value={d}
               size="small"
               style={{ width: 140 }}
@@ -115,6 +116,7 @@ export default function MemberManage() {
         if (adminAccess) {
           return (
             <Select
+              aria-label={`调整 ${record.name} 的角色`}
               value={r}
               size="small"
               style={{ width: 120 }}

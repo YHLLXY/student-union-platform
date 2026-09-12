@@ -39,6 +39,17 @@ export type PointsReason =
   | 'ticket_checkin'
   | (string & {});
 
+/**
+ * register_user RPC 的返回结构（第二十部分，v4.6.0）。
+ * `ok=true` 时 `user` 是落库后的整行；`ok=false` 时 `error` 是可直接展示给用户的中文原因
+ *（邀请码无效/已撤销/已过期/已用完、学号已注册、身份校验失败）。
+ */
+export interface RegisterUserResult {
+  ok: boolean;
+  error?: string;
+  user?: Record<string, unknown>;
+}
+
 /** check_in_ticket RPC 的返回结构（code 用于前端分流提示，不要按 message 做判断） */
 export interface CheckInResult {
   ok: boolean;
@@ -823,6 +834,20 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      /**
+       * 注册的唯一入口（第二十部分，v4.6.0）：把「复核邀请码 → 建号 → 核销邀请码」放进一个
+       * 事务，角色与部门**由邀请码推导**（客户端传什么都不算数）。
+       * 返回 { ok, error?, user? }，user 是落库后的整行（含列默认值，如 onboarded=false）。
+       */
+      register_user: {
+        Args: {
+          p_auth_id: string;
+          p_name: string;
+          p_student_id: string;
+          p_invite_code: string;
+        };
+        Returns: RegisterUserResult;
+      };
       grab_ticket: {
         Args: {
           p_ticket_id: string;

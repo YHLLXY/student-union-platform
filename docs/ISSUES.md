@@ -154,14 +154,79 @@
 
 ### #5 数据表 RLS 仍是「登录即全量放行」，缺细粒度策略
 
-- **日期：** 2026-07-08（提出）· 2026-09-11（更新现状）
+- **日期：** 2026-07-08（提出）· 2026-09-05（第一层）· 2026-09-12（**收口完成**）
 - **类型：** 安全隐患
-- **严重程度：** 中（仅当攻击者知道 Supabase 项目 URL 且有技术能力直接调 REST API 时才可被利用）
-- **现状（2026-09-05 安全加固后）：** 原来「16 张表仅 1 张启用 RLS」的问题**已解决第一层**——`supabase-migration.sql` 第十六部分已对全部业务表启用 RLS，`anon` 一律拒绝、`authenticated` 全量放行，登录前必需的 3 条匿名查询改走 `SECURITY DEFINER` 最小暴露函数。即：**拿到 anon key 已无法匿名读写任何业务数据**。
-- **仍然存在的缺口：** 已登录用户之间没有行级隔离——任何登录用户直接调 REST API 仍可读写全部表（前端 `hasMinRole()` 只是 UI 层拦截，不构成边界）。数据库侧目前只有 `auth.role()` 粒度的策略。
-- **进展（2026-09-12，v4.5.0）：** 第一批**按行 RLS** 已落地——`forum_likes` / `forum_bookmarks`（复合主键 + `user_id = public.current_app_user_id()` 约束 INSERT/DELETE，无 UPDATE 策略），复用第十八部分写好的 `current_app_user_id()` / `is_organizer()`。这批是 C2 的试点：把「辅助函数 + 逐动作策略 + 客户端不依赖写权限」这套写法先在两张小表上跑通，再往大表推。
-- **修复方案（Phase 4 C2 细粒度 RLS）：** 引入辅助函数 `is_admin()` / `is_dept_head_of(dept)`，逐表按 SELECT/INSERT/UPDATE/DELETE 定义策略；兼容 `created_by IS NULL` 的历史数据；分两批（先读后写）上线，每批执行后跑全量 E2E + 三角色矩阵回归。
-- **排期：** Phase 4（详见 `docs/plans/2026-09-06-全方位升级实施计划-v4.3至v4.6.md`），不在 v4.3.0 处理。
+- **严重程度：** 原为「中」，现已降为「低」
+- **进展（2026-09-12，v4.6.0 第二十部分）：** 已落地细粒度 RLS——14 张原本挂着
+  `authenticated_full_access FOR ALL USING(true)` 的表全部改为逐操作策略（17 张表共 50+ 条），
+  并新增 8 个策略辅助函数（`my_department` / `is_admin` / `is_presidium` / `is_dept_head_of` /
+  `can_view_post` / `can_manage_post` / `can_view_task` / `can_review_task`）。
+  **写侧是这次的重点**：改前任何登录用户直接打 REST 就能 `PATCH users` 把自己写成 president、
+  删光 tasks/notices；现在 `role`/`department` 的变更被守卫触发器锁到管理员、
+  `users` 表**没有 INSERT 策略**（注册只能走 `register_user()`，角色由邀请码推导）。
+  顺带审计了 RPC 的 EXECUTE 授权：实测 anon 能调 `role_level`/`is_organizer`/`semester_of`/
+  `check_in_ticket`/`ticket_qr_token`（Supabase 的默认授权），已逐个 REVOKE。
+- **仍然存在的两类缺口（**有意保留**，见第二十部分注释）：**
+  1. **5 张表读侧仍全量**：`users`（通讯录要读全员）、`tasks`（通讯录里「他人任务计数」要读全校）、
+     `tickets`/`ticket_records`（人人都要算剩余票数）、`school_notices`（本就是全员可见）。
+     按部门收紧会让这些页面**静默少数据**而不是报错，比不收紧更危险。
+     → 真收的落法：把「他人任务计数」改成聚合 RPC `member_task_counts()`，
+     剩余票数改成 `ticket_remaining(p_ticket)`，票券名单改成 `ticket_roster(p_ticket)`（见 #14）。
+  2. **`users` 的 SELECT 无法按列可见**：`contact_phone` / `contact_email` 现在仍对全体登录用户可读
+     （前端靠页面级权限规则不显示）。列级 RLS 在 Postgres 里不存在；列级 `GRANT` 又会让现有的
+     `select('*')` 直接报权限错。要收得改成「视图 + 只暴露非敏感列」。
+- **验收方式：** `supabase-verify-v4.6.0.sql`（角色冒充自证：结构核对 + allow/deny 矩阵，
+  在事务里 `SET ROLE authenticated` 逐条撞策略，末尾 `ROLLBACK`）。
+
+### #13 忘记密码 = 「知道姓名 + 学号即可改密码」（高危，需产品决策）
+
+- **日期：** 2026-09-12（Phase 4 C2 审计中发现）
+- **类型：** 安全隐患
+- **严重程度：** **高**（可匿名接管任意账号，含主席 / 老师）
+- **现象：** 登录页「忘记密码」的身份证明只有「姓名 + 学号」两项，链路是
+  `verify_user_identity(name, student_id)`（anon 可调，返回该用户的 `auth_id`）→
+  `reset_user_password(auth_id, new_password)`（anon 可调）→ 密码被改。
+  学号是可在通讯录里查到的半公开信息，因此**未登录的攻击者知道一个人的姓名与学号即可改其密码**。
+- **为什么本轮没改：** 这不是 RLS 能解决的问题（是 RPC 授权 + 产品流程），
+  且收紧会**直接让「忘记密码」这个功能不可用**——属于必须由你决定的产品取舍，不擅自改。
+- **可选修法（按代价从低到高）：**
+  1. **加第二因子**：重置时除姓名/学号外再要求该账号的**邀请码**（或任一未使用的邀请码）；
+  2. **改为一次性重置码**：用户申请后由部门负责人线下告知一个 6 位码，码有时效、一次性；
+  3. **改用真实邮箱**：目前登录邮箱是合成的 `学号@stuunion.org`（无真实收件箱），
+     改真实邮箱才能走 Supabase 自带的邮件重置。
+- **附带结论：** 无论如何，`reset_user_password` 都值得加一条审计记录（谁在什么时候重置了谁），
+  这样异常重置（例如一晚上重置 30 个账号）能被发现。
+
+### #14 读侧 RLS 收紧的前置改造（三处聚合 RPC）
+
+- **日期：** 2026-09-12（Phase 4 C2 记录，**下轮候选**）
+- **类型：** 安全增强 / 性能
+- **严重程度：** 低（现状不构成越权：这些数据本就是内部成员可读的）
+- **要做的事：** 把三处「为了算一个数而读全表」的前端查询改成数据库聚合函数，随后才能收紧读策略：
+  | 现状 | 改成 | 收益 |
+  |------|------|------|
+  | `profileService.fetchAllMembers` 里 `.in('assigned_to', 全员id)` 数每个人的任务 | `member_task_counts()` 返回 (user_id, total, overdue) | 通讯录少读上千行 + 可按部门收紧 `tasks` 的 SELECT |
+  | `ticketService.fetchTickets` 对每个活动做 `ticket_records` 的 head count | `ticket_remaining(p_ticket uuid)` | 剩余票数不再依赖「读得到全部票券行」 |
+  | `ticketService.fetchTicketRoster` 读某活动的全部持票人（含姓名+学号） | `ticket_roster(p_ticket uuid)` 内做组织者校验 | 学号姓名不再对全体登录用户可读 |
+- **顺带：** `users.contact_phone` / `contact_email` 的「按列可见」需要视图方案（见 #5 缺口 2）。
+
+### #15 无障碍：对比度问题的批量修复（serious 级，需你点头）
+
+- **日期：** 2026-09-12（Phase 4 C3 审计产出）
+- **类型：** 无障碍 / 视觉
+- **严重程度：** 中（读屏可用；但低视力用户在浅色主题下读小字吃力）
+- **现状：** `critical` 级已清零（8 个 antd Select 缺可访问名，已用 `aria-label` 修掉，
+  见 `tests/e2e/a11y.spec.ts` 门禁）；**`serious` 级尚有 5 页命中 color-contrast，共约 129 个节点**，
+  最集中在个人中心（81）、任务管理（16）、工作台（15）。
+- **根因：** `src/styles/variables.css` 的浅色主题令牌取值低于 WCAG AA 4.5:1：
+  `--text-secondary: #7f8c8d`（约 3.5:1）、`--text-tertiary: #95a5a6`（约 2.5:1）、
+  `--text-disabled: #bdc3c7`（约 1.8:1）。另有 antd 自身的 `ant-statistic-title` /
+  `ant-select-placeholder` / `ant-tag` / `ant-btn-dangerous` 配色。
+- **需要你决定：** 修它要动**全局次要文字颜色**（把上面三个令牌调深，例如
+  `#5f6b6d` / `#6b7477` / `#8b9295`），这会让全站「次要文字」都变深一点——
+  属于可见的视觉变更，按项目禁令不擅自改。
+- **不动的代价：** 只影响低视力/强光环境下的可读性，不影响功能；
+  报告随每轮自动生成在 `docs/a11y-audit.md`，可直接对着改。
 
 ### #1 antd `message` 静态方法主题警告
 

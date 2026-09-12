@@ -59,7 +59,16 @@ describe('dev-stub 兼容性探针', () => {
     const sid = `P${Date.now().toString().slice(-8)}`;
     const { signUp, signIn, checkStudentId, changePassword } = await import('@/modules/auth/authService');
     expect(await checkStudentId(sid)).toBe(false);
-    const reg = await signUp('测试志愿者', sid, 'TIYU_VOL', 'Passw0rd123', 'sports', 'volunteer');
+
+    // v4.6.0 起注册走 register_user：邀请码在**数据库侧**被复核「未撤销/未过期/还有余量」，
+    // 用种子里的固定码（如 TIUY_VOL）会与其他测试文件抢同一张码而随机失败，故现造一张。
+    const code = `PROBE_${Date.now().toString(36)}`;
+    await supabase.from('invite_codes').insert({
+      code, department: 'sports', role: 'volunteer',
+      max_uses: 5, used_count: 0, is_used: false, revoked_at: null,
+    });
+
+    const reg = await signUp('测试志愿者', sid, code, 'Passw0rd123', 'sports', 'volunteer');
     expect(reg.error).toBeNull();
     expect(reg.user).not.toBeNull();
     expect(await checkStudentId(sid)).toBe(true);

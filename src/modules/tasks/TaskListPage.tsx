@@ -213,6 +213,7 @@ export default function TaskListPage() {
             </Col>
             <Col xs={12} md={6}>
               <Select
+                aria-label="按优先级筛选"
                 value={priorityFilter}
                 onChange={setPriorityFilter}
                 style={{ width: '100%' }}
@@ -225,6 +226,7 @@ export default function TaskListPage() {
             {hasMinRole(user.role, 'president') && (
               <Col xs={12} md={6}>
                 <Select
+                  aria-label="按部门筛选"
                   value={deptFilter}
                   onChange={setDeptFilter}
                   style={{ width: '100%' }}

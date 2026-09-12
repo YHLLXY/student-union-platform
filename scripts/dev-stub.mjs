@@ -218,7 +218,7 @@ const TABLE_DEFAULTS = {
   task_submissions: { status: 'submitted' },
   task_milestones: { status: 'pending', sort_order: 0 },
   // 第十九部分：注册流程新建的用户 onboarded = false（真实库的列默认值）→ 新人引导会弹出来
-  users: { role: 'volunteer', department: '', onboarded: false, contact_phone: null, contact_email: null },
+  users: { role: 'volunteer', department: '', onboarded: false, contact_phone: null, contact_email: null, avatar_url: null },
   invite_codes: { used_count: 0, used_by: null, max_uses: 1, is_used: false, batch_id: null },
   // 第十八部分：签到的两列默认 NULL（真实库由 ALTER TABLE ADD COLUMN 得到，无默认值）
   ticket_records: { checked_in_at: null, checked_by: null },
@@ -459,6 +459,46 @@ const server = http.createServer(async (req, res) => {
     }
     if (fn === 'reset_user_password') return send(res, 200, true);
 
+    // ---- 第二十部分（v4.6.0）：注册的唯一入口 ----
+    // 真实实现把「邀请码行锁 → 复核撤销/过期/用尽 → 由邀请码推导角色部门 → 建号 → 核销」
+    // 放在同一事务里。stub 保证**分支与报文形态**一致：四种失败原因各一条，
+    // 成功时回传**落库后的整行**（沿用 TABLE_DEFAULTS —— 否则 users.onboarded 之类的
+    // 默认列会变成 undefined，新人引导又不弹了，v4.5.0 已经踩过这个坑）。
+    if (fn === 'register_user') {
+      const body = await readBody(req);
+      const ic = db.invite_codes.find((c) => c.code === String(body?.p_invite_code ?? ''));
+      if (!ic) return send(res, 200, { ok: false, error: '邀请码无效' });
+      if (ic.revoked_at) return send(res, 200, { ok: false, error: '邀请码已被撤销，请联系部门负责人' });
+      if (ic.expires_at && new Date(ic.expires_at) < new Date()) {
+        return send(res, 200, { ok: false, error: '邀请码已过期，请联系部门负责人' });
+      }
+      const used = ic.used_count ?? (ic.is_used ? 1 : 0);
+      const max = ic.max_uses ?? 1;
+      if (used >= max) return send(res, 200, { ok: false, error: '邀请码已用完，请联系部门负责人' });
+      if (db.users.some((u) => u.student_id === body?.p_student_id)) {
+        return send(res, 200, { ok: false, error: '该学号已注册，请直接登录' });
+      }
+
+      const role = ic.role;                       // 角色由邀请码决定，不由请求体
+      const row = {
+        id: uid(++seq),
+        created_at: new Date().toISOString(),
+        ...TABLE_DEFAULTS.users,
+        auth_id: body?.p_auth_id ?? null,
+        name: body?.p_name ?? '',
+        student_id: body?.p_student_id ?? '',
+        department: role === 'teacher' ? '' : (ic.department ?? ''),
+        role,
+      };
+      db.users.push(row);
+
+      ic.used_count = used + 1;
+      ic.is_used = used + 1 >= max;
+      ic.used_by = row.id;
+
+      return send(res, 200, { ok: true, user: row });
+    }
+
     // ---- 票务闭环（第十八部分）：令牌签发与扫码签到 ----
     // 真实实现是「库内随机密钥 + md5 MAC + 15 分钟有效期」，stub 只保证**形状与分支一致**：
     // 令牌 4 段、能过期、已签到幂等、时间窗外拒绝——E2E 依赖的是这些分支，而不是签名强度。
@@ -571,12 +611,19 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       if (req.method === 'POST') {
         const created = Array.isArray(body) ? body : [body];
+        const prefer = String(req.headers.prefer || '');
+        // `resolution=merge-duplicates` = PostgREST 的 upsert（按主键冲突则覆盖）。
+        // scripts/restore-backup.mjs 依赖这个语义做「幂等恢复」：同一份备份重放多次
+        // 不该产生重复行。没有这条，恢复脚本的幂等性就只能靠嘴说。
+        const merge = prefer.includes('merge-duplicates');
+        const pkCols = COMPOSITE_PK[table] || ['id'];
 
         // 复合主键表（第十九部分）：同一 (post_id, user_id) 只能有一行。
         // 真实库插入重复点赞会整条语句失败并返回 409 / code 23505 —— 前端依赖这个语义
         // 把「重复点赞」当成功处理，所以这里必须同构地拒绝（而不是静默多插一行）。
+        // upsert（merge-duplicates）除外：那种写法在真实库里是「冲突则覆盖」，不报错。
         const pk = COMPOSITE_PK[table];
-        if (pk) {
+        if (pk && !merge) {
           const seen = rows.map((r) => pk.map((c) => r[c]).join('\u0000'));
           for (const item of created) {
             const key = pk.map((c) => item[c]).join('\u0000');
@@ -594,13 +641,22 @@ const server = http.createServer(async (req, res) => {
         }
 
         const pushed = [];
+
         for (const item of created) {
+          if (merge) {
+            const key = (r) => pkCols.map((c) => r[c]).join('\u0000');
+            const hit = rows.find((r) => Object.prototype.hasOwnProperty.call(item, pkCols[0]) && key(r) === key(item));
+            if (hit) {
+              Object.assign(hit, item);
+              pushed.push(hit);
+              continue;
+            }
+          }
           const row = { id: uid(++seq), created_at: new Date().toISOString(), ...TABLE_DEFAULTS[table], ...item };
           rows.push(row);
           pushed.push(row);
           applyStubTriggers(table, 'insert', row);
         }
-        const prefer = String(req.headers.prefer || '');
         if (prefer.includes('representation')) {
           // 回传**落库后的整行**（含补上的列默认值），与 PostgREST 一致。
           // 曾经回传的是「请求体 + id/created_at」，于是 DEFAULT 出来的列在响应里根本不存在

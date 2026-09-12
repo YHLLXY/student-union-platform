@@ -262,11 +262,12 @@ for (const s of orderIssues) console.log(`  [顺序] ${s}`);
 
 // ---- 关卡 ②：语法解析（只解析解析器真正支持的语句类型）----
 // pgsql-ast-parser 覆盖的是查询与部分 DDL；SECURITY DEFINER / SET search_path / GRANT /
-// REVOKE / CREATE POLICY / CREATE TRIGGER / ENABLE ROW LEVEL SECURITY / ANALYZE / DO 一律不认。
+// REVOKE / CREATE POLICY / CREATE TRIGGER / ENABLE ROW LEVEL SECURITY / ANALYZE / DO 一律不认，
+// COMMENT ON FUNCTION 也不认（只认 COMMENT ON TABLE / COLUMN）。
 // 这些恰好是本项目脚本里 Postgres 专有、且语法固定不易写错的部分，故按白名单跳过，
 // 只对「查询与建表建索引」这类最容易手滑的语句做真解析。
 const SUPPORTED =
-  /^(SELECT|WITH|INSERT|UPDATE|DELETE\b|CREATE TABLE|CREATE (UNIQUE )?INDEX|COMMENT ON)/i;
+  /^(SELECT|WITH|INSERT|UPDATE|DELETE\b|CREATE TABLE|CREATE (UNIQUE )?INDEX|COMMENT ON (TABLE|COLUMN))\b/i;
 const ALTER_ADD_COLUMN = /^ALTER TABLE[\s\S]*\bADD COLUMN\b/i;
 
 let parseFailed = 0;

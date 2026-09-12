@@ -171,6 +171,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
         <h4 style={{ margin: 0 }}>邀请码管理</h4>
         <div style={{ display: 'flex', gap: 8 }}>
           <Select
+            aria-label="邀请码所属部门"
             value={genDept}
             onChange={setGenDept}
             options={deptOptions}
@@ -179,6 +180,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
             disabled={isDeptHead}
           />
           <Select
+            aria-label="邀请码对应角色"
             value={genRole}
             onChange={setGenRole}
             options={isDeptHead ? [{ value: 'volunteer', label: '常驻志愿者' }] : roleOptions}
@@ -197,6 +199,7 @@ export default function InviteCodeManage({ userRole, userDept }: InviteCodeManag
             title="可使用次数"
           />
           <Select
+            aria-label="邀请码有效期"
             value={genExpiresDays}
             onChange={setGenExpiresDays}
             size="small"
