@@ -104,6 +104,24 @@
   border-top: 1px solid var(--border-default);
 }
 
+/* ---- 帖子正文（Markdown 渲染产物）----
+   正文是用户生成内容：长链接、无空格英文串、代码块长行都会撑破手机屏。
+   overflow-wrap:anywhere 让普通文本可断行；pre/table 保留横向滚动（内容形态不该被破坏）。 */
+.markdownBody {
+  overflow-wrap: anywhere;
+}
+
+.markdownBody pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.markdownBody table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .actionBtn {
   display: inline-flex;
   align-items: center;

@@ -187,6 +187,7 @@
   line-height: 1.7;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ===== 我的签到码（v4.4.0） ===== */

@@ -76,10 +76,15 @@ export default function WorkOverview() {
       <Card
         size="small"
         style={{ marginBottom: 16 }}
+        className={styles.rankingCard}
         title={
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <TrophyOutlined style={{ color: token.colorWarning }} />
-            本学期积分排行
+          /* 文字保持整体（nowrap），学期 Tag 是可折行的兄弟节点——
+             小屏放不下时 Tag 整体落到第二行，而不是把「本学期积分排行」逐字拆断 */
+          <span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+              <TrophyOutlined style={{ color: token.colorWarning }} />
+              本学期积分排行
+            </span>
             <Tag color="blue">{formatSemester(semester)}</Tag>
           </span>
         }
@@ -124,6 +129,7 @@ export default function WorkOverview() {
             rowKey="user_id"
             size="small"
             pagination={{ pageSize: 10, size: 'small', hideOnSinglePage: true }}
+            scroll={{ x: 'max-content' }}
             columns={[
               {
                 title: '排名', dataIndex: 'rank', width: 70,

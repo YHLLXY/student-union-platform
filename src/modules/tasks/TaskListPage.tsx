@@ -169,7 +169,7 @@ export default function TaskListPage() {
           任务管理
           {memberFilter && <span style={{ fontSize: 14, fontWeight: 400, color: token.colorTextSecondary, marginLeft: 8 }}>（已筛选成员）</span>}
         </h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <Segmented
             options={[
               { label: '列表', value: 'list' },

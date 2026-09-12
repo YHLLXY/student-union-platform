@@ -106,6 +106,7 @@ export async function fillIdentity(
 export async function loginAs(
   page: Page,
   user: { name: string; studentId: string; password: string },
+  opts?: { mobile?: boolean },
 ): Promise<void> {
   await page.goto('/');
   await page.getByPlaceholder('姓名').fill(user.name);
@@ -117,7 +118,11 @@ export async function loginAs(
   await page.getByPlaceholder('输入密码').fill(user.password);
   await btn(page, '登录').click();
   await expect(page).toHaveURL(/#\/dashboard/);
-  await expect(page.getByRole('menuitem', { name: '任务管理' })).toBeVisible();
+  // 侧边栏菜单只在桌面（md≥768）渲染；移动端它是收起的 Drawer，菜单项不在 DOM。
+  // 移动模式下改由调用方断言页面级锚点（如工作台的「最近动态」）确认就绪。
+  if (!opts?.mobile) {
+    await expect(page.getByRole('menuitem', { name: '任务管理' })).toBeVisible();
+  }
 }
 
 /** 退出登录（顶部用户下拉 → 退出登录，会整页 reload 回登录页） */

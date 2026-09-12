@@ -134,6 +134,7 @@ export default function TicketDetailDrawer({
         rowKey="id"
         size="small"
         pagination={{ pageSize: 10, size: 'small', hideOnSinglePage: true }}
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: '姓名', dataIndex: 'name' },
           { title: '学号', dataIndex: 'student_id' },

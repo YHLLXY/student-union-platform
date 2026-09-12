@@ -180,7 +180,7 @@ export default function PostDetail({ postId, onClose, onDeleted, onChanged }: Po
         {post.updated_at !== post.created_at && ` (已编辑)`}
       </div>
 
-      <div style={{ padding: '16px 0', borderTop: `1px solid ${token.colorBorderSecondary}`, lineHeight: 1.8 }}>
+      <div className={styles.markdownBody} style={{ padding: '16px 0', borderTop: `1px solid ${token.colorBorderSecondary}`, lineHeight: 1.8 }}>
         {post.template_type && post.template_data ? (
           <Descriptions bordered size="small" column={1}>
             {Object.entries(post.template_data).map(([key, val]) => {

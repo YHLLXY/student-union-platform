@@ -183,6 +183,7 @@ export default function AnalyticsDashboard() {
           rowKey={(_, i) => String(i)}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: '暂无错误记录' }}
         />
       </Card>

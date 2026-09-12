@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Statistic, Descriptions, Button, Modal, message, theme, Space, Avatar } from 'antd';
+import { Card, Statistic, Descriptions, Button, Modal, message, theme, Space, Avatar, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
@@ -23,6 +23,7 @@ import styles from './profile.module.css';
 export default function ProfilePage() {
   const { token } = theme.useToken();
   const user = useAuth();
+  const { md } = Grid.useBreakpoint();
   const [showPassword, setShowPassword] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -129,7 +130,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        <Descriptions column={2} bordered size="small">
+        <Descriptions column={md ? 2 : 1} bordered size="small">
           <Descriptions.Item label="姓名">{user.name}</Descriptions.Item>
           <Descriptions.Item label="学号">{user.student_id}</Descriptions.Item>
           <Descriptions.Item label="部门">{getDepartmentLabel(user.department)}</Descriptions.Item>

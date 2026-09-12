@@ -571,6 +571,18 @@
   margin-bottom: 16px;
 }
 
+/* 小屏卡头折行：「我的积分 + 学期 Tag」与「明细」按钮一行放不下时 Tag 会被挤截断，
+   与 admin 模块积分排行卡头同一修法（antd v6 无 -head-wrapper 语义钩子）。
+   注意 antd 给 -head-title 自带 nowrap+ellipsis，必须一并放开，否则标题内部照样被省略号截断 */
+.pointsCard :global(.ant-card-head-wrapper) {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.pointsCard :global(.ant-card-head-title) {
+  white-space: normal;
+}
+
 .pointsSummary {
   display: flex;
   align-items: center;

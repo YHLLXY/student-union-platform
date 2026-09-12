@@ -194,7 +194,7 @@ export default function TaskDetail({ task, user, onUpdate, onClose }: TaskDetail
         </Descriptions.Item>
         {task.handover_note && (
           <Descriptions.Item label="交接备注" span={2}>
-            <div style={{ whiteSpace: 'pre-wrap', background: token.colorWarningBg, padding: 8, borderRadius: 4 }}>
+            <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', background: token.colorWarningBg, padding: 8, borderRadius: 4 }}>
               {task.handover_note}
             </div>
           </Descriptions.Item>

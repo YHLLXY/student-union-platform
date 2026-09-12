@@ -46,9 +46,13 @@ export default function PointsPanel() {
     <Card
       className={styles.pointsCard}
       title={
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <TrophyOutlined style={{ color: token.colorWarning }} />
-          我的积分
+        /* 文字保持整体（nowrap），学期 Tag 是可折行的兄弟节点——
+           小屏放不下时整组「我的积分」落到第二行，而不是把文字逐字拆断 */
+        <span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+            <TrophyOutlined style={{ color: token.colorWarning }} />
+            我的积分
+          </span>
           {points && <Tag color="blue">{formatSemester(points.semester)}</Tag>}
         </span>
       }

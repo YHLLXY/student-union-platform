@@ -133,6 +133,9 @@
   width: 400px;
   max-width: 100%;
   padding: 36px 36px 24px;
+  /* 本项目自定义样式没有全局 box-sizing 重置（antd 组件自带，普通 div 默认 content-box），
+     不补这条的话 400px + padding + border 会超出 max-width:100% 的语义，375px 屏溢出 10px */
+  box-sizing: border-box;
   background: var(--bg-card);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-default);
