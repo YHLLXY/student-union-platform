@@ -112,6 +112,19 @@
 - **修改位置：** 15 个文件，涉及 admin/tasks/forum/school/profile 五个模块
 - **Commits:** `54169010` + `d5b92a03` + `0462b3b9`
 
+**第二轮（2026-09-12，v4.6.1）—— 残留漏网点收口：**
+
+- **现象：** 第一轮修的是「配置类」漏网（Table/Modal/断点），本轮基线发现真正的残留是三类「内容与行级」问题。375px 视口基线实测 5 个页面溢出：任务管理 446px、权限管理（邀请码行）698px、个人中心 411px、论坛长串帖子详情（弹窗内）917px、登录页 380px——其中**登录页是首轮完全未记录过的**（根因见下）。
+- **根因（5 类）：**
+  1. 页头控件行不换行：TaskListPage 按钮行（446px）、InviteCodeManage 筛选行（620px）、WorkOverview/PointsPanel 的 Card 头（antd `-head-title` 自带 nowrap+ellipsis，标题被截断而非溢出，门禁量不到但肉眼可见）
+  2. 表格漏 `scroll.x`（3 处）：WorkOverview 积分排行、TicketDetailDrawer 签到名单、AnalyticsDashboard 最近错误
+  3. 用户生成内容无断词：论坛 Markdown 正文（长 URL/无空格串/代码块 100% 撑破）、公告/校通知/活动说明 pre-wrap 容器、TaskDetail 交接备注——全库此前仅 guide.module.css 一处有 `overflow-wrap`
+  4. ProfilePage `Descriptions column={2}` 未按断点降列（首轮只修了 TaskDetail）
+  5. **登录页溢出 10px 的隐藏根因：本项目自定义 CSS 没有全局 `box-sizing: border-box` 重置**（antd 组件自带、普通 div 默认 content-box），`.loginCard` 的 `max-width:100%` 之后 padding+border 又叠加在外面
+- **修复：** 页头/控件行 `flexWrap:'wrap'`（3 处）+ 两张积分卡头折行（`:global(.ant-card-head-wrapper/-head-title)`）；3 表补 `scroll.x`；正文容器补 `overflow-wrap:anywhere`（forum/notices/school/tickets/TaskDetail，代码块与表格保留内部横滚）；`column={md?2:1}`；`.loginCard` 补 `box-sizing:border-box`。**全部零 DDL、零 Service、零路由、零新依赖。**
+- **防回归：** 新增 `tests/e2e/mobile-overflow.spec.ts` 门禁——375px 视口遍历 8 高频页 + 长串样例帖详情，断言 document/contentArea/弹窗遮罩三层 `scrollWidth <= clientWidth+1`，已进 CI test job；每次运行生成 `docs/mobile-overflow-report.md`。首轮基线 5 页溢出 → 本轮全绿。
+- **Commits:** 代码 `15f0c236e` + 文档（本条）
+
 ### #3 老用户登录被邀请码校验拦截
 
 - **日期：** 2026-07-02
@@ -273,6 +286,21 @@
 - **现象：** 控制台输出 `[antd: message] Static function can not consume context like dynamic theme. Please use 'App' component instead.`
 - **原因：** `message.success()` / `message.error()` 等静态方法无法访问 React Context
 - **修复方案：** 引入 `<App>` 包裹根组件 + `App.useApp()` 获取 message 实例。改动面大，当前无动态主题需求，暂不处理
+
+### #18 年度热力图：月份标签与格子是两个独立滚动容器，横滑会错位
+
+- **日期：** 2026-09-12（v4.6.1 移动端排查中发现，属体验问题而非溢出，故本轮不修）
+- **严重程度：** 低（功能可用，仅横滑时月份对不上格子）
+- **现象/原因：** `TaskCalendar.tsx` 的月份标签行与格子行各自套了 `overflow-x:auto`（`profile.module.css` 两处），滑一条另一条不动。
+- **修法建议：** 把两行放进同一个滚动容器（或 onScroll 互相同步）。改动集中在 profile 模块，动前先跑 375px 门禁与热力图相关 E2E。
+
+### #19 自定义 CSS 无全局 `box-sizing: border-box` 重置（v4.6.1 登录页溢出的隐藏根因）
+
+- **日期：** 2026-09-12
+- **严重程度：** 中（潜伏类：每个自定义固定宽度 + padding 的元素都是潜在溢出点）
+- **背景：** antd 组件自带 border-box 重置，但项目自定义样式（`.module.css` 里的普通 div）默认 content-box——`.loginCard` 的 `max-width:100%` 之后 padding+border 叠加在外面，375px 屏溢出 10px（v4.6.1 已对该元素点状补 `box-sizing`）。
+- **为什么不本轮全局重置：** `*,::before,::after{box-sizing:border-box}` 会改变全部既有自定义盒子的尺寸语义，桌面端可能出现肉眼可见的布局位移，与「不破坏现有布局」红线冲突。
+- **建议做法：** 下轮专项：全局加重置 → 桌面 1280/平板 768/手机 375 三档截图对比 → 逐处修正位移；有 mobile-overflow 门禁兜底，回归风险可控。
 
 ---
 
