@@ -223,6 +223,8 @@ module/
 
 **需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有五份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-phase3-v4.5.0.sql`（第十九部分，含新表/新列/触发器/策略）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
 
+**交付时把「交付核对」一并给用户**：`check-sql.mjs` 结尾会打印行数 / 首行 / 末行，粘贴进 SQL Editor 后核对这两项即可确认没粘漏。2026-09-12 出现过 `42601 syntax error at end of input` + `LINE 0:`（空行）——那是「到达服务器的 SQL 只剩注释或空白」的签名；**而截断落在语句边界上时不会报错**，只会安静地少跑一段，比报错危险，所以这项核对不能省。
+
 ### 数据导出
 
 `src/utils/export.ts` 是全站唯一的导出通道（CSV + UTF-8 BOM + 公式注入防护）。

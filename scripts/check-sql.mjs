@@ -358,5 +358,19 @@ if (parser) {
 }
 
 const bad = structural.length + orderIssues.length + idempotency.length + parseFailed;
+
+// ---- 交付核对信息 ----
+// 由来（2026-09-12）：用户粘贴执行时报 `42601 syntax error at end of input / LINE 0:`——
+// 那是「到达服务器的 SQL 只剩注释或空白」的签名（若只是被截断在不完整语句上，行号会指向截断处而不是 0）。
+// 手工整份粘贴本身就可能出问题：选不全会截断，而**截断在语句边界上时不会报错**，
+// 只会安静地少跑一段——比报错更危险。所以每次交付都把行数/首末行打出来，让用户能一眼核对。
+const allLines = src.split('\n');
+const lineCount = src.endsWith('\n') ? allLines.length - 1 : allLines.length;
+const lastNonEmpty = [...allLines].reverse().find((l) => l.trim() !== '') ?? '';
+console.log('交付核对（粘贴进 Supabase SQL Editor 后核对行数与末行；截断可能只跑一部分而不报错）：');
+console.log(`  行数 ${lineCount} · 字节 ${Buffer.byteLength(src)}`);
+console.log(`  首行 ${allLines[0].slice(0, 64)}`);
+console.log(`  末行 ${lastNonEmpty.slice(0, 64)}`);
+
 console.log(`\n结论：${bad === 0 ? '未发现语法问题' : `${bad} 项待处理`}`);
 process.exit(bad ? 1 : 0);
