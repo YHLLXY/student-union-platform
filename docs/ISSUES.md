@@ -132,6 +132,28 @@
 
 ## 待处理
 
+### #17 正式库缺第十九部分（Phase 3 数据层）—— 论坛/资料/引导在线上是坏的（需你执行一次 SQL）
+
+- **日期：** 2026-09-12（Phase 4 验收表暴露，`npm run probe:db` 确认）
+- **类型：** 部署遗漏 / 数据层
+- **严重程度：** **高**（不是潜在风险，是正在发生的功能故障）
+- **现象：** 线上 `forum_likes` / `forum_bookmarks` 两张表不存在，`forum_posts.pinned_at / reply_count /
+  like_count`、`users.onboarded / contact_phone / contact_email` 六个列也不存在。于是：
+  | 页面 | 表现 | 原因 |
+  |------|------|------|
+  | 部门论坛 | 「帖子加载失败」（列表整条查询被拒） | 列表按 `pinned_at` 排序，该列不存在 → PostgREST `42703` |
+  | 帖子点赞 / 收藏 | 点下去报错、计数不动 | 表不存在（`PGRST205`） |
+  | 个人中心 → 编辑资料 | 保存失败 | 更新体固定带 `contact_phone / contact_email` |
+  | 新人引导 | 走完落库失败、下次登录可能再弹 | `onboarded` 列不存在 |
+- **根因：** 第十九部分的脚本（`supabase-phase3-v4.5.0.sql`）交付时标为「待用户执行」，之后一直没执行，
+  而**当时没有任何机器可查的证据**能发现这一点。同期的第十八部分（Phase 2）、第二十部分（Phase 4）都已正确落地。
+- **修复：** 在项目 `bbyykrgitgawqwdgcxhp` 执行 `supabase-phase3-v4.5.0.sql`（幂等，可整份重跑；它只建新表新列，
+  不触碰第二十部分收口的任何策略，**先后顺序无影响**），然后用 `npm run probe:db` 复验应全 `[OK]`，
+  再跑 `supabase-verify-v4.6.0.sql`（它会额外核对策略与触发器）。
+- **已做的防复发：** 新增只读自检 `scripts/probe-schema.mjs`（`npm run probe:db`）；
+  `supabase-verify-v4.6.0.sql` 增加 1.1b 前置对象核对、并在对象缺失时让第二段整体 `[跳过]`；
+  探测撞到 `42P01/42703` 不再算作「被拒绝」；第二十部分验收表把「表不存在」与「策略缺失」分开报。
+
 ### #12 antd `List` 组件弃用警告
 
 - **日期：** 2026-09-12（v4.5.0 E2E 控制台实测发现）

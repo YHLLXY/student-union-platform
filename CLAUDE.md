@@ -199,6 +199,11 @@ module/
 
 **DDL 脚本必须自带「反馈」**：建索引/建触发器成功时 SQL Editor 只显示 `Success. No rows returned`，用户会以为没生效。故每个一次性脚本**结尾都要留一条只读的验收查询**（`WITH expected AS (SELECT * FROM (VALUES …) AS e(…)) SELECT … '[OK]'/'[缺失]' …`），把「建了什么、成没成」直接打成表。
 
+**「待用户执行」的脚本必须配一个机器可查的「就位证据」（2026-09-12 踩过，代价最大的一次）**：第十九部分（Phase 3 数据层）交付时只写了「待你在 Supabase 执行」，之后没人回头核对；前端照常发版，于是线上论坛页连着几天都是「帖子加载失败」、个人资料保存报错、新人引导落库失败——直到 Phase 4 的验收表打出 `forum_likes / forum_bookmarks` 两行 `[缺失] 只有 0 条` 才暴露，而那张表当时**读起来像「策略被人删了」**。两条经验：
+
+- **不要靠回忆或截图判断脚本是否执行过**，用两道自检：库外 `npm run probe:db`（只读、anon key、按批次列出缺失的表与列，见下）；库内 `supabase-verify-v4.6.0.sql` 的 1.1b（连策略/触发器一起点）。**每次发版后跑一次 `probe:db`，全 `[OK]` 才算这轮数据层真的上线了。**
+- **验收表要把「表不存在」与「策略缺失」分开报**：两者的排查方向完全不同（前者去执行脚本，后者去查谁删了策略）。`[缺失] 只有 0 条` 这种把两种原因混在一句话里的输出，会把人引向错误方向。
+
 **先加列，再挂约束 / 触发器 / 索引（2026-09-11 踩过）**：`CREATE TRIGGER … AFTER UPDATE OF <列>` 与 `CREATE INDEX … (<新列>)` 会在**创建对象那一刻**就校验列是否存在，把「加列」排在它们之后，整份脚本会在半途炸掉：`42703 column "checked_in_at" of relation "ticket_records" does not exist`。新列一律提到脚本最前面加。`scripts/check-sql.mjs` 已加这条顺序检查（引用早于 `ADD COLUMN` 即报错）。
 
 **脚本工具（别再手抄 SQL，两份内容必须逐字一致）：**
@@ -208,6 +213,10 @@ module/
 - 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
 - `node scripts/backup-supabase.mjs [输出目录]` —— 全库导出（需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` 两个环境变量，**service_role key 绝不进仓库**）；
 - `node scripts/restore-backup.mjs <备份目录> [--yes]` —— 恢复（不带 `--yes` 只校验不写入）。两者用法与边界见 `docs/backup-restore.md`。
+- `npm run probe:db`（= `node scripts/probe-schema.mjs`）—— **数据层就位自检**：只用 `.env` 里的 anon key 做只读探测（`limit=0`，不取任何行），按批次回答「这份脚本到底执行了没有」。
+  判据是 PostgREST 的响应顺序：表不存在 = 404/`PGRST205`、列不存在 = 400/`42703`、就位但 anon 已被收权 = 401/`42501`。
+  **列探测之所以能在「anon 读不到的表」上生效，是因为解析先于鉴权**（这一点是它能只用 anon key 干活的根据）。
+  开头有一张不存在的表作对照，避免 key/URL 错误时把所有 401 误读成「已就位」。它是运维检查、会打到 `.env` 指向的真实项目，故不进 CI、不当测试用。
 - `npx playwright test tests/e2e/a11y.spec.ts` —— 无障碍扫描（同时是 critical 门禁），跑完刷新 `docs/a11y-audit.md`。
 
 **需要用户一次性粘贴执行的大段脚本**（安全收口、性能优化、阶段迁移这类），另存为独立文件放在仓库根，命名 `<用途>-<版本>.sql`，与 `supabase-migration.sql` 里对应部分内容一致——现有五份：`supabase-security-fix-step1/2.sql`（第十六部分）、`supabase-optimize-v4.3.0.sql`（第十七部分）、`supabase-phase2-v4.4.0.sql`（第十八部分，含新表/新列/新函数）、`supabase-phase3-v4.5.0.sql`（第十九部分，含新表/新列/触发器/策略）、`supabase-verify-v4.3.0.sql`（第十七部分的只读验收）。
@@ -357,7 +366,14 @@ git push origin master
 
 **学期键：** 形如 `2026-2027-1`（9 月~次年 1 月为第 1 学期）。数据库侧是 `public.semester_of()`，前端侧是 `src/utils/semester.ts` 的 `currentSemester()`——**两边必须同口径**，改一处要改两处。
 
-**Phase 3 数据层（v4.5.0，第十九部分）：** 执行脚本 `supabase-phase3-v4.5.0.sql`（**需用户在 Supabase 执行**）。四点设计意图，改动前务必先读：
+**Phase 3 数据层（v4.5.0，第十九部分）：** 执行脚本 `supabase-phase3-v4.5.0.sql`（**需用户在 Supabase 执行**）。
+
+> ⚠️ **状态：截至 2026-09-12 仍未在正式库执行**（用 `npm run probe:db` 实测：`forum_likes` / `forum_bookmarks`
+> 两张表与 6 个新列都不存在，而同期的第十八、二十部分都在）。后果是线上「帖子加载失败 / 资料保存报错 /
+> 新人引导落库失败」。**补执行它不改变任何权限语义**（它只建新表新列，不碰第二十部分收口的那些策略），
+> 执行完请用 `npm run probe:db` 复验。
+
+四点设计意图，改动前务必先读：
 
 1. **帖子列表不再 N+1**。`forum_posts` 新增 `reply_count` / `like_count` 两个**计数列**，由 `trg_forum_replies_count` / `trg_forum_likes_count` 触发器维护；回填语句在同一个脚本里。列表因此只需一条查询（`select('*, author:created_by(name)')`），原先「每个帖子各发一条 `head: true` 的 count」已删除。**这两个计数列是只读的**——客户端写它既没用也没意义。
 2. **`forum_likes` / `forum_bookmarks` 是全库第一对按行 RLS 的表**（Phase 4 C2 的先行试点）：复合主键 `(post_id, user_id)` 保证一人一帖一行；SELECT 放行全体登录用户，INSERT / DELETE 一律要求 `user_id = current_app_user_id()`，**有意不建 UPDATE 策略**（点赞行没有可改字段）。前端的 `toggleLike` 把 23505 当成功处理，双击/重试都不会报错。

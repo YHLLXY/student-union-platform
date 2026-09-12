@@ -22,6 +22,13 @@
 -- 角色冒充手法：`SET ROLE authenticated` + 注入 `request.jwt.claims` 的 sub。
 --   Postgres 只禁止在 SECURITY DEFINER 函数里切换角色，DO 块是 invoker，故可用；
 --   若本会话确实无权切换，第二段会打印一行 [跳过] 并说明，不会让脚本整体失败。
+--
+-- ⚠️ 前置条件（2026-09-12 补齐）：第十八/十九部分的对象必须**已经存在**。
+--   实测踩过：第十九部分（Phase 3 数据层）标注「待用户执行」后一直没跑，
+--   而第二十部分的验收表只会打出两行 `[缺失] 只有 0 条`，看不出「整个批次没执行」。
+--   现在 1.1b 会把缺失的批次对象直接点出来，第二段也会因此整体 [跳过] 而不是给出假结论。
+--   另：探测语句撞到「表/列不存在」（42P01/42703）时**不再算「被拒绝」**——
+--   环境没就位不该长得像权限生效。
 
 -- ---- 0. 本次自证用的临时表（只在本会话可见，断开即消失）----
 DROP TABLE IF EXISTS pg_temp._rls_verify;
@@ -80,7 +87,9 @@ BEGIN
       ('usage_events',      ARRAY['usage_events_select_admin','usage_events_insert_self']),
       ('notifications',     ARRAY['notifications_select_own','notifications_update_own','notifications_insert_authenticated']),
       ('notice_reads',      ARRAY['notice_reads_select_dept_or_self','notice_reads_insert_self','notice_reads_update_self']),
-      ('platform_guides',   ARRAY['platform_guides_insert_seed_or_head','platform_guides_update_head','platform_guides_delete_head'])
+      ('platform_guides',   ARRAY['platform_guides_insert_seed_or_head','platform_guides_update_head','platform_guides_delete_head']),
+      ('forum_likes',       ARRAY['forum_likes_read_all','forum_likes_insert_own','forum_likes_delete_own']),
+      ('forum_bookmarks',   ARRAY['forum_bookmarks_read_all','forum_bookmarks_insert_own','forum_bookmarks_delete_own'])
     ) AS x(tbl, names)
   LOOP
     SELECT string_agg(n, ', ' ORDER BY n) INTO v_missing
@@ -102,6 +111,62 @@ BEGIN
     );
   END LOOP;
 
+  -- 1.1b 前置批次的对象（表 / 列 / 触发器）是否就位
+  -- 教训（2026-09-12 实测）：第十九部分没执行时，1.1 只会在 forum_likes / forum_bookmarks
+  -- 两行报「策略缺失」，读起来像「策略被人删了」，真相是「那两张表根本不存在」——整批脚本没跑。
+  -- 这里把「哪个批次缺了什么」单独点出来，并直接给出该执行哪份脚本。
+  --（更省事的办法：仓库根的 `npm run probe:db` 用 anon key 从库外只读探测同一件事。）
+  SELECT string_agg(v.part || ' ' || v.item, '、' ORDER BY v.item) INTO v_missing
+  FROM (VALUES
+    ('第十八部分', '表 points_ledger',
+      to_regclass('public.points_ledger') IS NOT NULL),
+    ('第十八部分', '列 ticket_records.checked_in_at',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'ticket_records' AND column_name = 'checked_in_at')),
+    ('第十八部分', '列 ticket_records.checked_by',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'ticket_records' AND column_name = 'checked_by')),
+    ('第十八部分', '列 invite_codes.batch_id',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'invite_codes' AND column_name = 'batch_id')),
+    ('第十九部分', '表 forum_likes',
+      to_regclass('public.forum_likes') IS NOT NULL),
+    ('第十九部分', '表 forum_bookmarks',
+      to_regclass('public.forum_bookmarks') IS NOT NULL),
+    ('第十九部分', '列 forum_posts.pinned_at',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'forum_posts' AND column_name = 'pinned_at')),
+    ('第十九部分', '列 forum_posts.reply_count',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'forum_posts' AND column_name = 'reply_count')),
+    ('第十九部分', '列 forum_posts.like_count',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'forum_posts' AND column_name = 'like_count')),
+    ('第十九部分', '列 users.onboarded',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'onboarded')),
+    ('第十九部分', '列 users.contact_phone',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'contact_phone')),
+    ('第十九部分', '列 users.contact_email',
+      EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'contact_email')),
+    ('第十九部分', '触发器 trg_forum_likes_count',
+      EXISTS (SELECT 1 FROM pg_trigger WHERE NOT tgisinternal AND tgname = 'trg_forum_likes_count')),
+    ('第十九部分', '触发器 trg_forum_replies_count',
+      EXISTS (SELECT 1 FROM pg_trigger WHERE NOT tgisinternal AND tgname = 'trg_forum_replies_count')),
+    ('第十九部分', '触发器 trg_forum_posts_pin_guard',
+      EXISTS (SELECT 1 FROM pg_trigger WHERE NOT tgisinternal AND tgname = 'trg_forum_posts_pin_guard'))
+  ) AS v(part, item, present)
+  WHERE NOT v.present;
+
+  INSERT INTO _rls_verify VALUES (
+    '一、结构', 112, '前置批次对象（表/列/触发器）', '全部就位',
+    CASE WHEN v_missing IS NULL THEN '[OK] 第十八 / 十九部分对象齐全'
+         ELSE '[缺失] ' || v_missing || ' —— 先执行对应批次脚本（第十九部分：supabase-phase3-v4.5.0.sql）再重跑本脚本；否则前端会报「帖子加载失败 / 保存失败」' END,
+    v_missing IS NULL
+  );
+
   -- 1.2 旧的全量放行必须清零
   SELECT count(*) INTO v_cnt FROM pg_policies
   WHERE schemaname = 'public' AND policyname = 'authenticated_full_access';
@@ -118,7 +183,7 @@ BEGIN
     AND tablename IN ('users','invite_codes','tasks','task_submissions','notices','school_notices',
                       'forum_posts','forum_replies','tickets','ticket_records','task_templates',
                       'task_milestones','department_guides','usage_events','notifications',
-                      'notice_reads','platform_guides')
+                      'notice_reads','platform_guides','forum_likes','forum_bookmarks')
     AND (roles IS NULL OR 'public' = ANY (roles));
   INSERT INTO _rls_verify VALUES (
     '一、结构', 111, '本次策略的生效角色', '0 条对 PUBLIC 生效',
@@ -471,6 +536,16 @@ BEGIN
     RETURN;
   END IF;
 
+  -- 前置对象缺失时整体跳过：否则 forum_likes / forum_bookmarks 上的探测会以
+  -- 「表不存在」的形式失败一批，看不出根因是「第十九部分没执行」。
+  IF to_regclass('public.forum_likes') IS NULL OR to_regclass('public.forum_bookmarks') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'forum_posts' AND column_name = 'pinned_at') THEN
+    INSERT INTO _rls_verify VALUES ('二、语义', 998, '前置对象', '第十九部分已执行',
+      '[跳过] forum_likes / forum_bookmarks / forum_posts.pinned_at 缺失 —— 先在 Supabase 执行 supabase-phase3-v4.5.0.sql，再重跑本脚本；第一段结构核对结果仍然有效', false);
+    RETURN;
+  END IF;
+
   FOR p IN SELECT * FROM _rls_probe ORDER BY seq LOOP
     v_ok := false;
     v_actual := '';
@@ -489,7 +564,12 @@ BEGIN
         v_actual := n::text || ' 行' || CASE WHEN v_ok THEN '' ELSE '（期望 ' || p.expect || ' 行）' END;
       END IF;
     EXCEPTION WHEN OTHERS THEN
-      IF p.expect = 'deny' THEN
+      IF SQLSTATE IN ('42P01', '42703') THEN
+        -- 表/列不存在（= 前置批次没执行）绝不能算「被拒绝」：那是环境缺失，不是权限生效。
+        -- 漏了这条，第十九部分没跑时所有 forum_likes 探测都会以 42P01 伪装成 [OK]。
+        v_ok := false;
+        v_actual := format('环境缺失（%s：%s）——不是策略拒绝，先执行对应批次的数据层脚本', SQLSTATE, left(SQLERRM, 50));
+      ELSIF p.expect = 'deny' THEN
         v_ok := true;
         v_actual := '已拒绝（SQLSTATE ' || SQLSTATE || '）';
       ELSE

@@ -784,6 +784,9 @@ ANALYZE public.usage_events;
 -- 与第十八/十九部分同理：DDL 成功时 SQL Editor 只显示「Success. No rows returned」。
 -- 这条查询**只读**，不写任何数据。
 -- 「策略数」列给的是**下限**（>=），将来加策略不会让这张表变红，但少一条一定会。
+-- 2026-09-12 补：策略数为 0 有两种完全不同的原因——「表不存在」（整批数据层脚本没执行）与
+-- 「表在但策略被删过」。前者曾把用户引到错误的排查方向（实测：forum_likes/forum_bookmarks
+-- 两行 `[缺失] 只有 0 条`，真相是第十九部分压根没执行），所以这里分开报，并直接说明该跑哪份脚本。
 WITH expected AS (
   SELECT * FROM (VALUES
     ('users', 2), ('invite_codes', 4), ('tasks', 3), ('task_submissions', 3),
@@ -797,11 +800,15 @@ WITH expected AS (
 SELECT t."类型", t."对象", t."结果"
 FROM (
   SELECT '策略数' AS "类型", e.tbl AS "对象",
-    CASE WHEN (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl) >= e.min_policies
-         THEN '[OK] 策略 ' || (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl)
-              || '/' || e.min_policies
-         ELSE '[缺失] 只有 ' || (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl)
-              || ' 条，应 >= ' || e.min_policies END AS "结果"
+    CASE
+      WHEN to_regclass('public.' || e.tbl) IS NULL
+        THEN '[缺失] 表不存在 —— 该表所属批次的数据层脚本还没执行（如 forum_likes / forum_bookmarks 属于第十九部分 supabase-phase3-v4.5.0.sql），先执行它再重跑本部分'
+      WHEN (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl) >= e.min_policies
+        THEN '[OK] 策略 ' || (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl)
+             || '/' || e.min_policies
+      ELSE '[缺失] 表在，但只有 ' || (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = e.tbl)
+           || ' 条策略，应 >= ' || e.min_policies || '（重跑本部分脚本可恢复）'
+    END AS "结果"
   FROM expected e
   UNION ALL
   SELECT '函数', 'register_user',
