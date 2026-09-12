@@ -324,9 +324,16 @@ git push origin master
 
 3. **确认部署文件内容：**
    ```bash
-   # 爬取线上 JS/CSS 文件名，与 gh-pages 分支或本地 dist/ 对比
+   # 爬取线上 JS/CSS 文件名，与本地 dist/ 对比
    curl -s "https://yhllxy.github.io/student-union-platform/" | grep -o 'assets/[^"]*\.js'
    ```
+   ⚠️ **别把「chunk 哈希逐字一致」当作唯一判据**（2026-09-12 实测踩过）：同一份源码，
+   CI（Linux）与本地（Windows）构建出来的**懒加载 chunk 哈希并不一致**——实测线上入口 chunk
+   与本地 diff 有 30 处不同，逐处核对后发现**全都是指向其他 chunk 的 8 位哈希名**，
+   13 个入口静态引用的 chunk 名字则完全相同。也就是说产物一致、只是命名/顺序在不同环境里有差异。
+   判定「线上是不是这次构建」请用：**`version.json` / `sw.js` 的版本号 + CI 该次运行的状态**
+   （`curl -s https://api.github.com/repos/YHLLXY/student-union-platform/actions/runs?per_page=2`），
+   chunk 名对比只作为参考。
 
 4. **以上三步确认正常后，才排查代码问题。**
 
