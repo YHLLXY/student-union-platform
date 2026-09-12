@@ -87,7 +87,7 @@ BEGIN
       ('usage_events',      ARRAY['usage_events_select_admin','usage_events_insert_self']),
       ('notifications',     ARRAY['notifications_select_own','notifications_update_own','notifications_insert_authenticated']),
       ('notice_reads',      ARRAY['notice_reads_select_dept_or_self','notice_reads_insert_self','notice_reads_update_self']),
-      ('platform_guides',   ARRAY['platform_guides_insert_seed_or_head','platform_guides_update_head','platform_guides_delete_head']),
+      ('platform_guides',   ARRAY['platform_guides_select_authenticated','platform_guides_insert_seed_or_head','platform_guides_update_head','platform_guides_delete_head']),
       ('forum_likes',       ARRAY['forum_likes_read_all','forum_likes_insert_own','forum_likes_delete_own']),
       ('forum_bookmarks',   ARRAY['forum_bookmarks_read_all','forum_bookmarks_insert_own','forum_bookmarks_delete_own'])
     ) AS x(tbl, names)
@@ -178,7 +178,11 @@ BEGIN
 
   -- 1.3 本次新建的策略必须都限定 TO authenticated
   --（不写 TO 就是 TO PUBLIC，对 anon 也生效，与「anon 一律拒绝」的姿态相悖）
-  SELECT count(*) INTO v_pub FROM pg_policies
+  -- 报「哪一条」而不是只报条数：实跑时打出「1 条对 PUBLIC 生效」，但没说是哪条，
+  -- 只能回来翻脚本对名字（platform_guides 的读策略就是这么找出来的）。名字直接给出来，一眼能改。
+  SELECT count(*), string_agg(tablename || '.' || policyname, '、' ORDER BY tablename, policyname)
+    INTO v_pub, v_missing
+  FROM pg_policies
   WHERE schemaname = 'public'
     AND tablename IN ('users','invite_codes','tasks','task_submissions','notices','school_notices',
                       'forum_posts','forum_replies','tickets','ticket_records','task_templates',
@@ -188,7 +192,8 @@ BEGIN
   INSERT INTO _rls_verify VALUES (
     '一、结构', 111, '本次策略的生效角色', '0 条对 PUBLIC 生效',
     CASE WHEN v_pub = 0 THEN '[OK] 全部限定 TO authenticated'
-         ELSE '[提示] ' || v_pub || ' 条对 PUBLIC 生效（anon 已无表权限，暂无风险，建议限定角色）' END,
+         ELSE '[提示] ' || v_pub || ' 条对 PUBLIC 生效（anon 已无表权限，暂无实际泄露，但应限定角色）：' || v_missing
+              || ' —— 修法：DROP + CREATE 同名策略并在末尾补 `TO authenticated`（见第二十部分 (c) 的 platform_guides 读策略）' END,
     v_pub = 0
   );
 
@@ -314,6 +319,7 @@ END $$;
 DO $$
 DECLARE
   v_vol   record; v_head record; v_pres record;
+  v_n_vol integer; v_n_head integer;
   v_dept  text; v_other_dept text;
   v_post_other uuid; v_post_own uuid;
   v_task_own uuid; v_task_other uuid;
@@ -342,9 +348,19 @@ BEGIN
   SELECT id, auth_id, department, role INTO v_pres FROM public.users
    WHERE role IN ('president','teacher') AND auth_id IS NOT NULL ORDER BY created_at LIMIT 1;
 
+  -- 样本不足时要把「缺哪一个、缺几个」说清楚：首跑只报了一句
+  -- 「库内缺少 volunteer，或缺少 department 非空的 dept_head」，两种可能并列，等于没说。
+  SELECT count(*) INTO v_n_vol  FROM public.users WHERE role = 'volunteer' AND auth_id IS NOT NULL;
+  SELECT count(*) INTO v_n_head FROM public.users
+   WHERE role = 'dept_head' AND auth_id IS NOT NULL AND department <> '';
+
   IF v_vol.id IS NULL OR v_head.id IS NULL THEN
     INSERT INTO _rls_verify VALUES ('二、语义', 0, '角色样本', '志愿者与部门负责人各一名',
-      '[跳过] 库内缺少 volunteer，或缺少 department 非空的 dept_head，无法冒充', false);
+      format('[跳过] 库内样本不足：volunteer（有 auth_id）%s 名、dept_head（部门非空）%s 名，冒充对象各需 ≥1 名。'
+        || '正式库常见这种情况——真实成员只有部长/主席，没有志愿者账号。'
+        || '要跑完第二段：用一张邀请码注册一个测试志愿者账号，或临时把某个测试账号的 role 改成 volunteer，'
+        || '跑完再改回；第一段结构核对的结果不受影响。', v_n_vol, v_n_head),
+      false);
     RETURN;
   END IF;
 
@@ -645,14 +661,18 @@ SELECT
   label    AS "探测项",
   expected AS "期望",
   actual   AS "实测",
-  CASE WHEN ok THEN '[OK]' ELSE '[失败]' END AS "结果"
+  -- 「跳过」单独成一档：它既不是通过也不是策略失败，原因是环境（不允许切角色 / 样本不足 /
+  -- 前置对象缺失）。首跑把它显示成 [失败]，读起来像「策略有问题」，得回去看「实测」才知道是跳过。
+  CASE WHEN actual LIKE '[跳过]%' THEN '[跳过]'
+       WHEN ok THEN '[OK]' ELSE '[失败]' END AS "结果"
 FROM _rls_verify
 ORDER BY phase, seq;
 
 -- 结果怎么读（写给执行者）：
 --   · 全为 [OK]                → 策略与预期一致，权限收口生效；
+--   · [跳过]                   → 该段没跑（看「实测」给的原因，通常是样本不足或本会话不允许切角色），
+--                                第一段结构核对的结果仍然有效；
 --   · [失败]（写侧探测被放行）  → 策略没生效，确认是不是在正确项目里执行了 supabase-phase4-v4.6.0.sql；
 --   · [缺失]                   → 对应策略/函数没建成功，把 supabase-phase4-v4.6.0.sql 重跑一遍；
 --   · [越权]                   → anon 仍有权限，重点看 1.7 / 1.8 两段；
---   · 第一段全 OK、第二段整段 [跳过] → 只是当前会话不允许切换角色，换 Dashboard 的 SQL Editor 再跑；
 --   · [注意]/[严重]             → 脚本没能清干净，按提示重跑一次或手工处理。

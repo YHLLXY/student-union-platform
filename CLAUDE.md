@@ -397,6 +397,9 @@ git push origin master
    `tasks`（通讯录里的「他人任务计数」要读全校）、`tickets`/`ticket_records`（人人都要算剩余票数）、
    `school_notices`。按部门收紧它们会让页面**静默少数据而不是报错**，比不收紧更危险；
    真要收得先把那几处改成聚合 RPC（见 `docs/ISSUES.md` #14）。
+   **但「读侧留宽」不等于「对 anon 开放」**：策略不写 `TO` 就是 `TO PUBLIC`（含 anon）。
+   `platform_guides` 的读策略 2026-07 建时就漏了 `TO authenticated`，2026-09-12 自证脚本点名后一并收口
+   （改名为 `platform_guides_select_authenticated`）。anon 本已无表权限，所以这只是把第二道门也关上。
 2. **策略辅助函数一律 SECURITY DEFINER**（`my_department` / `is_admin` / `is_presidium` /
    `is_dept_head_of` / `can_view_post` / `can_manage_post` / `can_view_task` / `can_review_task`）。
    策略表达式以**当前用户**身份求值，直接写子查询会连带触发被引用表的 RLS，变成「策略依赖策略」，

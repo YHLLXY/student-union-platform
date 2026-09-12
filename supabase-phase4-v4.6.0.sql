@@ -683,6 +683,15 @@ CREATE POLICY notifications_insert_authenticated ON public.notifications
 --     若 INSERT 只认「负责人」，空库上的播种会失败（表现为使用指南空白）。
 --     DROP + CREATE 相邻（这两张表的策略没有全量放行兜底，中间有毫秒级真空，可接受）。
 --     同样新老名字都要删（见 (b) 的 42710 说明）。
+-- 2026-09-12 补：这张表的**读**策略也一并收口。它 2026-07 建的是 `"Anyone can read guides"`
+--   `FOR SELECT USING (true)`，**没写 TO** —— 不写 TO 就是 TO PUBLIC（对 anon 也生效），
+--   与「anon 一律拒绝」的姿态相悖。anon 现在没有表权限（第 7 节），所以暂无实际泄露，
+--   但两道门该一致关上；同时把名字统一成 `platform_guides_select_authenticated`，
+--   免得同一张表上「新名字写策略、老名字读策略」混着看。自证脚本 1.1 会按名字点它。
+DROP POLICY IF EXISTS "Anyone can read guides" ON public.platform_guides;
+DROP POLICY IF EXISTS platform_guides_select_authenticated ON public.platform_guides;
+CREATE POLICY platform_guides_select_authenticated ON public.platform_guides
+  FOR SELECT TO authenticated USING (true);
 DROP POLICY IF EXISTS "Dept head+ can insert guides" ON public.platform_guides;
 DROP POLICY IF EXISTS "Dept head+ can update guides" ON public.platform_guides;
 DROP POLICY IF EXISTS "Dept head+ can delete guides" ON public.platform_guides;
