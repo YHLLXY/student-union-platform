@@ -260,6 +260,53 @@ stmts.forEach((s, i) => {
 console.log(`DDL 顺序检查：${orderIssues.length === 0 ? '通过' : `${orderIssues.length} 项异常`}`);
 for (const s of orderIssues) console.log(`  [顺序] ${s}`);
 
+// ---- 关卡 ④：可重跑检查（CREATE POLICY / CREATE TRIGGER 都不支持 IF NOT EXISTS）----
+// 来自真实事故（2026-09-12）：第二十部分里 notifications 的三条新策略只删了**旧名字**，
+// 没删新名字，于是第二次执行（用户在 Phase 3 执行后又跑了一遍 Phase 4）在
+// `CREATE POLICY notifications_select_own` 报 `42710 policy ... already exists`，
+// 整份脚本用一条错误终止——用户拿到的只是一句「already exists」，看不出「这个脚本不能重跑」。
+// 本项目的约定是**先删后建**（DROP ... IF EXISTS 紧接 CREATE 同名对象），这里就是那条约定的机器检查。
+// 判据：每次 CREATE 之前，必须有同名的 DROP ... IF EXISTS 出现过（位置在前）。
+const IDEMPOTENT_KINDS = [
+  { kind: '策略', drop: /DROP\s+POLICY\s+IF\s+EXISTS\s+/i, create: /CREATE\s+POLICY\s+/i, errcode: '42710' },
+  { kind: '触发器', drop: /DROP\s+TRIGGER\s+IF\s+EXISTS\s+/i, create: /CREATE\s+TRIGGER\s+/i, errcode: '42710' },
+];
+const OBJ_NAME = '(?<n>"(?:[^"]*)"|[A-Za-z_][A-Za-z0-9_$]*)';
+const normName = (n) => n.replace(/"/g, '').trim().toLowerCase();
+
+// 注意：只在**代码区**里找（`s.code` 已挖掉注释与字符串内容）。
+// 第一版直接在原文上正则，把第四部分里整段注释掉的 `-- CREATE POLICY "users_select_own" …`
+// 也算了进来，于是报出 23 项假异常——注释不会被执行，检查必须只看代码。
+const idempotency = [];
+for (const { kind, drop, create, errcode } of IDEMPOTENT_KINDS) {
+  const events = [];
+  stmts.forEach((s, si) => {
+    for (const m of s.code.matchAll(new RegExp(drop.source + OBJ_NAME, 'gi'))) {
+      events.push({ type: 'drop', name: normName(m.groups.n), si, at: m.index });
+    }
+    for (const m of s.code.matchAll(new RegExp(create.source + OBJ_NAME, 'gi'))) {
+      events.push({ type: 'create', raw: m.groups.n, name: normName(m.groups.n), si, at: m.index });
+    }
+  });
+  events.sort((a, b) => a.si - b.si || a.at - b.at);
+
+  const dropped = new Set();
+  for (const e of events) {
+    if (e.type === 'drop') {
+      dropped.add(e.name);
+      continue;
+    }
+    if (dropped.has(e.name)) continue;
+    idempotency.push(
+      `L${lineOf(stmts[e.si].offset)}  CREATE ${kind} ${e.raw} 之前没有同名的 DROP ${kind} IF EXISTS` +
+        `——脚本第二次执行会报 ${errcode}，整份中断`,
+    );
+  }
+}
+
+console.log(`可重跑检查：${idempotency.length === 0 ? '通过' : `${idempotency.length} 项异常`}`);
+for (const s of idempotency) console.log(`  [重跑] ${s}`);
+
 // ---- 关卡 ②：语法解析（只解析解析器真正支持的语句类型）----
 // pgsql-ast-parser 覆盖的是查询与部分 DDL；SECURITY DEFINER / SET search_path / GRANT /
 // REVOKE / CREATE POLICY / CREATE TRIGGER / ENABLE ROW LEVEL SECURITY / ANALYZE / DO 一律不认，
@@ -310,6 +357,6 @@ if (parser) {
   console.log('语法解析：跳过（未找到 pgsql-ast-parser，见文件头安装说明）');
 }
 
-const bad = structural.length + orderIssues.length + parseFailed;
+const bad = structural.length + orderIssues.length + idempotency.length + parseFailed;
 console.log(`\n结论：${bad === 0 ? '未发现语法问题' : `${bad} 项待处理`}`);
 process.exit(bad ? 1 : 0);

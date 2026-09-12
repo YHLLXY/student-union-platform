@@ -204,12 +204,14 @@ module/
 - **不要靠回忆或截图判断脚本是否执行过**，用两道自检：库外 `npm run probe:db`（只读、anon key、按批次列出缺失的表与列，见下）；库内 `supabase-verify-v4.6.0.sql` 的 1.1b（连策略/触发器一起点）。**每次发版后跑一次 `probe:db`，全 `[OK]` 才算这轮数据层真的上线了。**
 - **验收表要把「表不存在」与「策略缺失」分开报**：两者的排查方向完全不同（前者去执行脚本，后者去查谁删了策略）。`[缺失] 只有 0 条` 这种把两种原因混在一句话里的输出，会把人引向错误方向。
 
+**脚本必须能重跑：`CREATE POLICY` / `CREATE TRIGGER` 之前一定要删同名对象（2026-09-12 踩过）**：这两类 DDL **没有 `IF NOT EXISTS`**，所以「改写了策略名」时最容易漏——第二十部分把 `notifications` / `platform_guides` 的策略换了新名字，却只 `DROP` 了旧名字，于是脚本第二次执行在这里报 `42710 policy "notifications_select_own" for table "notifications" already exists` 并整份中断（SQL Editor 把整段当一个事务，用户拿到的只是一句「already exists」，看不出「这个脚本不能重跑」）。**用户会重跑**（补数据层、复查、复现问题都会重跑），所以这是必答题不是加分题。`check-sql.mjs` 的可重跑检查就是这条约定的机器版，改完脚本跑一遍再交付。
+
 **先加列，再挂约束 / 触发器 / 索引（2026-09-11 踩过）**：`CREATE TRIGGER … AFTER UPDATE OF <列>` 与 `CREATE INDEX … (<新列>)` 会在**创建对象那一刻**就校验列是否存在，把「加列」排在它们之后，整份脚本会在半途炸掉：`42703 column "checked_in_at" of relation "ticket_records" does not exist`。新列一律提到脚本最前面加。`scripts/check-sql.mjs` 已加这条顺序检查（引用早于 `ADD COLUMN` 即报错）。
 
 **脚本工具（别再手抄 SQL，两份内容必须逐字一致）：**
 
 - `node scripts/extract-sql-section.mjs <第N部分> <输出文件名>` —— 从 `supabase-migration.sql` 抽取某章节生成独立执行脚本（自动识别章节边界，抬头标注勿手改）。
-- `node scripts/check-sql.mjs <sql 文件>` —— 静态体检三关：① 结构自检（语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点，零依赖）；② **DDL 顺序检查**（触发器 `UPDATE OF 列` / 索引列引用了本文件后面才 `ADD COLUMN` 的列即报错——42703 就是这么来的）；③ 可选 `pgsql-ast-parser` 真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。
+- `node scripts/check-sql.mjs <sql 文件>` —— 静态体检四关：① 结构自检（语句切分、圆括号配平、`$$` 闭合、字符串闭合、代码区全角标点，零依赖）；② **DDL 顺序检查**（触发器 `UPDATE OF 列` / 索引列引用了本文件后面才 `ADD COLUMN` 的列即报错——42703 就是这么来的）；③ **可重跑检查**（`CREATE POLICY` / `CREATE TRIGGER` 之前没有同名的 `DROP … IF EXISTS` 即报错——这两类 DDL 没有 `IF NOT EXISTS`，缺一次就会在第二次执行时报 42710，2026-09-12 真踩过）；④ 可选 `pgsql-ast-parser` 真语法解析（装法见文件头；它不认 `GRANT`/`REVOKE`/`SECURITY DEFINER`/`CREATE POLICY` 等 Postgres 专有 DDL，脚本已按白名单跳过，只解析查询与建表建索引）。**交付前对每个 `<用途>-<版本>.sql` 都跑一遍，四关全通过再交给用户。**
 - 注意 `WITH cte(a,b) AS (VALUES …)` 这种 CTE 列名列表是 pgsql-ast-parser 的盲点（Postgres 本身合法），写验收查询时用 `WITH cte AS (SELECT * FROM (VALUES …) AS e(a,b))` 才能被机器校验。
 - `node scripts/backup-supabase.mjs [输出目录]` —— 全库导出（需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` 两个环境变量，**service_role key 绝不进仓库**）；
 - `node scripts/restore-backup.mjs <备份目录> [--yes]` —— 恢复（不带 `--yes` 只校验不写入）。两者用法与边界见 `docs/backup-restore.md`。
@@ -368,10 +370,11 @@ git push origin master
 
 **Phase 3 数据层（v4.5.0，第十九部分）：** 执行脚本 `supabase-phase3-v4.5.0.sql`（**需用户在 Supabase 执行**）。
 
-> ⚠️ **状态：截至 2026-09-12 仍未在正式库执行**（用 `npm run probe:db` 实测：`forum_likes` / `forum_bookmarks`
-> 两张表与 6 个新列都不存在，而同期的第十八、二十部分都在）。后果是线上「帖子加载失败 / 资料保存报错 /
-> 新人引导落库失败」。**补执行它不改变任何权限语义**（它只建新表新列，不碰第二十部分收口的那些策略），
-> 执行完请用 `npm run probe:db` 复验。
+> ⚠️ **状态：曾在 2026-09-12 被发现漏执行，同日已补执行**（用 `npm run probe:db` 实测：发现时
+> `forum_likes` / `forum_bookmarks` 两张表与 6 个新列都不存在，而同期的第十八、二十部分都在；
+> 当时线上表现是「帖子加载失败 / 资料保存报错 / 新人引导落库失败」。补执行后 `probe:db` 三批全 `[OK]`）。
+> **补执行它不改变任何权限语义**（它只建新表新列，不碰第二十部分收口的那些策略），先后顺序无影响。
+> 教训见 `docs/ISSUES.md` #17、迭代总结经验 14：**交付脚本后要跑 `probe:db` 确认落地，别靠回忆。**
 
 四点设计意图，改动前务必先读：
 

@@ -655,9 +655,15 @@ CREATE POLICY notice_reads_update_self ON public.notice_reads
 
 -- (b) notifications：三条策略沿用第八部分的产品语义（只读自己的、只改自己的、
 --     给谁都能发），只把里层的「users 子查询」换成辅助函数——少一层嵌套 RLS，快且好读。
+--     新名字与旧名字都要删：只删旧名字的话，本脚本**第二次执行**会在这里报
+--     `42710 policy "notifications_select_own" for table "notifications" already exists` 并整份中断
+--     （2026-09-12 真踩过：用户在补跑 Phase 3 后又跑了一次本部分）。`check-sql.mjs` 已加此检查。
 DROP POLICY IF EXISTS "Users can read own notifications"             ON public.notifications;
 DROP POLICY IF EXISTS "Users can update own notifications"           ON public.notifications;
 DROP POLICY IF EXISTS "Authenticated users can insert notifications" ON public.notifications;
+DROP POLICY IF EXISTS notifications_select_own         ON public.notifications;
+DROP POLICY IF EXISTS notifications_update_own          ON public.notifications;
+DROP POLICY IF EXISTS notifications_insert_authenticated ON public.notifications;
 CREATE POLICY notifications_select_own ON public.notifications
   FOR SELECT TO authenticated USING (user_id = public.current_app_user_id());
 CREATE POLICY notifications_update_own ON public.notifications
@@ -676,9 +682,13 @@ CREATE POLICY notifications_insert_authenticated ON public.notifications
 --     seedDefaultGuides 由任意用户首次打开使用指南时触发，写入的行没有 created_by，
 --     若 INSERT 只认「负责人」，空库上的播种会失败（表现为使用指南空白）。
 --     DROP + CREATE 相邻（这两张表的策略没有全量放行兜底，中间有毫秒级真空，可接受）。
+--     同样新老名字都要删（见 (b) 的 42710 说明）。
 DROP POLICY IF EXISTS "Dept head+ can insert guides" ON public.platform_guides;
 DROP POLICY IF EXISTS "Dept head+ can update guides" ON public.platform_guides;
 DROP POLICY IF EXISTS "Dept head+ can delete guides" ON public.platform_guides;
+DROP POLICY IF EXISTS platform_guides_insert_seed_or_head ON public.platform_guides;
+DROP POLICY IF EXISTS platform_guides_update_head         ON public.platform_guides;
+DROP POLICY IF EXISTS platform_guides_delete_head         ON public.platform_guides;
 CREATE POLICY platform_guides_insert_seed_or_head ON public.platform_guides
   FOR INSERT TO authenticated
   WITH CHECK (created_by IS NULL OR public.is_organizer());
